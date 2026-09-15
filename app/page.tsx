@@ -52,7 +52,6 @@ interface Order {
   courierStatus?: string;
 }
 
-// সর্বত্র অভিন্ন স্টাফ নামের তালিকা
 const STAFF_MEMBERS = ['Awlad Hossain', 'Emdadullah Sakib', 'Omar Faruque'];
 
 const WOO_STATUSES = [
@@ -81,7 +80,19 @@ export default function Dashboard() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
-  // ১. সেশন ভেরিফিকেশন ও বর্তমান ইউজারের নাম আনা
+  // Group 2 (RUHAMA WEAR DASHBOARD) এ প্রতিটি কাজের লাইভ নোটিফিকেশন
+  const sendActivityLog = async (logText: string) => {
+    try {
+      await fetch('/api/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: logText, type: 'activity' }),
+      });
+    } catch (err) {
+      console.error('Activity Log Error:', err);
+    }
+  };
+
   useEffect(() => {
     fetch('/api/auth/check')
       .then((res) => {
@@ -98,7 +109,6 @@ export default function Dashboard() {
       });
   }, [router]);
 
-  // ২. অর্ডার ফেচ করা
   const fetchOrders = async () => {
     setLoading(true);
     setMessage(null);
@@ -178,7 +188,6 @@ export default function Dashboard() {
     );
   };
 
-  // স্ট্যাটাস পরিবর্তনের সাথে সাথে বর্তমান লগইন ইউজারের নাম অটো-অ্যাসাইন
   const handleUpdateOrderStatus = async (order: Order, newStatus: string) => {
     setUpdatingId(order.id);
     setMessage(null);
@@ -211,6 +220,15 @@ export default function Dashboard() {
           text: `Order #${order.invoice} স্ট্যাটাস "${newStatus}" করা হয়েছে (${assignedStaff})`,
           type: 'success',
         });
+
+        const logMsg = `🔄 <b>স্ট্যাটাস আপডেট করা হয়েছে</b>\n` +
+          `━━━━━━━━━━━━━━━━━━━\n` +
+          `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
+          `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
+          `👤 <b>কাস্টমার:</b> ${order.customerName} (${order.phone})\n` +
+          `📌 <b>নতুন স্ট্যাটাস:</b> <code>${newStatus.toUpperCase()}</code>\n` +
+          `👨‍💼 <b>স্টাফ:</b> ${assignedStaff}`;
+        sendActivityLog(logMsg);
       } else {
         setMessage({ text: result.error || 'স্ট্যাটাস আপডেট ব্যর্থ হয়েছে', type: 'error' });
       }
@@ -246,6 +264,14 @@ export default function Dashboard() {
           text: `Order #${order.invoice} মুছে ফেলা হয়েছে!`,
           type: 'success',
         });
+
+        const logMsg = `🗑️ <b>অর্ডার মুছে ফেলা হয়েছে</b>\n` +
+          `━━━━━━━━━━━━━━━━━━━\n` +
+          `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
+          `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
+          `👤 <b>কাস্টমার:</b> ${order.customerName}\n` +
+          `👨‍💼 <b>অ্যাকশন নিয়েছেন:</b> ${currentUser}`;
+        sendActivityLog(logMsg);
       } else {
         setMessage({ text: result.error || 'ডিলিট করতে সমস্যা হয়েছে', type: 'error' });
       }
@@ -256,7 +282,6 @@ export default function Dashboard() {
     }
   };
 
-  // কুরিয়ারে পাঠালে অটো নাম অ্যাসাইন
   const handleSendToSteadfast = async (order: Order) => {
     if (!confirm(`Are you sure you want to send order #${order.invoice} to Steadfast?`)) return;
 
@@ -312,6 +337,18 @@ export default function Dashboard() {
           text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে (${assignedStaff})! CID: ${cid}`,
           type: 'success',
         });
+
+        const logMsg = `🚀 <b>STEADFAST কুরিয়ারে ডিসপ্যাচ করা হয়েছে</b>\n` +
+          `━━━━━━━━━━━━━━━━━━━\n` +
+          `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
+          `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
+          `👤 <b>কাস্টমার:</b> ${order.customerName}\n` +
+          `📞 <b>ফোন:</b> ${order.phone}\n` +
+          `📍 <b>ঠিকানা:</b> ${fullAddress}\n` +
+          `💵 <b>COD:</b> ৳${order.total} ${order.size ? `(সাইজ: ${order.size})` : ''}\n` +
+          `🏷️ <b>CID:</b> <code>${cid}</code> | <b>Tracking:</b> <code>${tracking}</code>\n` +
+          `👨‍💼 <b>প্রসেস করেছেন:</b> ${assignedStaff}`;
+        sendActivityLog(logMsg);
       } else {
         setMessage({ text: result.error || 'কুরিয়ারে পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
       }
@@ -416,10 +453,8 @@ export default function Dashboard() {
       <div className="max-w-[1950px] mx-auto">
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 bg-white p-5 rounded-2xl shadow-md border-2 border-slate-300">
-          
-          {/* Clickable Brand Logo & Title (লোগোতে ক্লিক করলে ড্যাশবোর্ড রিফ্রেশ হবে) */}
-          <div 
-            onClick={() => window.location.href = '/'} 
+          <div
+            onClick={() => (window.location.href = '/')}
             className="flex items-center gap-4 cursor-pointer select-none transition hover:opacity-90 active:scale-98"
             title="Dashboard Reload"
           >
@@ -449,7 +484,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Right Header Actions */}
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 bg-slate-100 border-2 border-slate-300 px-3.5 py-2 rounded-xl shadow-2xs">
               <div className="w-7 h-7 rounded-lg bg-slate-950 text-white flex items-center justify-center">
@@ -672,8 +706,20 @@ export default function Dashboard() {
                               onClick={() => {
                                 const newCallState = !order.callDone;
                                 handleFieldChange(order.id, order.storeId, 'callDone', newCallState);
+                                const assignedStaff = order.staffName || currentUser;
                                 if (!order.staffName) {
-                                  handleFieldChange(order.id, order.storeId, 'staffName', currentUser);
+                                  handleFieldChange(order.id, order.storeId, 'staffName', assignedStaff);
+                                }
+                                
+                                if (newCallState) {
+                                  const callLog = `📞 <b>কাস্টমারকে কল দেওয়া হয়েছে</b>\n` +
+                                    `━━━━━━━━━━━━━━━━━━━\n` +
+                                    `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
+                                    `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
+                                    `👤 <b>কাস্টমার:</b> ${order.customerName}\n` +
+                                    `📞 <b>ফোন:</b> ${order.phone}\n` +
+                                    `👨‍💼 <b>কল দিয়েছেন:</b> ${assignedStaff}`;
+                                  sendActivityLog(callLog);
                                 }
                               }}
                               className={`flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-lg transition border-2 shadow-sm cursor-pointer ${
