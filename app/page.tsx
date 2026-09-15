@@ -81,7 +81,7 @@ export default function Dashboard() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
-  // ১. সেশন ভেরিফিকেশন ও ইউজার নাম রিড
+  // ১. সেশন ভেরিফিকেশন ও বর্তমান ইউজারের নাম আনা
   useEffect(() => {
     fetch('/api/auth/check')
       .then((res) => {
@@ -98,7 +98,7 @@ export default function Dashboard() {
       });
   }, [router]);
 
-  // ২. অর্ডার ফেচ
+  // ২. অর্ডার ফেচ করা
   const fetchOrders = async () => {
     setLoading(true);
     setMessage(null);
@@ -416,7 +416,13 @@ export default function Dashboard() {
       <div className="max-w-[1950px] mx-auto">
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 bg-white p-5 rounded-2xl shadow-md border-2 border-slate-300">
-          <div className="flex items-center gap-4">
+          
+          {/* Clickable Brand Logo & Title (লোগোতে ক্লিক করলে ড্যাশবোর্ড রিফ্রেশ হবে) */}
+          <div 
+            onClick={() => window.location.href = '/'} 
+            className="flex items-center gap-4 cursor-pointer select-none transition hover:opacity-90 active:scale-98"
+            title="Dashboard Reload"
+          >
             {hasLogoImg ? (
               <div className="w-14 h-14 rounded-2xl bg-slate-950 flex items-center justify-center p-2 shadow-lg border-2 border-slate-800 shrink-0">
                 <img
