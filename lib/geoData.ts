@@ -4,108 +4,381 @@ export interface DistrictData {
 }
 
 export const BANGLADESH_DISTRICTS: DistrictData[] = [
+  // --- বরিশাল বিভাগ (Barishal Division) ---
   {
-    district: 'Dhaka',
+    district: 'Patuakhali',
     thanas: [
-      'Adabor', 'Badda', 'Bangshal', 'Bimanbandar', 'Cantonment', 'Chawkbazar', 'Dakshinkhan', 
-      'Darus Salam', 'Demra', 'Dhanmondi', 'Gendaria', 'Gulshan', 'Hazaribagh', 'Jatrabari', 
-      'Kadamtali', 'Kafrul', 'Kalabagan', 'Kamrangirchar', 'Khilgaon', 'Khilkhet', 'Kotwali', 
-      'Lalbagh', 'Mirpur', 'Mohammadpur', 'Motijheel', 'New Market', 'Pallabi', 'Paltan', 
-      'Ramna', 'Rampura', 'Sabujbagh', 'Shah Ali', 'Shahbagh', 'Sher-e-Bangla Nagar', 'Shyampur', 
-      'Sutrapur', 'Tejgaon', 'Tejgaon Industrial Area', 'Turag', 'Uttara East', 'Uttara West', 
-      'Vatara', 'Wari', 'Dhamrai', 'Dohar', 'Keraniganj', 'Nawabganj', 'Savar'
-    ]
-  },
-  {
-    district: 'Chattogram',
-    thanas: ['Anwara', 'Banshkhali', 'Boalkhali', 'Chandanaish', 'Fatikchhari', 'Hathazari', 'Karnaphuli', 'Lohagara', 'Mirsharai', 'Patiya', 'Rangunia', 'Raozan', 'Sandwip', 'Satkania', 'Sitakunda', 'Kotwali', 'Panchlaish', 'Pahartali', 'Halishahar', 'Khulshi', 'Bakalia', 'Bayazid', 'Patenga']
-  },
-  {
-    district: 'Gazipur',
-    thanas: ['Gazipur Sadar', 'Kaliakair', 'Kaliganj', 'Kapasia', 'Sreepur', 'Tongi']
-  },
-  {
-    district: 'Narayanganj',
-    thanas: ['Araihazar', 'Bandar', 'Narayanganj Sadar', 'Rupganj', 'Sonargaon', 'Fatullah', 'Siddhirganj']
-  },
-  {
-    district: 'Sylhet',
-    thanas: ['Balaganj', 'Beanibazar', 'Bishwanath', 'Companiganj', 'Dakshin Surma', 'Fenchuganj', 'Golapganj', 'Gowainghat', 'Jaintiapur', 'Kanaighat', 'Osmani Nagar', 'Sylhet Sadar', 'Zakiganj']
-  },
-  {
-    district: 'Rajshahi',
-    thanas: ['Bagha', 'Bagmara', 'Charghat', 'Durgapur', 'Godagari', 'Mohanpur', 'Paba', 'Puthia', 'Tanore', 'Boalia', 'Motihar', 'Rajpara', 'Shah Makhdum']
-  },
-  {
-    district: 'Khulna',
-    thanas: ['Batiaghata', 'Dacope', 'Dumuria', 'Dighalia', 'Koyra', 'Paikgachha', 'Phultala', 'Rupsha', 'Terokhada', 'Daulatpur', 'Khalishpur', 'Khan Jahan Ali', 'Kotwali', 'Sonadanga']
-  },
-  {
-    district: 'Bogura',
-    thanas: ['Adamdighi', 'Bogura Sadar', 'Dhunat', 'Dhupchanchia', 'Gabtali', 'Kahaloo', 'Nandigram', 'Sariakandi', 'Shajahanpur', 'Sherpur', 'Shibganj', 'Sonatola']
-  },
-  {
-    district: 'Cumilla',
-    thanas: ['Barura', 'Brahmanpara', 'Burichang', 'Chandina', 'Chauddagram', 'Cumilla Adarsha Sadar', 'Cumilla Sadar Dakshin', 'Daudkandi', 'Debidwar', 'Homna', 'Laksam', 'Lalmai', 'Meghna', 'Monohargonj', 'Muradnagar', 'Nangalkot', 'Titas']
+      'Patuakhali Sadar',
+      'Bauphal',
+      'Galachipa',
+      'Kalapara',
+      'Kuakata',
+      'Mirzaganj',
+      'Dumki',
+      'Dashmina',
+      'Rangabali',
+    ],
   },
   {
     district: 'Barishal',
-    thanas: ['Agailjhara', 'Babuganj', 'Bakerganj', 'Banaripara', 'Barishal Sadar', 'Gournadi', 'Hizla', 'Mehendiganj', 'Muladi', 'Wazirpur', 'Kotwali']
+    thanas: [
+      'Barishal Sadar (Kotwali)',
+      'Bakerganj',
+      'Babuganj',
+      'Wazirpur',
+      'Banaripara',
+      'Gournadi',
+      'Agailjhara',
+      'Mehendiganj',
+      'Muladi',
+      'Hizla',
+    ],
   },
   {
-    district: 'Mymensingh',
-    thanas: ['Bhaluka', 'Dhobaura', 'Fulbaria', 'Gafargaon', 'Gauripur', 'Haluaghat', 'Ishwarganj', 'Mymensingh Sadar', 'Muktagachha', 'Nandail', 'Phulpur', 'Tara Khanda']
+    district: 'Bhola',
+    thanas: ['Bhola Sadar', 'Borhanuddin', 'Char Fasson', 'Daulatkhan', 'Lalmohan', 'Monpura', 'Tazumuddin'],
   },
   {
-    district: 'Faridpur',
-    thanas: ['Alfadanga', 'Bhanga', 'Boalmari', 'Charbhadrasan', 'Faridpur Sadar', 'Madhukhali', 'Nagarkanda', 'Sadarpur', 'Saltha']
+    district: 'Barguna',
+    thanas: ['Barguna Sadar', 'Amtali', 'Betagi', 'Bamna', 'Patharghata', 'Taltali'],
   },
   {
-    district: 'Jashore',
-    thanas: ['Abhaynagar', 'Bagherpara', 'Chaugachha', 'Jashore Sadar', 'Jhikargachha', 'Keshabpur', 'Manirampur', 'Sharsha']
+    district: 'Jhalokathi',
+    thanas: ['Jhalokathi Sadar', 'Kathalia', 'Nalchity', 'Rajapur'],
   },
   {
-    district: 'Cox\'s Bazar',
-    thanas: ['Chakaria', 'Cox\'s Bazar Sadar', 'Kutubdia', 'Maheshkhali', 'Pekua', 'Ramu', 'Teknaf', 'Ukhiya']
+    district: 'Pirojpur',
+    thanas: ['Pirojpur Sadar', 'Bhandaria', 'Mathbaria', 'Kawkhali', 'Nazirpur', 'Nesarabad (Swarupkati)', 'Indurkani'],
+  },
+
+  // --- ঢাকা বিভাগ (Dhaka Division) ---
+  {
+    district: 'Dhaka',
+    thanas: [
+      'Dhaka North City',
+      'Dhaka South City',
+      'Dhanmondi',
+      'Mirpur',
+      'Uttara',
+      'Gulshan',
+      'Banani',
+      'Mohammadpur',
+      'Badda',
+      'Motijheel',
+      'Paltan',
+      'Tejgaon',
+      'Jatrabari',
+      'Khilgaon',
+      'Savar',
+      'Dhamrai',
+      'Keraniganj',
+      'Nawabganj',
+      'Dohar',
+    ],
+  },
+  {
+    district: 'Gazipur',
+    thanas: ['Gazipur Sadar', 'Joydebpur', 'Tongi', 'Kaliakair', 'Kapasia', 'Sreepur', 'Kaliganj'],
+  },
+  {
+    district: 'Narayanganj',
+    thanas: ['Narayanganj Sadar', 'Fatullah', 'Siddhirganj', 'Bandar', 'Araihazar', 'Sonargaon', 'Rupganj'],
+  },
+  {
+    district: 'Narsingdi',
+    thanas: ['Narsingdi Sadar', 'Belabo', 'Monohardi', 'Palash', 'Raipura', 'Shibpur'],
   },
   {
     district: 'Tangail',
-    thanas: ['Basail', 'Bhuapur', 'Delduar', 'Dhanbari', 'Ghatail', 'Gopalpur', 'Kalihati', 'Madhupur', 'Mirzapur', 'Nagarpur', 'Sakhipur', 'Tangail Sadar']
+    thanas: [
+      'Tangail Sadar',
+      'Basail',
+      'Bhuapur',
+      'Delduar',
+      'Ghatail',
+      'Gopalpur',
+      'Kalihati',
+      'Madhupur',
+      'Mirzapur',
+      'Nagarpur',
+      'Sakhipur',
+      'Dhanbari',
+    ],
   },
   {
-    district: 'Sirajganj',
-    thanas: ['Belkuchi', 'Chauhali', 'Kamarkhanda', 'Kazipur', 'Raiganj', 'Shahjadpur', 'Sirajganj Sadar', 'Tarash', 'Ullahpara']
+    district: 'Faridpur',
+    thanas: ['Faridpur Sadar', 'Alfadanga', 'Bhangga', 'Boalmari', 'Charbhadrasan', 'Madhukhali', 'Nagarkanda', 'Sadarpur', 'Saltha'],
   },
   {
-    district: 'Pabna',
-    thanas: ['Atgharia', 'Bera', 'Bhangura', 'Chatmohar', 'Faridpur', 'Ishwardi', 'Pabna Sadar', 'Santhia', 'Sujanagar']
-  },
-  {
-    district: 'Brahmanbaria',
-    thanas: ['Akhaura', 'Ashuganj', 'Bancharampur', 'Brahmanbaria Sadar', 'Kasba', 'Nabinagar', 'Nasirnagar', 'Sarail', 'Bijoynagar']
+    district: 'Gopalganj',
+    thanas: ['Gopalganj Sadar', 'Kashiani', 'Kotalipara', 'Muksudpur', 'Tungipara'],
   },
   {
     district: 'Kishoreganj',
-    thanas: ['Austagram', 'Bajitpur', 'Bhairab', 'Hossainpur', 'Itna', 'Karimganj', 'Katiadi', 'Kishoreganj Sadar', 'Kuliarchar', 'Mithamain', 'Nikli', 'Pakundia', 'Tarail']
+    thanas: [
+      'Kishoreganj Sadar',
+      'Bajitpur',
+      'Bhairab',
+      'Hossainpur',
+      'Itna',
+      'Karimganj',
+      'Katiadi',
+      'Kuliarchar',
+      'Mithamain',
+      'Nikli',
+      'Pakundia',
+      'Tarail',
+      'Ashtagram',
+    ],
+  },
+  {
+    district: 'Madaripur',
+    thanas: ['Madaripur Sadar', 'Kalkini', 'Rajoir', 'Shibchar', 'Dasar'],
+  },
+  {
+    district: 'Manikganj',
+    thanas: ['Manikganj Sadar', 'Daulatpur', 'Ghior', 'Harirampur', 'Saturia', 'Shibalaya', 'Singair'],
+  },
+  {
+    district: 'Munshiganj',
+    thanas: ['Munshiganj Sadar', 'Gazaria', 'Lohajang', 'Sirajdikhan', 'Sreenagar', 'Tongibari'],
+  },
+  {
+    district: 'Rajbari',
+    thanas: ['Rajbari Sadar', 'Baliakandi', 'Goalandaghat', 'Pangsha', 'Kalukhali'],
+  },
+  {
+    district: 'Shariatpur',
+    thanas: ['Shariatpur Sadar', 'Bhedarganj', 'Damudya', 'Gosairhat', 'Naria', 'Zajira'],
+  },
+
+  // --- চট্টগ্রাম বিভাগ (Chattogram Division) ---
+  {
+    district: 'Chattogram',
+    thanas: [
+      'Chattogram City',
+      'Agrabad',
+      'Kotwali',
+      'Panchlaish',
+      'Halishahar',
+      'Anwara',
+      'Banshkhali',
+      'Boalkhali',
+      'Chandanaish',
+      'Fatikchhari',
+      'Hathazari',
+      'Lohagara',
+      'Mirsharai',
+      'Patiya',
+      'Rangunia',
+      'Raozan',
+      'Sandwip',
+      'Satkania',
+      'Sitakunda',
+      'Karnafuli',
+    ],
+  },
+  {
+    district: "Cox's Bazar",
+    thanas: ["Cox's Bazar Sadar", 'Chakaria', 'Kutubdia', 'Maheshkhali', 'Ramu', 'Teknaf', 'Ukhia', 'Pekua', 'Eidgaon'],
+  },
+  {
+    district: 'Cumilla',
+    thanas: [
+      'Cumilla Adarsha Sadar',
+      'Cumilla Sadar Dakshin',
+      'Barura',
+      'Brahmanpara',
+      'Burichang',
+      'Chandina',
+      'Chauddagram',
+      'Daudkandi',
+      'Debidwar',
+      'Homna',
+      'Laksam',
+      'Muradnagar',
+      'Meghna',
+      'Monohargonj',
+      'Titas',
+      'Lalmai',
+    ],
   },
   {
     district: 'Feni',
-    thanas: ['Chhagalnaiya', 'Daganbhuiyan', 'Feni Sadar', 'Fulgazi', 'Parshuram', 'Sonagazi']
+    thanas: ['Feni Sadar', 'Chhagalnaiya', 'Daganbhuiyan', 'Parshuram', 'Fulgazi', 'Sonagazi'],
+  },
+  {
+    district: 'Brahmanbaria',
+    thanas: ['Brahmanbaria Sadar', 'Ashuganj', 'Bancharampur', 'Kasba', 'Nabinagar', 'Nasirnagar', 'Sarail', 'Akhaura', 'Bijoynagar'],
+  },
+  {
+    district: 'Chandpur',
+    thanas: ['Chandpur Sadar', 'Faridganj', 'Haimchar', 'Haziganj', 'Kachua', 'Matlab Dakshin', 'Matlab Uttar', 'Shahrasti'],
   },
   {
     district: 'Noakhali',
-    thanas: ['Begumganj', 'Chatkhil', 'Companiganj', 'Hatiya', 'Kabirhat', 'Noakhali Sadar', 'Senbagh', 'Sonaimuri', 'Subarnachar']
+    thanas: ['Noakhali Sadar (Sudharam)', 'Begumganj', 'Chatkhil', 'Companiganj', 'Hatiya', 'Senbagh', 'Sonaimuri', 'Subarnachar', 'Kabirhat'],
   },
   {
-    district: 'Dinajpur',
-    thanas: ['Birampur', 'Birganj', 'Biral', 'Bochaganj', 'Chirirbandar', 'Phulbari', 'Ghoraghat', 'Hakimpur', 'Kaharole', 'Khansama', 'Dinajpur Sadar', 'Nawabganj', 'Parbatipur']
+    district: 'Lakshmipur',
+    thanas: ['Lakshmipur Sadar', 'Raipur', 'Ramganj', 'Ramgati', 'Kamalnagar'],
   },
   {
-    district: 'Rangpur',
-    thanas: ['Badarganj', 'Gangachhara', 'Kaunia', 'Rangpur Sadar', 'Mithapukur', 'Pirgachha', 'Pirganj', 'Taraganj']
+    district: 'Bandarban',
+    thanas: ['Bandarban Sadar', 'Ali Kadam', 'Naikhongchhari', 'Rowangchhari', 'Ruma', 'Thanchi', 'Lama'],
+  },
+  {
+    district: 'Khagrachhari',
+    thanas: ['Khagrachhari Sadar', 'Dighinala', 'Lakshmichhari', 'Mahalchhari', 'Manikchhari', 'Matiranga', 'Panchhari', 'Ramgarh', 'Guimara'],
+  },
+  {
+    district: 'Rangamati',
+    thanas: ['Rangamati Sadar', 'Baghaichhari', 'Barkal', 'Belaichhari', 'Juraichhari', 'Kaptai', 'Kawkhali', 'Langadu', 'Naniarchar', 'Rajasthali'],
+  },
+
+  // --- খুলনা বিভাগ (Khulna Division) ---
+  {
+    district: 'Khulna',
+    thanas: ['Khulna Sadar', 'Sonadanga', 'Khalishpur', 'Daulatpur', 'Batiaghata', 'Dacope', 'Dumuria', 'Dighalia', 'Koyra', 'Paikgachha', 'Phultala', 'Rupsha', 'Terokhada'],
+  },
+  {
+    district: 'Jashore',
+    thanas: ['Jashore Sadar', 'Abhaynagar', 'Bagherpara', 'Chaugachha', 'Jhikargachha', 'Keshabpur', 'Manirampur', 'Sharsha (Benapole)'],
+  },
+  {
+    district: 'Bagerhat',
+    thanas: ['Bagerhat Sadar', 'Chitalmari', 'Fakirhat', 'Kachua', 'Mollahat', 'Mongla', 'Morrelganj', 'Rampal', 'Sarankhola'],
+  },
+  {
+    district: 'Satkhira',
+    thanas: ['Satkhira Sadar', 'Assasuni', 'Debhata', 'Kalaroa', 'Kaliganj', 'Shyamnagar', 'Tala'],
   },
   {
     district: 'Kushtia',
-    thanas: ['Bheramara', 'Daulatpur', 'Khoksa', 'Kumarkhali', 'Kushtia Sadar', 'Mirpur']
-  }
+    thanas: ['Kushtia Sadar', 'Bheramara', 'Daulatpur', 'Khoksa', 'Kumarkhali', 'Mirpur'],
+  },
+  {
+    district: 'Jhenaidah',
+    thanas: ['Jhenaidah Sadar', 'Harinakunda', 'Kaliganj', 'Kotchandpur', 'Maheshpur', 'Shailkupa'],
+  },
+  {
+    district: 'Chuadanga',
+    thanas: ['Chuadanga Sadar', 'Alamdanga', 'Damurhuda', 'Jibannagar'],
+  },
+  {
+    district: 'Magura',
+    thanas: ['Magura Sadar', 'Mohammadpur', 'Shalikha', 'Sreepur'],
+  },
+  {
+    district: 'Meherpur',
+    thanas: ['Meherpur Sadar', 'Gangni', 'Mujibnagar'],
+  },
+  {
+    district: 'Narail',
+    thanas: ['Narail Sadar', 'Kalia', 'Lohagara'],
+  },
+
+  // --- রাজশাহী বিভাগ (Rajshahi Division) ---
+  {
+    district: 'Rajshahi',
+    thanas: ['Rajshahi Sadar (Boalia)', 'Motihar', 'Rajpara', 'Shah Makhdum', 'Bagha', 'Bagmara', 'Charghat', 'Durgapur', 'Godagari', 'Mohanpur', 'Paba', 'Puthia', 'Tanore'],
+  },
+  {
+    district: 'Bogura',
+    thanas: ['Bogura Sadar', 'Adamdighi', 'Dhunat', 'Dhupchanchia', 'Gabtali', 'Kahaloo', 'Nandigram', 'Sariakandi', 'Shajahanpur', 'Sherpur', 'Shibganj', 'Sonatola'],
+  },
+  {
+    district: 'Pabna',
+    thanas: ['Pabna Sadar', 'Atgharia', 'Bera', 'Bhangura', 'Chatmohar', 'Faridpur', 'Ishwardi', 'Santhia', 'Sujanagar'],
+  },
+  {
+    district: 'Sirajganj',
+    thanas: ['Sirajganj Sadar', 'Belkuchi', 'Chauhali', 'Kamarkhanda', 'Kazipur', 'Raiganj', 'Shahjadpur', 'Tarash', 'Ullapara'],
+  },
+  {
+    district: 'Naogaon',
+    thanas: ['Naogaon Sadar', 'Atrai', 'Badalgachhi', 'Dhamoirhat', 'Manda', 'Mohadevpur', 'Niamatpur', 'Patnitala', 'Porsha', 'Raninagar', 'Sapahar'],
+  },
+  {
+    district: 'Natore',
+    thanas: ['Natore Sadar', 'Bagatipara', 'Baraigram', 'Gurudaspur', 'Lalpur', 'Singra', 'Naldanga'],
+  },
+  {
+    district: 'Chapai Nawabganj',
+    thanas: ['Chapai Nawabganj Sadar', 'Bholahat', 'Gomastapur', 'Nachole', 'Shibganj'],
+  },
+  {
+    district: 'Joypurhat',
+    thanas: ['Joypurhat Sadar', 'Akkelpur', 'Kalai', 'Khetlal', 'Panchbibi'],
+  },
+
+  // --- রংপুর বিভাগ (Rangpur Division) ---
+  {
+    district: 'Rangpur',
+    thanas: ['Rangpur Sadar', 'Badarganj', 'Gangachhara', 'Kaunia', 'Mithapukur', 'Pirgachha', 'Pirganj', 'Taraganj'],
+  },
+  {
+    district: 'Dinajpur',
+    thanas: ['Dinajpur Sadar', 'Birampur', 'Birganj', 'Biral', 'Bochaganj', 'Chirirbandar', 'Phulbari', 'Ghoraghat', 'Hakimpur', 'Kaharole', 'Khansama', 'Nawabganj', 'Parbatipur'],
+  },
+  {
+    district: 'Gaibandha',
+    thanas: ['Gaibandha Sadar', 'Fulchhari', 'Gobindaganj', 'Palashbari', 'Sadullapur', 'Saghata', 'Sundarganj'],
+  },
+  {
+    district: 'Kurigram',
+    thanas: ['Kurigram Sadar', 'Bhurungamari', 'Char Rajibpur', 'Chilmari', 'Phulbari', 'Nageshwari', 'Rajarhat', 'Raomari', 'Ulipur'],
+  },
+  {
+    district: 'Lalmonirhat',
+    thanas: ['Lalmonirhat Sadar', 'Aditmari', 'Kaliganj', 'Hatibandha', 'Patgram'],
+  },
+  {
+    district: 'Nilphamari',
+    thanas: ['Nilphamari Sadar', 'Dimla', 'Domar', 'Jaldhaka', 'Kishoreganj', 'Syedpur'],
+  },
+  {
+    district: 'Panchagarh',
+    thanas: ['Panchagarh Sadar', 'Atwari', 'Boda', 'Debiganj', 'Tetulia'],
+  },
+  {
+    district: 'Thakurgaon',
+    thanas: ['Thakurgaon Sadar', 'Baliadangi', 'Haripur', 'Pirganj', 'Ranisankail'],
+  },
+
+  // --- সিলেট বিভাগ (Sylhet Division) ---
+  {
+    district: 'Sylhet',
+    thanas: ['Sylhet Sadar', 'Beanibazar', 'Bishwanath', 'Companiganj', 'Fenchuganj', 'Golapganj', 'Gowainghat', 'Jaintiapur', 'Kanaighat', 'Zakiganj', 'South Surma', 'Osmani Nagar'],
+  },
+  {
+    district: 'Habiganj',
+    thanas: ['Habiganj Sadar', 'Ajmiriganj', 'Bahubal', 'Baniyachong', 'Chunarughat', 'Lakhai', 'Madhabpur', 'Nabiganj', 'Shayestaganj'],
+  },
+  {
+    district: 'Moulvibazar',
+    thanas: ['Moulvibazar Sadar', 'Barlekha', 'Kamalganj', 'Kulaura', 'Rajnagar', 'Sreemangal', 'Juri'],
+  },
+  {
+    district: 'Sunamganj',
+    thanas: ['Sunamganj Sadar', 'Bishwamvarpur', 'Chhatak', 'Derai', 'Dharampasha', 'Dowarabazar', 'Jagannathpur', 'Jamalganj', 'Sullah', 'Tahirpur', 'Dakshin Sunamganj (Shantiganj)', 'Madhyanagar'],
+  },
+
+  // --- ময়মনসিংহ বিভাগ (Mymensingh Division) ---
+  {
+    district: 'Mymensingh',
+    thanas: ['Mymensingh Sadar (Kotwali)', 'Bhaluka', 'Dhobaura', 'Fulbaria', 'Gafargaon', 'Gauripur', 'Haluaghat', 'Ishwarganj', 'Muktagachha', 'Nandail', 'Phulpur', 'Trishal', 'Tara Khanda'],
+  },
+  {
+    district: 'Jamalpur',
+    thanas: ['Jamalpur Sadar', 'Baksiganj', 'Dewanganj', 'Islampur', 'Madarganj', 'Melandaha', 'Sarishabari'],
+  },
+  {
+    district: 'Netrokona',
+    thanas: ['Netrokona Sadar', 'Atpara', 'Barhatta', 'Durgapur', 'Kalmakanda', 'Kendua', 'Madan', 'Mohanganj', 'Purbadhala', 'Khaliajuri'],
+  },
+  {
+    district: 'Sherpur',
+    thanas: ['Sherpur Sadar', 'Jhenaigati', 'Nakla', 'Nalitabari', 'Sreebardi'],
+  },
 ];
