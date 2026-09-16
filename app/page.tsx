@@ -29,7 +29,6 @@ import {
   LogOut,
   Save,
   PlusCircle,
-  X,
 } from 'lucide-react';
 
 interface Order {
@@ -53,6 +52,7 @@ interface Order {
   trackingCode?: string;
   consignmentId?: number | string;
   courierStatus?: string;
+  isNewRow?: boolean;
 }
 
 const STAFF_MEMBERS = ['Awlad Hossain', 'Emdadullah Sakib', 'Omar Faruque'];
@@ -73,6 +73,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<string>('Admin');
   const [orders, setOrders] = useState<Order[]>([]);
+  const [initialOrders, setInitialOrders] = useState<Record<string, Order>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedStore, setSelectedStore] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -82,21 +83,6 @@ export default function Dashboard() {
   const [trackingId, setTrackingId] = useState<number | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
-
-  // ম্যানুয়াল অর্ডার ক্রিয়েশন স্টেট
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [creatingOrder, setCreatingOrder] = useState(false);
-  const [newOrder, setNewOrder] = useState({
-    storeId: 'store1',
-    customerName: '',
-    phone: '',
-    streetAddress: '',
-    district: 'Patuakhali',
-    thana: '',
-    items: '',
-    size: 'XL',
-    total: '',
-  });
 
   const sendActivityLog = async (logText: string) => {
     try {
@@ -136,8 +122,15 @@ export default function Dashboard() {
           customNote: '',
           staffName: o.staffName || '',
           courierStatus: o.courierStatus || '',
+          isNewRow: false,
         }));
         setOrders(mappedOrders);
+
+        const snapshot: Record<string, Order> = {};
+        mappedOrders.forEach((item) => {
+          snapshot[`${item.storeId}-${item.id}`] = JSON.parse(JSON.stringify(item));
+        });
+        setInitialOrders(snapshot);
       } else {
         setOrders([]);
       }
@@ -163,6 +156,34 @@ export default function Dashboard() {
     }
   };
 
+  // খালি রো যোগ করা (In-Line Blank Row)
+  const handleAddNewBlankRow = () => {
+    const tempId = -Date.now();
+    const blankOrder: Order = {
+      id: tempId,
+      storeId: 'store1',
+      storeName: 'Ruhama Wear',
+      invoice: 'NEW',
+      customerName: '',
+      phone: '',
+      streetAddress: '',
+      district: 'Patuakhali',
+      thana: 'Patuakhali Sadar',
+      size: 'XL',
+      customNote: '',
+      total: '',
+      status: 'processing',
+      dateCreated: new Date().toISOString(),
+      items: '',
+      staffName: currentUser,
+      callDone: false,
+      isNewRow: true,
+    };
+
+    setOrders((prev) => [blankOrder, ...prev]);
+    setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
+  };
+
   const phoneOrderData = useMemo(() => {
     const data: Record<string, { count: number; recentOrders: Order[] }> = {};
     const now = new Date().getTime();
@@ -186,6 +207,10 @@ export default function Dashboard() {
       prev.map((order) => {
         if (order.id === orderId && order.storeId === storeId) {
           if (field === 'district') return { ...order, district: value, thana: '' };
+          if (field === 'storeId') {
+            const sName = value === 'store2' ? 'Aastha Naturals' : 'Ruhama Wear';
+            return { ...order, storeId: value, storeName: sName };
+          }
           return { ...order, [field]: value };
         }
         return order;
@@ -193,13 +218,40 @@ export default function Dashboard() {
     );
   };
 
-  // সম্পূর্ণ অর্ডার সেভ ও টেলিগ্রামে একক চূড়ান্ত মেসেজ প্রেরণ
+  // সম্পূর্ণ অর্ডার সেভ ও কনফার্ম
   const handleSaveOrder = async (order: Order, overrideStatus?: string) => {
-    setUpdatingId(order.id);
-    setMessage(null);
+    if (!order.customerName.trim() || !order.phone.trim()) {
+      setMessage({ text: 'অনুগ্রহ করে কাস্টমারের নাম এবং ফোন নম্বর লিখুন।', type: 'error' });
+      return;
+    }
 
     const newStatus = overrideStatus || order.status;
     const assignedStaff = order.staffName || currentUser;
+    const key = `${order.storeId}-${order.id}`;
+    const prev = initialOrders[key];
+
+    // ডাটা পরিবর্তন চেক (শুধু পরিবর্তন হলেই সেভ/মেসেজ হবে)
+    if (!order.isNewRow && prev) {
+      const isChanged =
+        prev.customerName !== order.customerName ||
+        prev.phone !== order.phone ||
+        prev.streetAddress !== order.streetAddress ||
+        prev.district !== order.district ||
+        prev.thana !== order.thana ||
+        prev.size !== order.size ||
+        prev.total !== order.total ||
+        prev.items !== order.items ||
+        prev.status !== newStatus ||
+        prev.staffName !== assignedStaff;
+
+      if (!isChanged && !overrideStatus) {
+        setMessage({ text: `Order #${order.invoice}-এ কোনো তথ্য পরিবর্তন করা হয়নি।`, type: 'success' });
+        return;
+      }
+    }
+
+    setUpdatingId(order.id);
+    setMessage(null);
 
     try {
       const res = await fetch('/api/orders/update', {
@@ -207,7 +259,7 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId: order.storeId,
-          orderId: order.id,
+          orderId: order.isNewRow ? 0 : order.id,
           status: newStatus,
           staffName: assignedStaff,
           customerName: order.customerName,
@@ -217,37 +269,49 @@ export default function Dashboard() {
           thana: order.thana,
           size: order.size,
           items: order.items,
-          total: order.total,
+          total: order.total || '0',
         }),
       });
 
       const result = await res.json();
 
       if (res.ok) {
-        setOrders((prev) =>
-          prev.map((o) =>
-            o.id === order.id && o.storeId === order.storeId
-              ? { ...o, status: newStatus, staffName: assignedStaff }
-              : o
-          )
+        const returnedId = result.order?.id || order.id;
+        const finalInvoice = String(returnedId);
+
+        const updatedOrder: Order = {
+          ...order,
+          id: returnedId,
+          invoice: finalInvoice,
+          status: newStatus,
+          staffName: assignedStaff,
+          isNewRow: false,
+        };
+
+        setOrders((prevOrders) =>
+          prevOrders.map((o) => (o.id === order.id ? updatedOrder : o))
         );
+
+        setInitialOrders((prevInit) => ({
+          ...prevInit,
+          [`${order.storeId}-${returnedId}`]: JSON.parse(JSON.stringify(updatedOrder)),
+        }));
+
         setMessage({
-          text: `Order #${order.invoice} সফলভাবে সেভ ও কনফার্ম করা হয়েছে!`,
+          text: `Order #${finalInvoice} সফলভাবে WooCommerce-এ সেভ করা হয়েছে!`,
           type: 'success',
         });
 
-        // শুধুমাত্র ফাইনাল সেভ/কনফার্মের সময় একক চূড়ান্ত মেসেজ
-        const logMsg = `✅ <b>অর্ডার কনফার্ম ও ডাটাবেসে সেভ করা হয়েছে</b>\n` +
+        const logMsg = `✅ <b>${order.isNewRow ? 'নতুন অর্ডার তৈরি ও কনফার্ম' : 'অর্ডার আপডেট ও সেভ'}</b>\n` +
           `━━━━━━━━━━━━━━━━━━━\n` +
           `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
-          `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
+          `📦 <b>ইনভয়েস:</b> #${finalInvoice}\n` +
           `👤 <b>কাস্টমার:</b> ${order.customerName} (<code>${order.phone}</code>)\n` +
           `📍 <b>ঠিকানা:</b> ${order.streetAddress || ''}, ${order.thana ? `${order.thana}, ` : ''}${order.district || ''}\n` +
-          `👕 <b>আইটেম/সাইজ:</b> ${order.items} ${order.size ? `[সাইজ: ${order.size}]` : ''}\n` +
-          `💵 <b>টাকা:</b> ৳${order.total}\n` +
+          `👕 <b>আইটেম/সাইজ:</b> ${order.items || 'N/A'} ${order.size ? `[সাইজ: ${order.size}]` : ''}\n` +
+          `💵 <b>টাকা:</b> ৳${order.total || '0'}\n` +
           `📌 <b>স্ট্যাটাস:</b> <code>${newStatus.toUpperCase()}</code>\n` +
-          `📞 <b>কল স্ট্যাটাস:</b> ${order.callDone ? 'সম্পন্ন হয়েছে' : 'বাকি আছে'}\n` +
-          `👨‍💼 <b>কনফার্ম করেছেন:</b> ${currentUser} ${assignedStaff !== currentUser ? `(অ্যাসাইন্ড: ${assignedStaff})` : ''}`;
+          `👨‍💼 <b>কনফার্ম করেছেন:</b> ${currentUser}`;
         sendActivityLog(logMsg);
       } else {
         setMessage({ text: result.error || 'সেভ করতে সমস্যা হয়েছে', type: 'error' });
@@ -259,59 +323,12 @@ export default function Dashboard() {
     }
   };
 
-  const handleCreateManualOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreatingOrder(true);
-    setMessage(null);
-
-    try {
-      const res = await fetch('/api/orders/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...newOrder,
-          staffName: currentUser,
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        setMessage({ text: 'নতুন ম্যানুয়াল অর্ডার সফলভাবে তৈরি হয়েছে!', type: 'success' });
-        setIsModalOpen(false);
-        setNewOrder({
-          storeId: 'store1',
-          customerName: '',
-          phone: '',
-          streetAddress: '',
-          district: 'Patuakhali',
-          thana: '',
-          items: '',
-          size: 'XL',
-          total: '',
-        });
-
-        // সাথে সাথে লাইভ রিফ্রেশ
-        await fetchOrders();
-
-        const logMsg = `🆕 <b>নতুন ম্যানুয়াল অর্ডার যোগ করা হয়েছে</b>\n` +
-          `━━━━━━━━━━━━━━━━━━━\n` +
-          `🏪 <b>স্টোর:</b> ${newOrder.storeId === 'store1' ? 'Ruhama Wear' : 'Aastha Naturals BD'}\n` +
-          `👤 <b>কাস্টমার:</b> ${newOrder.customerName} (<code>${newOrder.phone}</code>)\n` +
-          `📍 <b>ঠিকানা:</b> ${newOrder.streetAddress}, ${newOrder.thana}, ${newOrder.district}\n` +
-          `💵 <b>টোটাল COD:</b> ৳${newOrder.total} | <b>সাইজ:</b> ${newOrder.size}\n` +
-          `👨‍💼 <b>যুক্ত করেছেন:</b> ${currentUser}`;
-        sendActivityLog(logMsg);
-      } else {
-        setMessage({ text: data.error || 'অর্ডার তৈরি করতে ব্যর্থ হয়েছে', type: 'error' });
-      }
-    } catch (err: any) {
-      setMessage({ text: err.message || 'Network error', type: 'error' });
-    } finally {
-      setCreatingOrder(false);
-    }
-  };
-
   const handleDeleteOrder = async (order: Order) => {
+    if (order.isNewRow) {
+      setOrders((prev) => prev.filter((o) => o.id !== order.id));
+      return;
+    }
+
     if (!confirm(`⚠️ সতর্কবার্তা! আপনি কি Order #${order.invoice} স্থায়ীভাবে মুছে ফেলতে চান?`)) return;
 
     setUpdatingId(order.id);
@@ -352,6 +369,11 @@ export default function Dashboard() {
   };
 
   const handleSendToSteadfast = async (order: Order) => {
+    if (order.isNewRow) {
+      alert('অনুগ্রহ করে আগে তথ্য সেভ (Save) করুন, এরপর কুরিয়ারে পাঠান।');
+      return;
+    }
+
     if (!confirm(`আপনি কি অর্ডার #${order.invoice} স্টেডফাস্ট কুরিয়ারে পাঠাতে চান?`)) return;
 
     setSendingId(order.id);
@@ -476,6 +498,7 @@ export default function Dashboard() {
   };
 
   const filteredOrders = orders.filter((order) => {
+    if (order.isNewRow) return true; // নতুন খালি রো সবসময় দেখাবে
     const matchesStore = selectedStore === 'all' || order.storeName.toLowerCase().includes(selectedStore.toLowerCase());
     const matchesStatus = selectedStatus === 'all' || order.status.toLowerCase() === selectedStatus.toLowerCase();
     const matchesSearch =
@@ -517,9 +540,6 @@ export default function Dashboard() {
     return 'bg-slate-200 text-slate-800 border-slate-400';
   };
 
-  const activeDistrictObj = BANGLADESH_DISTRICTS.find((d) => d.district === newOrder.district);
-  const activeNewThanas = activeDistrictObj ? activeDistrictObj.thanas : [];
-
   return (
     <div className="min-h-screen bg-slate-200/70 text-slate-900 p-4 md:p-6">
       <div className="max-w-[1950px] mx-auto">
@@ -557,11 +577,12 @@ export default function Dashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {/* ইন-লাইন ব্ল্যাঙ্ক রো বাটন */}
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={handleAddNewBlankRow}
               className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-black text-sm shadow-md transition active:scale-95 cursor-pointer"
             >
-              <PlusCircle className="w-5 h-5" /> + নতুন অর্ডার তৈরি করুন
+              <PlusCircle className="w-5 h-5" /> + নতুন অর্ডার যোগ করুন
             </button>
 
             <div className="flex items-center gap-2 bg-slate-100 border-2 border-slate-300 px-3.5 py-2 rounded-xl shadow-2xs">
@@ -589,165 +610,6 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
-
-        {/* Modal: New Manual Order */}
-        {isModalOpen && (
-          <div className="fixed inset-0 bg-slate-950/70 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
-            <div className="bg-white border-2 border-slate-400 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-150">
-              <div className="bg-slate-950 text-white p-4 px-6 flex justify-between items-center">
-                <h3 className="font-black text-lg flex items-center gap-2">
-                  <PlusCircle className="w-5 h-5 text-emerald-400" /> নতুন ম্যানুয়াল অর্ডার তৈরি (Add Parcel)
-                </h3>
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="text-slate-400 hover:text-white transition p-1"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              <form onSubmit={handleCreateManualOrder} className="p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-black text-slate-800 block mb-1">স্টোর নির্বাচন করুন *</label>
-                    <select
-                      value={newOrder.storeId}
-                      onChange={(e) => setNewOrder({ ...newOrder, storeId: e.target.value })}
-                      className="w-full text-xs font-bold border-2 border-slate-300 rounded-xl p-2.5 bg-white focus:border-slate-950"
-                    >
-                      <option value="store1">Ruhama Wear (ruhamawear.com)</option>
-                      <option value="store2">Aastha Naturals BD (aasthanaturalsbd.com)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-black text-slate-800 block mb-1">কাস্টমারের নাম *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="পুরো নাম লিখুন"
-                      value={newOrder.customerName}
-                      onChange={(e) => setNewOrder({ ...newOrder, customerName: e.target.value })}
-                      className="w-full text-xs font-bold border-2 border-slate-300 rounded-xl p-2.5 bg-white focus:border-slate-950"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-black text-slate-800 block mb-1">মোবাইল নম্বর *</label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="01XXXXXXXXX"
-                      value={newOrder.phone}
-                      onChange={(e) => setNewOrder({ ...newOrder, phone: e.target.value })}
-                      className="w-full text-xs font-bold border-2 border-slate-300 rounded-xl p-2.5 bg-white focus:border-slate-950"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-black text-slate-800 block mb-1">টোটাল COD অ্যামাউন্ট (৳) *</label>
-                    <input
-                      type="number"
-                      required
-                      placeholder="যেমন: 1250"
-                      value={newOrder.total}
-                      onChange={(e) => setNewOrder({ ...newOrder, total: e.target.value })}
-                      className="w-full text-xs font-black border-2 border-slate-300 rounded-xl p-2.5 bg-white text-emerald-800 focus:border-slate-950"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-black text-slate-800 block mb-1">বিস্তারিত ঠিকানা *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="রোড, বাড়ি, এলাকা..."
-                    value={newOrder.streetAddress}
-                    onChange={(e) => setNewOrder({ ...newOrder, streetAddress: e.target.value })}
-                    className="w-full text-xs font-bold border-2 border-slate-300 rounded-xl p-2.5 bg-white focus:border-slate-950"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-black text-slate-800 block mb-1">জেলা (District) *</label>
-                    <select
-                      value={newOrder.district}
-                      onChange={(e) => setNewOrder({ ...newOrder, district: e.target.value, thana: '' })}
-                      className="w-full text-xs font-black border-2 border-slate-300 rounded-xl p-2.5 bg-white focus:border-slate-950"
-                    >
-                      {BANGLADESH_DISTRICTS.map((d) => (
-                        <option key={d.district} value={d.district}>
-                          {d.district}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-black text-slate-800 block mb-1">থানা / উপজেলা *</label>
-                    <select
-                      value={newOrder.thana}
-                      onChange={(e) => setNewOrder({ ...newOrder, thana: e.target.value })}
-                      className="w-full text-xs font-black border-2 border-slate-300 rounded-xl p-2.5 bg-white focus:border-slate-950"
-                    >
-                      <option value="">থানা নির্বাচন করুন</option>
-                      {activeNewThanas.map((th) => (
-                        <option key={th} value={th}>
-                          {th}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="col-span-2">
-                    <label className="text-xs font-black text-slate-800 block mb-1">প্রোডাক্টের বিবরণ</label>
-                    <input
-                      type="text"
-                      placeholder="যেমন: প্রিমিয়াম পায়জামা ২ পিস"
-                      value={newOrder.items}
-                      onChange={(e) => setNewOrder({ ...newOrder, items: e.target.value })}
-                      className="w-full text-xs font-bold border-2 border-slate-300 rounded-xl p-2.5 bg-white focus:border-slate-950"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-black text-slate-800 block mb-1">সাইজ</label>
-                    <input
-                      type="text"
-                      placeholder="XL, L, M..."
-                      value={newOrder.size}
-                      onChange={(e) => setNewOrder({ ...newOrder, size: e.target.value.toUpperCase() })}
-                      className="w-full text-xs font-black uppercase text-center border-2 border-slate-300 rounded-xl p-2.5 bg-white focus:border-slate-950"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-4 flex justify-end gap-3 border-t border-slate-200">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-5 py-2.5 rounded-xl text-xs font-black border-2 border-slate-300 hover:bg-slate-100 transition cursor-pointer"
-                  >
-                    বাতিল
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={creatingOrder}
-                    className="px-6 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-md transition cursor-pointer disabled:opacity-50"
-                  >
-                    {creatingOrder ? 'অর্ডার তৈরি হচ্ছে...' : 'অর্ডার সংরক্ষণ ও তৈরি করুন'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
 
         {/* Alerts */}
         {message && (
@@ -831,7 +693,7 @@ export default function Dashboard() {
                 <thead>
                   <tr className="bg-slate-950 text-white text-xs uppercase font-black tracking-widest">
                     <th className="p-4 w-36 border-r-2 border-slate-800">Store / Invoice</th>
-                    <th className="p-4 w-44 border-r-2 border-slate-800">Customer Name</th>
+                    <th className="p-4 w-56 border-r-2 border-slate-800">Customer Name (নাম)</th>
                     <th className="p-4 w-32 border-r-2 border-slate-800">Date & Time</th>
                     <th className="p-4 w-80 border-r-2 border-slate-800">Phone, Staff & Call</th>
                     <th className="p-4 w-[430px] border-r-2 border-slate-800">Address & District/Thana</th>
@@ -851,7 +713,9 @@ export default function Dashboard() {
                     const availableThanas = selectedDistrictObj ? selectedDistrictObj.thanas : [];
 
                     const isEven = index % 2 === 0;
-                    const rowBgClass = isRecent
+                    const rowBgClass = order.isNewRow
+                      ? 'bg-emerald-50 border-2 border-emerald-500 animate-in fade-in duration-200'
+                      : isRecent
                       ? 'bg-rose-100/90 hover:bg-rose-200'
                       : isDuplicate
                       ? 'bg-amber-100/90 hover:bg-amber-200'
@@ -866,22 +730,42 @@ export default function Dashboard() {
                       >
                         {/* Store & Invoice */}
                         <td className="p-3.5 align-top font-black border-r-2 border-slate-300">
-                          <span className="text-xs text-slate-950 bg-white border-2 border-slate-400 font-black px-2.5 py-1 rounded-md block w-fit mb-1.5 shadow-sm">
-                            {order.storeName}
-                          </span>
+                          {order.isNewRow ? (
+                            <select
+                              value={order.storeId}
+                              onChange={(e) => handleFieldChange(order.id, order.storeId, 'storeId', e.target.value)}
+                              className="text-xs text-slate-950 bg-emerald-100 border-2 border-emerald-500 font-black px-2 py-1.5 rounded-lg block w-full mb-1.5 shadow-sm cursor-pointer"
+                            >
+                              <option value="store1">Ruhama Wear</option>
+                              <option value="store2">Aastha Naturals</option>
+                            </select>
+                          ) : (
+                            <span className="text-xs text-slate-950 bg-white border-2 border-slate-400 font-black px-2.5 py-1 rounded-md block w-fit mb-1.5 shadow-sm">
+                              {order.storeName}
+                            </span>
+                          )}
+
                           <span className="font-mono text-xs font-black text-slate-900 bg-slate-300/80 px-2 py-0.5 rounded border border-slate-400 inline-block">
-                            {order.invoice}
+                            {order.isNewRow ? '🆕 NEW' : `#${order.invoice}`}
                           </span>
                         </td>
 
-                        {/* Customer Name */}
-                        <td className="p-3.5 align-top border-r-2 border-slate-300">
-                          <input
-                            type="text"
+                        {/* Customer Name: বড় ফন্ট ও সম্পূর্ণ এডিটেবল টেক্সট-এরিয়া */}
+                        <td className="p-3.5 align-top border-r-2 border-slate-300 group relative">
+                          <textarea
+                            rows={3}
                             value={order.customerName}
                             onChange={(e) => handleFieldChange(order.id, order.storeId, 'customerName', e.target.value)}
-                            className="w-full font-black text-slate-950 border-2 border-slate-300 focus:border-slate-900 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-slate-900 transition shadow-sm"
+                            placeholder="কাস্টমারের পুরো নাম..."
+                            className="w-full font-black text-base text-slate-950 border-2 border-slate-300 focus:border-slate-950 rounded-xl p-2.5 bg-white focus:ring-2 focus:ring-slate-900 transition shadow-sm resize-y leading-tight tracking-wide placeholder:text-slate-400 placeholder:text-xs"
                           />
+                          {/* Hover Tooltip */}
+                          {order.customerName && (
+                            <div className="pointer-events-none absolute left-2 top-full z-30 hidden w-64 rounded-lg bg-slate-950 p-2.5 text-xs font-bold text-white shadow-xl group-hover:block border border-slate-700">
+                              <span className="text-[10px] text-amber-400 uppercase block mb-0.5">পুরো নাম:</span>
+                              {order.customerName}
+                            </div>
+                          )}
                         </td>
 
                         {/* Date */}
@@ -894,11 +778,12 @@ export default function Dashboard() {
 
                         {/* Phone, Staff & Call */}
                         <td className="p-3.5 align-top space-y-2 border-r-2 border-slate-300">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 group relative">
                             <Phone className="w-4 h-4 text-slate-600 shrink-0" />
                             <input
                               type="text"
                               value={order.phone}
+                              placeholder="01XXXXXXXXX"
                               onChange={(e) => handleFieldChange(order.id, order.storeId, 'phone', e.target.value)}
                               className={`w-full text-xs font-mono font-black border-2 rounded-lg px-2.5 py-1.5 bg-white shadow-sm ${
                                 isRecent
@@ -908,6 +793,12 @@ export default function Dashboard() {
                                   : 'border-slate-300 text-slate-950'
                               }`}
                             />
+                            {/* Phone Tooltip */}
+                            {order.phone && (
+                              <div className="pointer-events-none absolute left-6 top-full z-30 hidden rounded-md bg-slate-950 px-2 py-1 text-xs font-mono font-bold text-white shadow-lg group-hover:block">
+                                {order.phone}
+                              </div>
+                            )}
                           </div>
 
                           {isRecent ? (
@@ -939,7 +830,6 @@ export default function Dashboard() {
                               </select>
                             </div>
 
-                            {/* কল অ্যাকশন: শুধু ইউআই আপডেট হবে, টেলিগ্রামে স্প্যাম করবে না */}
                             <button
                               onClick={() => {
                                 const newCallState = !order.callDone;
@@ -962,15 +852,22 @@ export default function Dashboard() {
 
                         {/* Address, District & Thana */}
                         <td className="p-3.5 align-top space-y-2 border-r-2 border-slate-300">
-                          <div className="flex items-start gap-1.5">
+                          <div className="flex items-start gap-1.5 group relative">
                             <MapPin className="w-4 h-4 text-slate-600 mt-1 shrink-0" />
                             <textarea
                               rows={2}
                               value={order.streetAddress}
                               onChange={(e) => handleFieldChange(order.id, order.storeId, 'streetAddress', e.target.value)}
                               placeholder="বিস্তারিত ঠিকানা..."
-                              className="w-full text-xs font-bold text-slate-900 border-2 border-slate-300 rounded-lg px-2.5 py-1.5 bg-white resize-none shadow-sm focus:border-slate-900"
+                              className="w-full text-xs font-bold text-slate-900 border-2 border-slate-300 rounded-lg px-2.5 py-1.5 bg-white resize-y shadow-sm focus:border-slate-900 leading-snug"
                             />
+                            {/* Address Tooltip */}
+                            {order.streetAddress && (
+                              <div className="pointer-events-none absolute left-6 top-full z-30 hidden w-80 rounded-lg bg-slate-950 p-2.5 text-xs font-bold text-white shadow-xl group-hover:block border border-slate-700">
+                                <span className="text-[10px] text-amber-400 uppercase block mb-0.5">সম্পূর্ণ ঠিকানা:</span>
+                                {order.streetAddress}
+                              </div>
+                            )}
                           </div>
 
                           <div className="grid grid-cols-2 gap-2">
@@ -1011,25 +908,35 @@ export default function Dashboard() {
 
                         {/* Items, COD & Size */}
                         <td className="p-3.5 align-top space-y-2 border-r-2 border-slate-300">
-                          <div className="flex items-start gap-1.5">
+                          <div className="flex items-start gap-1.5 group relative">
                             <Edit3 className="w-4 h-4 text-slate-600 mt-1 shrink-0" />
                             <textarea
                               rows={2}
                               value={order.items}
                               onChange={(e) => handleFieldChange(order.id, order.storeId, 'items', e.target.value)}
-                              placeholder="Items"
-                              className="w-full text-xs font-bold text-slate-900 border-2 border-slate-300 rounded-lg px-2.5 py-1.5 bg-white resize-none shadow-sm"
+                              placeholder="আইটেমের নাম ও বিবরণ..."
+                              className="w-full text-xs font-bold text-slate-900 border-2 border-slate-300 rounded-lg px-2.5 py-1.5 bg-white resize-y shadow-sm leading-snug"
                             />
+                            {/* Items Tooltip */}
+                            {order.items && (
+                              <div className="pointer-events-none absolute left-6 top-full z-30 hidden w-64 rounded-lg bg-slate-950 p-2 text-xs font-bold text-white shadow-xl group-hover:block border border-slate-700">
+                                <span className="text-[10px] text-amber-400 uppercase block mb-0.5">পণ্যসমূহ:</span>
+                                {order.items}
+                              </div>
+                            )}
                           </div>
 
                           <div className="flex items-center gap-2.5 pt-1">
+                            {/* COD Input with Auto-Select on Click */}
                             <div className="flex items-center gap-1">
                               <span className="text-xs font-black text-slate-800">COD:</span>
                               <input
                                 type="number"
                                 value={order.total}
+                                onFocus={(e) => e.target.select()}
                                 onChange={(e) => handleFieldChange(order.id, order.storeId, 'total', e.target.value)}
-                                className="w-20 text-xs font-black text-emerald-800 border-2 border-slate-300 rounded-lg px-2 py-1 bg-white shadow-sm focus:border-slate-900 focus:outline-none"
+                                placeholder="৳"
+                                className="w-20 text-xs font-black text-emerald-800 border-2 border-slate-300 rounded-lg px-2 py-1 bg-white shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
                               />
                             </div>
 
@@ -1064,7 +971,7 @@ export default function Dashboard() {
                             ))}
                           </select>
 
-                          {/* একক সেভ বাটন: পুরো কাজ শেষে একবারে ক্লিক করবেন */}
+                          {/* একক সেভ বাটন */}
                           <button
                             onClick={() => handleSaveOrder(order)}
                             disabled={updatingId === order.id}
@@ -1106,7 +1013,7 @@ export default function Dashboard() {
 
                         {/* Steadfast Courier */}
                         <td className="p-3.5 align-top space-y-2">
-                          <div className="text-left">
+                          <div className="text-left group relative">
                             <label className="text-[11px] font-black text-slate-800 flex items-center gap-1 mb-0.5">
                               <FileText className="w-3.5 h-3.5 text-slate-600" /> কুরিয়ার স্পেশাল নোট:
                             </label>
@@ -1117,6 +1024,12 @@ export default function Dashboard() {
                               placeholder="যেমন: দেখে ডেলিভারি দিন..."
                               className="w-full text-xs font-bold border-2 border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 placeholder:text-slate-400 shadow-sm"
                             />
+                            {/* Note Tooltip */}
+                            {order.customNote && (
+                              <div className="pointer-events-none absolute left-0 top-full z-30 hidden w-64 rounded-lg bg-slate-950 p-2 text-xs font-bold text-white shadow-xl group-hover:block border border-slate-700">
+                                {order.customNote}
+                              </div>
+                            )}
                           </div>
 
                           <button

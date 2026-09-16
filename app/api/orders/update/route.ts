@@ -19,17 +19,11 @@ export async function POST(req: Request) {
       action,
     } = body;
 
-    if (!orderId) {
-      return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
-    }
-
-    // Store Mapping
     let url = '';
     let key = '';
     let secret = '';
 
     const sId = String(storeId || '').toLowerCase();
-
     if (sId.includes('aastha') || sId === 'store2' || sId === '2') {
       url = process.env.STORE2_URL || 'https://aasthanaturalsbd.com';
       key = process.env.STORE2_KEY || '';
@@ -47,8 +41,9 @@ export async function POST(req: Request) {
     const cleanUrl = url.replace(/\/$/, '');
     const authHeader = 'Basic ' + Buffer.from(`${key}:${secret}`).toString('base64');
 
-    // অর্ডার স্থায়ীভাবে মুছে ফেলার অ্যাকশন
+    // ডিলিট অ্যাকশন
     if (action === 'delete') {
+      if (!orderId) return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
       const deleteRes = await fetch(`${cleanUrl}/wp-json/wc/v3/orders/${orderId}?force=true`, {
         method: 'DELETE',
         headers: { Authorization: authHeader },
@@ -61,50 +56,73 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true });
     }
 
-    // অর্ডার সম্পূর্ণ আপডেট পে-লোড
-    const updatePayload: any = {};
-    if (status) updatePayload.status = status;
-    if (total) updatePayload.total = String(total);
+    // নাম বিভাজন
+    const nameParts = (customerName || '').trim().split(' ');
+    const firstName = nameParts[0] || 'Customer';
+    const lastName = nameParts.slice(1).join(' ') || '';
 
-    // বিলিং ও কাস্টমার ডাটা তৈরি
-    const billing: any = {};
-    if (customerName) {
-      const nameParts = customerName.trim().split(' ');
-      billing.first_name = nameParts[0] || '';
-      billing.last_name = nameParts.slice(1).join(' ') || '';
-    }
-    if (phone) billing.phone = phone;
+    const billingShipping = {
+      first_name: firstName,
+      last_name: lastName,
+      phone: phone || '',
+      address_1: streetAddress || '',
+      address_2: thana ? `Thana: ${thana}` : '',
+      city: district || '',
+      state: district || '',
+      country: 'BD',
+    };
 
-    // ঠিকানা, জেলা ও থানা সাজানো
-    if (streetAddress || district || thana) {
-      billing.address_1 = streetAddress || '';
-      if (thana) billing.address_2 = `Thana: ${thana}`;
-      if (district) {
-        billing.city = district;
-        billing.state = district;
+    const metaData: any[] = [
+      { key: '_processed_by_staff', value: staffName || 'Admin' },
+      ...(size ? [{ key: 'size', value: size }, { key: 'সাইজ', value: size }] : []),
+      ...(district ? [{ key: 'district', value: district }] : []),
+      ...(thana ? [{ key: 'thana', value: thana }] : []),
+    ];
+
+    // যদি এটি নতুন ব্ল্যাঙ্ক রো হয় (orderId < 0 বা টেম্পোরারি আইডি) -> WooCommerce এ POST (Create) হবে
+    if (!orderId || Number(orderId) <= 0) {
+      const createPayload: any = {
+        payment_method: 'cod',
+        payment_method_title: 'Cash on delivery',
+        set_paid: false,
+        status: status || 'processing',
+        billing: billingShipping,
+        shipping: billingShipping,
+        line_items: [
+          {
+            name: items || 'Custom Item',
+            quantity: 1,
+            total: String(total || '0'),
+          },
+        ],
+        meta_data: metaData,
+      };
+
+      const createRes = await fetch(`${cleanUrl}/wp-json/wc/v3/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: authHeader,
+        },
+        body: JSON.stringify(createPayload),
+      });
+
+      const createData = await createRes.json();
+      if (!createRes.ok) {
+        return NextResponse.json({ error: createData.message || 'Failed to create order' }, { status: createRes.status });
       }
+
+      return NextResponse.json({ success: true, order: createData, isNew: true });
     }
 
-    if (Object.keys(billing).length > 0) {
-      updatePayload.billing = billing;
-      updatePayload.shipping = billing; // শিপিং ঠিকানাও একই সাথে আপডেট
-    }
-
-    // মেটা-ডাটা আপডেট (স্টাফ, সাইজ, থানা, জেলা)
-    const metaData: any[] = [];
-    if (staffName) {
-      metaData.push({ key: '_processed_by_staff', value: staffName });
-    }
-    if (size) {
-      metaData.push({ key: 'size', value: size });
-      metaData.push({ key: 'সাইজ', value: size });
-    }
-    if (district) metaData.push({ key: 'district', value: district });
-    if (thana) metaData.push({ key: 'thana', value: thana });
-
-    if (metaData.length > 0) {
-      updatePayload.meta_data = metaData;
-    }
+    // অন্যথায় পুরনো অর্ডার আপডেট (PUT) হবে
+    const updatePayload: any = {
+      status: status || 'processing',
+      total: String(total || '0'),
+      billing: billingShipping,
+      shipping: billingShipping,
+      meta_data: metaData,
+    };
 
     const res = await fetch(`${cleanUrl}/wp-json/wc/v3/orders/${orderId}`, {
       method: 'PUT',
@@ -116,14 +134,13 @@ export async function POST(req: Request) {
     });
 
     const data = await res.json();
-
     if (!res.ok) {
       return NextResponse.json({ error: data.message || 'Update failed in WooCommerce' }, { status: res.status });
     }
 
     return NextResponse.json({ success: true, order: data });
   } catch (error: any) {
-    console.error('Order update error:', error);
+    console.error('Order update/create error:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
