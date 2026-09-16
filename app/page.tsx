@@ -84,15 +84,15 @@ export default function Dashboard() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
-  const sendActivityLog = async (logText: string) => {
+  const sendActivityLog = async (logText: string, targetType: 'activity' | 'courier' = 'activity') => {
     try {
       await fetch('/api/telegram', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: logText, type: 'activity' }),
+        body: JSON.stringify({ text: logText, type: targetType }),
       });
     } catch (err) {
-      console.error('Activity Log Error:', err);
+      console.error('Telegram Log Error:', err);
     }
   };
 
@@ -181,7 +181,7 @@ export default function Dashboard() {
     };
 
     setOrders((prev) => [blankOrder, ...prev]);
-    setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
+    setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। নাম ও তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
   const phoneOrderData = useMemo(() => {
@@ -230,7 +230,7 @@ export default function Dashboard() {
     const key = `${order.storeId}-${order.id}`;
     const prev = initialOrders[key];
 
-    // ডাটা পরিবর্তন চেক (শুধু পরিবর্তন হলেই সেভ/মেসেজ হবে)
+    // কোনো পরিবর্তন না হলে টেলিগ্রাম মেসেজ ব্লক
     if (!order.isNewRow && prev) {
       const isChanged =
         prev.customerName !== order.customerName ||
@@ -312,7 +312,7 @@ export default function Dashboard() {
           `💵 <b>টাকা:</b> ৳${order.total || '0'}\n` +
           `📌 <b>স্ট্যাটাস:</b> <code>${newStatus.toUpperCase()}</code>\n` +
           `👨‍💼 <b>কনফার্ম করেছেন:</b> ${currentUser}`;
-        sendActivityLog(logMsg);
+        sendActivityLog(logMsg, 'activity');
       } else {
         setMessage({ text: result.error || 'সেভ করতে সমস্যা হয়েছে', type: 'error' });
       }
@@ -357,7 +357,7 @@ export default function Dashboard() {
           `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
           `👤 <b>কাস্টমার:</b> ${order.customerName}\n` +
           `👨‍💼 <b>ডিলিট করেছেন:</b> ${currentUser}`;
-        sendActivityLog(logMsg);
+        sendActivityLog(logMsg, 'activity');
       } else {
         setMessage({ text: result.error || 'ডিলিট করতে সমস্যা হয়েছে', type: 'error' });
       }
@@ -368,6 +368,7 @@ export default function Dashboard() {
     }
   };
 
+  // Steadfast কুরিয়ারে পাঠানো (গ্রুপ ৩ এ যাবে)
   const handleSendToSteadfast = async (order: Order) => {
     if (order.isNewRow) {
       alert('অনুগ্রহ করে আগে তথ্য সেভ (Save) করুন, এরপর কুরিয়ারে পাঠান।');
@@ -430,6 +431,7 @@ export default function Dashboard() {
           type: 'success',
         });
 
+        // কুরিয়ার সংক্রান্ত বার্তা সরাসরি কুরিয়ার গ্রুপে (গ্রুপ ৩) পাঠানো
         const logMsg = `🚀 <b>STEADFAST কুরিয়ারে ডিসপ্যাচ করা হয়েছে</b>\n` +
           `━━━━━━━━━━━━━━━━━━━\n` +
           `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
@@ -439,7 +441,7 @@ export default function Dashboard() {
           `💵 <b>COD:</b> ৳${order.total} ${order.size ? `(সাইজ: ${order.size})` : ''}\n` +
           `🏷️ <b>CID:</b> <code>${cid}</code> | <b>Tracking:</b> <code>${tracking}</code>\n` +
           `👨‍💼 <b>ডিসপ্যাচ করেছেন:</b> ${currentUser}`;
-        sendActivityLog(logMsg);
+        sendActivityLog(logMsg, 'courier');
       } else {
         setMessage({ text: result.error || 'কুরিয়ারে পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
       }
@@ -498,7 +500,7 @@ export default function Dashboard() {
   };
 
   const filteredOrders = orders.filter((order) => {
-    if (order.isNewRow) return true; // নতুন খালি রো সবসময় দেখাবে
+    if (order.isNewRow) return true;
     const matchesStore = selectedStore === 'all' || order.storeName.toLowerCase().includes(selectedStore.toLowerCase());
     const matchesStatus = selectedStatus === 'all' || order.status.toLowerCase() === selectedStatus.toLowerCase();
     const matchesSearch =
@@ -514,15 +516,17 @@ export default function Dashboard() {
     return matchesStore && matchesStatus && matchesSearch;
   });
 
+  // ১২ ঘণ্টার ফরম্যাট (AM/PM) - বাংলাদেশ স্ট্যান্ডার্ড টাইম
   const formatDate = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
-      return d.toLocaleDateString('en-GB', {
+      return d.toLocaleString('en-GB', {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+        hour12: true,
       });
     } catch {
       return dateStr;
@@ -577,7 +581,6 @@ export default function Dashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* ইন-লাইন ব্ল্যাঙ্ক রো বাটন */}
             <button
               onClick={handleAddNewBlankRow}
               className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-black text-sm shadow-md transition active:scale-95 cursor-pointer"
@@ -693,8 +696,8 @@ export default function Dashboard() {
                 <thead>
                   <tr className="bg-slate-950 text-white text-xs uppercase font-black tracking-widest">
                     <th className="p-4 w-36 border-r-2 border-slate-800">Store / Invoice</th>
-                    <th className="p-4 w-56 border-r-2 border-slate-800">Customer Name (নাম)</th>
-                    <th className="p-4 w-32 border-r-2 border-slate-800">Date & Time</th>
+                    <th className="p-4 w-60 border-r-2 border-slate-800">Customer Name (নাম)</th>
+                    <th className="p-4 w-36 border-r-2 border-slate-800">Date & Time (12h)</th>
                     <th className="p-4 w-80 border-r-2 border-slate-800">Phone, Staff & Call</th>
                     <th className="p-4 w-[430px] border-r-2 border-slate-800">Address & District/Thana</th>
                     <th className="p-4 w-72 border-r-2 border-slate-800">Items, COD & Size</th>
@@ -750,25 +753,18 @@ export default function Dashboard() {
                           </span>
                         </td>
 
-                        {/* Customer Name: বড় ফন্ট ও সম্পূর্ণ এডিটেবল টেক্সট-এরিয়া */}
-                        <td className="p-3.5 align-top border-r-2 border-slate-300 group relative">
+                        {/* Customer Name: পরিচ্ছন্ন বর্ডারহীন এবং সম্পূর্ণ নাম ভিজিবল */}
+                        <td className="p-3.5 align-top border-r-2 border-slate-300">
                           <textarea
                             rows={3}
                             value={order.customerName}
                             onChange={(e) => handleFieldChange(order.id, order.storeId, 'customerName', e.target.value)}
-                            placeholder="কাস্টমারের পুরো নাম..."
-                            className="w-full font-black text-base text-slate-950 border-2 border-slate-300 focus:border-slate-950 rounded-xl p-2.5 bg-white focus:ring-2 focus:ring-slate-900 transition shadow-sm resize-y leading-tight tracking-wide placeholder:text-slate-400 placeholder:text-xs"
+                            placeholder="কাস্টমারের নাম লিখুন..."
+                            className="w-full font-black text-base text-slate-950 bg-transparent focus:bg-white border border-transparent focus:border-slate-400 rounded-lg p-1.5 transition resize-none outline-none leading-tight whitespace-normal break-words placeholder:text-slate-400 placeholder:text-xs"
                           />
-                          {/* Hover Tooltip */}
-                          {order.customerName && (
-                            <div className="pointer-events-none absolute left-2 top-full z-30 hidden w-64 rounded-lg bg-slate-950 p-2.5 text-xs font-bold text-white shadow-xl group-hover:block border border-slate-700">
-                              <span className="text-[10px] text-amber-400 uppercase block mb-0.5">পুরো নাম:</span>
-                              {order.customerName}
-                            </div>
-                          )}
                         </td>
 
-                        {/* Date */}
+                        {/* Date: 12-Hour Format (AM/PM) */}
                         <td className="p-3.5 align-top text-xs text-slate-800 whitespace-nowrap font-bold border-r-2 border-slate-300">
                           <div className="flex items-center gap-1.5 bg-white border-2 border-slate-300 p-2 rounded-lg shadow-sm">
                             <Calendar className="w-4 h-4 text-slate-600 shrink-0" />
@@ -778,7 +774,7 @@ export default function Dashboard() {
 
                         {/* Phone, Staff & Call */}
                         <td className="p-3.5 align-top space-y-2 border-r-2 border-slate-300">
-                          <div className="flex items-center gap-1.5 group relative">
+                          <div className="flex items-center gap-1.5">
                             <Phone className="w-4 h-4 text-slate-600 shrink-0" />
                             <input
                               type="text"
@@ -793,12 +789,6 @@ export default function Dashboard() {
                                   : 'border-slate-300 text-slate-950'
                               }`}
                             />
-                            {/* Phone Tooltip */}
-                            {order.phone && (
-                              <div className="pointer-events-none absolute left-6 top-full z-30 hidden rounded-md bg-slate-950 px-2 py-1 text-xs font-mono font-bold text-white shadow-lg group-hover:block">
-                                {order.phone}
-                              </div>
-                            )}
                           </div>
 
                           {isRecent ? (
@@ -852,7 +842,7 @@ export default function Dashboard() {
 
                         {/* Address, District & Thana */}
                         <td className="p-3.5 align-top space-y-2 border-r-2 border-slate-300">
-                          <div className="flex items-start gap-1.5 group relative">
+                          <div className="flex items-start gap-1.5">
                             <MapPin className="w-4 h-4 text-slate-600 mt-1 shrink-0" />
                             <textarea
                               rows={2}
@@ -861,13 +851,6 @@ export default function Dashboard() {
                               placeholder="বিস্তারিত ঠিকানা..."
                               className="w-full text-xs font-bold text-slate-900 border-2 border-slate-300 rounded-lg px-2.5 py-1.5 bg-white resize-y shadow-sm focus:border-slate-900 leading-snug"
                             />
-                            {/* Address Tooltip */}
-                            {order.streetAddress && (
-                              <div className="pointer-events-none absolute left-6 top-full z-30 hidden w-80 rounded-lg bg-slate-950 p-2.5 text-xs font-bold text-white shadow-xl group-hover:block border border-slate-700">
-                                <span className="text-[10px] text-amber-400 uppercase block mb-0.5">সম্পূর্ণ ঠিকানা:</span>
-                                {order.streetAddress}
-                              </div>
-                            )}
                           </div>
 
                           <div className="grid grid-cols-2 gap-2">
@@ -908,7 +891,7 @@ export default function Dashboard() {
 
                         {/* Items, COD & Size */}
                         <td className="p-3.5 align-top space-y-2 border-r-2 border-slate-300">
-                          <div className="flex items-start gap-1.5 group relative">
+                          <div className="flex items-start gap-1.5">
                             <Edit3 className="w-4 h-4 text-slate-600 mt-1 shrink-0" />
                             <textarea
                               rows={2}
@@ -917,17 +900,9 @@ export default function Dashboard() {
                               placeholder="আইটেমের নাম ও বিবরণ..."
                               className="w-full text-xs font-bold text-slate-900 border-2 border-slate-300 rounded-lg px-2.5 py-1.5 bg-white resize-y shadow-sm leading-snug"
                             />
-                            {/* Items Tooltip */}
-                            {order.items && (
-                              <div className="pointer-events-none absolute left-6 top-full z-30 hidden w-64 rounded-lg bg-slate-950 p-2 text-xs font-bold text-white shadow-xl group-hover:block border border-slate-700">
-                                <span className="text-[10px] text-amber-400 uppercase block mb-0.5">পণ্যসমূহ:</span>
-                                {order.items}
-                              </div>
-                            )}
                           </div>
 
                           <div className="flex items-center gap-2.5 pt-1">
-                            {/* COD Input with Auto-Select on Click */}
                             <div className="flex items-center gap-1">
                               <span className="text-xs font-black text-slate-800">COD:</span>
                               <input
@@ -971,7 +946,6 @@ export default function Dashboard() {
                             ))}
                           </select>
 
-                          {/* একক সেভ বাটন */}
                           <button
                             onClick={() => handleSaveOrder(order)}
                             disabled={updatingId === order.id}
@@ -1013,7 +987,7 @@ export default function Dashboard() {
 
                         {/* Steadfast Courier */}
                         <td className="p-3.5 align-top space-y-2">
-                          <div className="text-left group relative">
+                          <div className="text-left">
                             <label className="text-[11px] font-black text-slate-800 flex items-center gap-1 mb-0.5">
                               <FileText className="w-3.5 h-3.5 text-slate-600" /> কুরিয়ার স্পেশাল নোট:
                             </label>
@@ -1024,12 +998,6 @@ export default function Dashboard() {
                               placeholder="যেমন: দেখে ডেলিভারি দিন..."
                               className="w-full text-xs font-bold border-2 border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 placeholder:text-slate-400 shadow-sm"
                             />
-                            {/* Note Tooltip */}
-                            {order.customNote && (
-                              <div className="pointer-events-none absolute left-0 top-full z-30 hidden w-64 rounded-lg bg-slate-950 p-2 text-xs font-bold text-white shadow-xl group-hover:block border border-slate-700">
-                                {order.customNote}
-                              </div>
-                            )}
                           </div>
 
                           <button
