@@ -16,7 +16,7 @@ export async function GET() {
       if (!key || !secret) return [];
       try {
         const auth = 'Basic ' + Buffer.from(`${key}:${secret}`).toString('base64');
-        const res = await fetch(`${url}/wp-json/wc/v3/orders?per_page=50`, {
+        const res = await fetch(`${url}/wp-json/wc/v3/orders?per_page=100&status=any`, {
           headers: { Authorization: auth },
           cache: 'no-store',
         });
@@ -61,7 +61,7 @@ export async function GET() {
             total: o.total || '0',
             status: o.status || 'pending',
             dateCreated: o.date_created || new Date().toISOString(),
-            items: itemsSummary || 'No Items',
+            items: itemsSummary || 'Custom Order Item',
             staffName: staffName,
           };
         });

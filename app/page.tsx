@@ -28,6 +28,8 @@ import {
   User,
   LogOut,
   Save,
+  PlusCircle,
+  X,
 } from 'lucide-react';
 
 interface Order {
@@ -80,6 +82,21 @@ export default function Dashboard() {
   const [trackingId, setTrackingId] = useState<number | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
+
+  // ম্যানুয়াল অর্ডার ক্রিয়েশন স্টেট
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [creatingOrder, setCreatingOrder] = useState(false);
+  const [newOrder, setNewOrder] = useState({
+    storeId: 'store1',
+    customerName: '',
+    phone: '',
+    streetAddress: '',
+    district: 'Patuakhali',
+    thana: '',
+    items: '',
+    size: 'XL',
+    total: '',
+  });
 
   const sendActivityLog = async (logText: string) => {
     try {
@@ -176,7 +193,7 @@ export default function Dashboard() {
     );
   };
 
-  // সম্পূর্ণ অর্ডার সেভ ও স্ট্যাটাস আপডেট হ্যান্ডলার
+  // সম্পূর্ণ অর্ডার সেভ ও টেলিগ্রামে একক চূড়ান্ত মেসেজ প্রেরণ
   const handleSaveOrder = async (order: Order, overrideStatus?: string) => {
     setUpdatingId(order.id);
     setMessage(null);
@@ -215,19 +232,22 @@ export default function Dashboard() {
           )
         );
         setMessage({
-          text: `Order #${order.invoice} এর সকল তথ্য WooCommerce-এ সেভ করা হয়েছে!`,
+          text: `Order #${order.invoice} সফলভাবে সেভ ও কনফার্ম করা হয়েছে!`,
           type: 'success',
         });
 
-        const logMsg = `💾 <b>অর্ডার আপডেট ও সেভ করা হয়েছে</b>\n` +
+        // শুধুমাত্র ফাইনাল সেভ/কনফার্মের সময় একক চূড়ান্ত মেসেজ
+        const logMsg = `✅ <b>অর্ডার কনফার্ম ও ডাটাবেসে সেভ করা হয়েছে</b>\n` +
           `━━━━━━━━━━━━━━━━━━━\n` +
           `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
           `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
           `👤 <b>কাস্টমার:</b> ${order.customerName} (<code>${order.phone}</code>)\n` +
-          `📍 <b>ঠিকানা:</b> ${order.streetAddress || ''}, ${order.thana || ''}, ${order.district || ''}\n` +
-          `👕 <b>সাইজ:</b> ${order.size || 'N/A'} | <b>টাকা:</b> ৳${order.total}\n` +
+          `📍 <b>ঠিকানা:</b> ${order.streetAddress || ''}, ${order.thana ? `${order.thana}, ` : ''}${order.district || ''}\n` +
+          `👕 <b>আইটেম/সাইজ:</b> ${order.items} ${order.size ? `[সাইজ: ${order.size}]` : ''}\n` +
+          `💵 <b>টাকা:</b> ৳${order.total}\n` +
           `📌 <b>স্ট্যাটাস:</b> <code>${newStatus.toUpperCase()}</code>\n` +
-          `👨‍💼 <b>স্টাফ:</b> ${assignedStaff}`;
+          `📞 <b>কল স্ট্যাটাস:</b> ${order.callDone ? 'সম্পন্ন হয়েছে' : 'বাকি আছে'}\n` +
+          `👨‍💼 <b>কনফার্ম করেছেন:</b> ${currentUser} ${assignedStaff !== currentUser ? `(অ্যাসাইন্ড: ${assignedStaff})` : ''}`;
         sendActivityLog(logMsg);
       } else {
         setMessage({ text: result.error || 'সেভ করতে সমস্যা হয়েছে', type: 'error' });
@@ -236,6 +256,58 @@ export default function Dashboard() {
       setMessage({ text: err.message || 'Network error', type: 'error' });
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleCreateManualOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingOrder(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch('/api/orders/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newOrder,
+          staffName: currentUser,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setMessage({ text: 'নতুন ম্যানুয়াল অর্ডার সফলভাবে তৈরি হয়েছে!', type: 'success' });
+        setIsModalOpen(false);
+        setNewOrder({
+          storeId: 'store1',
+          customerName: '',
+          phone: '',
+          streetAddress: '',
+          district: 'Patuakhali',
+          thana: '',
+          items: '',
+          size: 'XL',
+          total: '',
+        });
+
+        // সাথে সাথে লাইভ রিফ্রেশ
+        await fetchOrders();
+
+        const logMsg = `🆕 <b>নতুন ম্যানুয়াল অর্ডার যোগ করা হয়েছে</b>\n` +
+          `━━━━━━━━━━━━━━━━━━━\n` +
+          `🏪 <b>স্টোর:</b> ${newOrder.storeId === 'store1' ? 'Ruhama Wear' : 'Aastha Naturals BD'}\n` +
+          `👤 <b>কাস্টমার:</b> ${newOrder.customerName} (<code>${newOrder.phone}</code>)\n` +
+          `📍 <b>ঠিকানা:</b> ${newOrder.streetAddress}, ${newOrder.thana}, ${newOrder.district}\n` +
+          `💵 <b>টোটাল COD:</b> ৳${newOrder.total} | <b>সাইজ:</b> ${newOrder.size}\n` +
+          `👨‍💼 <b>যুক্ত করেছেন:</b> ${currentUser}`;
+        sendActivityLog(logMsg);
+      } else {
+        setMessage({ text: data.error || 'অর্ডার তৈরি করতে ব্যর্থ হয়েছে', type: 'error' });
+      }
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Network error', type: 'error' });
+    } finally {
+      setCreatingOrder(false);
     }
   };
 
@@ -267,7 +339,7 @@ export default function Dashboard() {
           `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
           `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
           `👤 <b>কাস্টমার:</b> ${order.customerName}\n` +
-          `👨‍💼 <b>অ্যাকশন নিয়েছেন:</b> ${currentUser}`;
+          `👨‍💼 <b>ডিলিট করেছেন:</b> ${currentUser}`;
         sendActivityLog(logMsg);
       } else {
         setMessage({ text: result.error || 'ডিলিট করতে সমস্যা হয়েছে', type: 'error' });
@@ -280,7 +352,7 @@ export default function Dashboard() {
   };
 
   const handleSendToSteadfast = async (order: Order) => {
-    if (!confirm(`Are you sure you want to send order #${order.invoice} to Steadfast?`)) return;
+    if (!confirm(`আপনি কি অর্ডার #${order.invoice} স্টেডফাস্ট কুরিয়ারে পাঠাতে চান?`)) return;
 
     setSendingId(order.id);
     setMessage(null);
@@ -329,7 +401,6 @@ export default function Dashboard() {
           )
         );
 
-        // সাথে সাথে ডাটাবেসেও সেভ রাখা
         handleSaveOrder(order);
 
         setMessage({
@@ -345,7 +416,7 @@ export default function Dashboard() {
           `📍 <b>ঠিকানা:</b> ${fullAddress}\n` +
           `💵 <b>COD:</b> ৳${order.total} ${order.size ? `(সাইজ: ${order.size})` : ''}\n` +
           `🏷️ <b>CID:</b> <code>${cid}</code> | <b>Tracking:</b> <code>${tracking}</code>\n` +
-          `👨‍💼 <b>প্রসেস করেছেন:</b> ${assignedStaff}`;
+          `👨‍💼 <b>ডিসপ্যাচ করেছেন:</b> ${currentUser}`;
         sendActivityLog(logMsg);
       } else {
         setMessage({ text: result.error || 'কুরিয়ারে পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
@@ -446,6 +517,9 @@ export default function Dashboard() {
     return 'bg-slate-200 text-slate-800 border-slate-400';
   };
 
+  const activeDistrictObj = BANGLADESH_DISTRICTS.find((d) => d.district === newOrder.district);
+  const activeNewThanas = activeDistrictObj ? activeDistrictObj.thanas : [];
+
   return (
     <div className="min-h-screen bg-slate-200/70 text-slate-900 p-4 md:p-6">
       <div className="max-w-[1950px] mx-auto">
@@ -483,6 +557,13 @@ export default function Dashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-black text-sm shadow-md transition active:scale-95 cursor-pointer"
+            >
+              <PlusCircle className="w-5 h-5" /> + নতুন অর্ডার তৈরি করুন
+            </button>
+
             <div className="flex items-center gap-2 bg-slate-100 border-2 border-slate-300 px-3.5 py-2 rounded-xl shadow-2xs">
               <div className="w-7 h-7 rounded-lg bg-slate-950 text-white flex items-center justify-center">
                 <User className="w-4 h-4 text-amber-400" />
@@ -508,6 +589,165 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+
+        {/* Modal: New Manual Order */}
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-slate-950/70 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+            <div className="bg-white border-2 border-slate-400 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-150">
+              <div className="bg-slate-950 text-white p-4 px-6 flex justify-between items-center">
+                <h3 className="font-black text-lg flex items-center gap-2">
+                  <PlusCircle className="w-5 h-5 text-emerald-400" /> নতুন ম্যানুয়াল অর্ডার তৈরি (Add Parcel)
+                </h3>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="text-slate-400 hover:text-white transition p-1"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateManualOrder} className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-black text-slate-800 block mb-1">স্টোর নির্বাচন করুন *</label>
+                    <select
+                      value={newOrder.storeId}
+                      onChange={(e) => setNewOrder({ ...newOrder, storeId: e.target.value })}
+                      className="w-full text-xs font-bold border-2 border-slate-300 rounded-xl p-2.5 bg-white focus:border-slate-950"
+                    >
+                      <option value="store1">Ruhama Wear (ruhamawear.com)</option>
+                      <option value="store2">Aastha Naturals BD (aasthanaturalsbd.com)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black text-slate-800 block mb-1">কাস্টমারের নাম *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="পুরো নাম লিখুন"
+                      value={newOrder.customerName}
+                      onChange={(e) => setNewOrder({ ...newOrder, customerName: e.target.value })}
+                      className="w-full text-xs font-bold border-2 border-slate-300 rounded-xl p-2.5 bg-white focus:border-slate-950"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-black text-slate-800 block mb-1">মোবাইল নম্বর *</label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="01XXXXXXXXX"
+                      value={newOrder.phone}
+                      onChange={(e) => setNewOrder({ ...newOrder, phone: e.target.value })}
+                      className="w-full text-xs font-bold border-2 border-slate-300 rounded-xl p-2.5 bg-white focus:border-slate-950"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black text-slate-800 block mb-1">টোটাল COD অ্যামাউন্ট (৳) *</label>
+                    <input
+                      type="number"
+                      required
+                      placeholder="যেমন: 1250"
+                      value={newOrder.total}
+                      onChange={(e) => setNewOrder({ ...newOrder, total: e.target.value })}
+                      className="w-full text-xs font-black border-2 border-slate-300 rounded-xl p-2.5 bg-white text-emerald-800 focus:border-slate-950"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-black text-slate-800 block mb-1">বিস্তারিত ঠিকানা *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="রোড, বাড়ি, এলাকা..."
+                    value={newOrder.streetAddress}
+                    onChange={(e) => setNewOrder({ ...newOrder, streetAddress: e.target.value })}
+                    className="w-full text-xs font-bold border-2 border-slate-300 rounded-xl p-2.5 bg-white focus:border-slate-950"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-black text-slate-800 block mb-1">জেলা (District) *</label>
+                    <select
+                      value={newOrder.district}
+                      onChange={(e) => setNewOrder({ ...newOrder, district: e.target.value, thana: '' })}
+                      className="w-full text-xs font-black border-2 border-slate-300 rounded-xl p-2.5 bg-white focus:border-slate-950"
+                    >
+                      {BANGLADESH_DISTRICTS.map((d) => (
+                        <option key={d.district} value={d.district}>
+                          {d.district}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black text-slate-800 block mb-1">থানা / উপজেলা *</label>
+                    <select
+                      value={newOrder.thana}
+                      onChange={(e) => setNewOrder({ ...newOrder, thana: e.target.value })}
+                      className="w-full text-xs font-black border-2 border-slate-300 rounded-xl p-2.5 bg-white focus:border-slate-950"
+                    >
+                      <option value="">থানা নির্বাচন করুন</option>
+                      {activeNewThanas.map((th) => (
+                        <option key={th} value={th}>
+                          {th}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-2">
+                    <label className="text-xs font-black text-slate-800 block mb-1">প্রোডাক্টের বিবরণ</label>
+                    <input
+                      type="text"
+                      placeholder="যেমন: প্রিমিয়াম পায়জামা ২ পিস"
+                      value={newOrder.items}
+                      onChange={(e) => setNewOrder({ ...newOrder, items: e.target.value })}
+                      className="w-full text-xs font-bold border-2 border-slate-300 rounded-xl p-2.5 bg-white focus:border-slate-950"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black text-slate-800 block mb-1">সাইজ</label>
+                    <input
+                      type="text"
+                      placeholder="XL, L, M..."
+                      value={newOrder.size}
+                      onChange={(e) => setNewOrder({ ...newOrder, size: e.target.value.toUpperCase() })}
+                      className="w-full text-xs font-black uppercase text-center border-2 border-slate-300 rounded-xl p-2.5 bg-white focus:border-slate-950"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 flex justify-end gap-3 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-5 py-2.5 rounded-xl text-xs font-black border-2 border-slate-300 hover:bg-slate-100 transition cursor-pointer"
+                  >
+                    বাতিল
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={creatingOrder}
+                    className="px-6 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-md transition cursor-pointer disabled:opacity-50"
+                  >
+                    {creatingOrder ? 'অর্ডার তৈরি হচ্ছে...' : 'অর্ডার সংরক্ষণ ও তৈরি করুন'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Alerts */}
         {message && (
@@ -699,24 +939,13 @@ export default function Dashboard() {
                               </select>
                             </div>
 
+                            {/* কল অ্যাকশন: শুধু ইউআই আপডেট হবে, টেলিগ্রামে স্প্যাম করবে না */}
                             <button
                               onClick={() => {
                                 const newCallState = !order.callDone;
                                 handleFieldChange(order.id, order.storeId, 'callDone', newCallState);
-                                const assignedStaff = order.staffName || currentUser;
                                 if (!order.staffName) {
-                                  handleFieldChange(order.id, order.storeId, 'staffName', assignedStaff);
-                                }
-                                
-                                if (newCallState) {
-                                  const callLog = `📞 <b>কাস্টমারকে কল দেওয়া হয়েছে</b>\n` +
-                                    `━━━━━━━━━━━━━━━━━━━\n` +
-                                    `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
-                                    `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
-                                    `👤 <b>কাস্টমার:</b> ${order.customerName}\n` +
-                                    `📞 <b>ফোন:</b> ${order.phone}\n` +
-                                    `👨‍💼 <b>কল দিয়েছেন:</b> ${assignedStaff}`;
-                                  sendActivityLog(callLog);
+                                  handleFieldChange(order.id, order.storeId, 'staffName', currentUser);
                                 }
                               }}
                               className={`flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-lg transition border-2 shadow-sm cursor-pointer ${
@@ -835,14 +1064,14 @@ export default function Dashboard() {
                             ))}
                           </select>
 
-                          {/* ডাটাবেস সেভ বাটন */}
+                          {/* একক সেভ বাটন: পুরো কাজ শেষে একবারে ক্লিক করবেন */}
                           <button
                             onClick={() => handleSaveOrder(order)}
                             disabled={updatingId === order.id}
-                            className="w-full flex items-center justify-center gap-1.5 text-xs font-black text-white bg-slate-950 hover:bg-slate-800 py-1.5 px-2 rounded-xl transition shadow-sm cursor-pointer disabled:opacity-50"
+                            className="w-full flex items-center justify-center gap-1.5 text-xs font-black text-white bg-slate-950 hover:bg-slate-800 py-2 px-2 rounded-xl transition shadow-md cursor-pointer disabled:opacity-50"
                           >
                             <Save className={`w-3.5 h-3.5 ${updatingId === order.id ? 'animate-spin' : ''}`} />
-                            {updatingId === order.id ? 'সেভ হচ্ছে...' : 'তথ্য সেভ করুন (Save)'}
+                            {updatingId === order.id ? 'সেভ হচ্ছে...' : 'তথ্য সেভ ও কনফার্ম (Save)'}
                           </button>
 
                           <div className="grid grid-cols-3 gap-1.5 pt-0.5">
