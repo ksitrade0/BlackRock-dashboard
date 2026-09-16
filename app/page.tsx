@@ -10,6 +10,7 @@ import {
   CheckCircle,
   AlertCircle,
   Calendar,
+  Clock,
   MapPin,
   Phone,
   Edit3,
@@ -227,7 +228,7 @@ export default function Dashboard() {
         if (order.id === orderId && order.storeId === storeId) {
           if (field === 'district') return { ...order, district: value, thana: '' };
           if (field === 'storeId') {
-            const sName = value === 'store2' ? 'Aastha Naturals' : 'Ruhama Wear';
+            const sName = value === 'store2' ? 'Aastha Naturals BD' : 'Ruhama Wear';
             return { ...order, storeId: value, storeName: sName };
           }
           return { ...order, [field]: value };
@@ -531,19 +532,30 @@ export default function Dashboard() {
     return matchesStore && matchesStatus && matchesSearch;
   });
 
-  const formatDate = (dateStr: string) => {
+  // তারিখ ও সময় আলাদা ফরম্যাট
+  const formatOrderDate = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
-      return d.toLocaleString('en-GB', {
+      return d.toLocaleDateString('en-GB', {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatOrderTime = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleTimeString('en-GB', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
       });
     } catch {
-      return dateStr;
+      return '';
     }
   };
 
@@ -561,7 +573,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-200/70 text-slate-900 p-4 md:p-6">
       <div className="max-w-[1950px] mx-auto">
-        {/* Header - ২ রতে সাজানো পরিষ্কার বাটন কন্ট্রোল */}
+        {/* Header - ডান দিক থেকে সুশৃঙ্খল বিন্যাস */}
         <div className="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-300">
           <div
             onClick={() => (window.location.href = '/')}
@@ -594,47 +606,52 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* ২ সারিতে ছোট ও সিম্পল কন্ট্রোল বাটনসমূহ */}
-          <div className="flex flex-col gap-2 w-full lg:w-auto items-end">
-            {/* সারি ১: প্রাইমারি অ্যাকশন বাটন */}
-            <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
-              <button
-                onClick={handleAddNewBlankRow}
-                className="flex items-center gap-1.5 bg-slate-900 hover:bg-black text-white px-3.5 py-2 rounded-lg font-bold text-xs shadow-sm transition cursor-pointer active:scale-95 border border-slate-800"
-              >
-                <Plus className="w-3.5 h-3.5 text-emerald-400" /> + নতুন অর্ডার যোগ করুন
-              </button>
-
-              <button
-                onClick={handleSendCourierReport}
-                disabled={reporting}
-                className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 px-3.5 py-2 rounded-lg font-bold text-xs transition cursor-pointer border border-slate-300 disabled:opacity-50"
-              >
-                <BarChart2 className={`w-3.5 h-3.5 text-slate-700 ${reporting ? 'animate-spin' : ''}`} />
-                {reporting ? 'রিপোর্ট যাচ্ছে...' : '📊 কুরিয়ার অডিট রিপোর্ট'}
-              </button>
+          {/* ডান পাশের অ্যাকশন প্যানেল (লগইন বক্স + ২ কলাম বাটন) */}
+          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
+            {/* ৩য় কলাম (বাঁয়ে): দুই লাইনের সাইজে মোটা ইউজার অ্যাকাউন্ট বক্স */}
+            <div className="flex items-center gap-2.5 bg-slate-100 border border-slate-300 px-4 py-2.5 rounded-xl h-[74px] shadow-2xs">
+              <div className="w-9 h-9 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0">
+                <User className="w-5 h-5 text-amber-400" />
+              </div>
+              <div className="text-left leading-tight">
+                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">বর্তমান লগইন</div>
+                <div className="text-sm font-black text-slate-950 mt-0.5">{currentUser}</div>
+              </div>
             </div>
 
-            {/* সারি ২: ইউজার স্ট্যাটাস, রিফ্রেশ ও লগআউট */}
-            <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
-              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-800">
-                <User className="w-3.5 h-3.5 text-slate-500" />
-                <span className="text-slate-500 font-normal">লগইন:</span>
-                <span className="font-black text-slate-900">{currentUser}</span>
-              </div>
-
+            {/* ২য় কলাম (মাঝে): রিফ্রেশ ও লগআউট বাটন */}
+            <div className="flex flex-col gap-1.5">
               <button
                 onClick={fetchOrders}
-                className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 px-3 py-1.5 rounded-lg font-bold text-xs transition border border-slate-300 cursor-pointer active:scale-95"
+                className="flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 px-3.5 py-1.5 rounded-lg font-bold text-xs transition border border-slate-300 cursor-pointer active:scale-95 h-[34px] w-36"
               >
                 <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${loading ? 'animate-spin' : ''}`} /> Refresh Orders
               </button>
 
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-1 bg-rose-50 hover:bg-rose-100 text-rose-700 px-3 py-1.5 rounded-lg font-bold text-xs transition border border-rose-200 cursor-pointer active:scale-95"
+                className="flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 px-3.5 py-1.5 rounded-lg font-bold text-xs transition border border-rose-200 cursor-pointer active:scale-95 h-[34px] w-36"
               >
                 <LogOut className="w-3.5 h-3.5" /> লগআউট
+              </button>
+            </div>
+
+            {/* ১ম কলাম (একদম ডানপাশে): কুরিয়ার রিপোর্ট ও নতুন অর্ডার যোগ বাটন */}
+            <div className="flex flex-col gap-1.5">
+              <button
+                onClick={handleSendCourierReport}
+                disabled={reporting}
+                className="flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white px-3.5 py-1.5 rounded-lg font-bold text-xs transition cursor-pointer border border-slate-800 disabled:opacity-50 h-[34px] w-48 shadow-xs"
+              >
+                <BarChart2 className={`w-3.5 h-3.5 text-amber-400 ${reporting ? 'animate-spin' : ''}`} />
+                {reporting ? 'রিপোর্ট যাচ্ছে...' : '📊 কুরিয়ার অডিট রিপোর্ট'}
+              </button>
+
+              <button
+                onClick={handleAddNewBlankRow}
+                className="flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 px-3.5 py-1.5 rounded-lg font-bold text-xs transition cursor-pointer border border-slate-300 active:scale-95 h-[34px] w-48 shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5 text-emerald-600 font-black" /> + নতুন অর্ডার যোগ করুন
               </button>
             </div>
           </div>
@@ -721,10 +738,10 @@ export default function Dashboard() {
               <table className="w-full text-left border-collapse min-w-[1850px]">
                 <thead>
                   <tr className="bg-slate-900 text-white text-[11px] uppercase font-bold tracking-wider">
-                    <th className="p-3.5 w-36 border-r border-slate-800">Store / Invoice</th>
+                    <th className="p-3.5 w-36 border-r border-slate-800">Invoice / Store</th>
                     <th className="p-3.5 w-60 border-r border-slate-800">Customer Name (নাম)</th>
-                    <th className="p-3.5 w-36 border-r border-slate-800">Date & Time (12h)</th>
-                    <th className="p-3.5 w-80 border-r border-slate-800">Phone, Staff & Call</th>
+                    <th className="p-3.5 w-40 border-r border-slate-800">Date & Time</th>
+                    <th className="p-3.5 w-80 border-r border-slate-800">Phone, Call & Staff</th>
                     <th className="p-3.5 w-[430px] border-r border-slate-800">Address & District/Thana</th>
                     <th className="p-3.5 w-72 border-r border-slate-800">Items, COD & Size</th>
                     <th className="p-3.5 w-52 text-center border-r border-slate-800">Status & Save</th>
@@ -757,29 +774,31 @@ export default function Dashboard() {
                         key={`${order.storeId}-${order.id}`}
                         className={`transition-colors border-b border-slate-200 ${rowBgClass}`}
                       >
-                        {/* Store & Invoice */}
-                        <td className="p-3 align-top font-bold border-r border-slate-200">
+                        {/* 1. Store / Invoice: ইনভয়েস উপরে বড়, স্টোর নিচে */}
+                        <td className="p-3 align-top font-bold border-r border-slate-200 space-y-1.5">
+                          {/* ইনভয়েস উপরে */}
+                          <div className="font-mono text-xs font-black text-slate-950 bg-slate-100 border border-slate-300 px-2.5 py-1 rounded text-center shadow-2xs">
+                            {order.isNewRow ? '🆕 NEW' : `#${order.invoice}`}
+                          </div>
+
+                          {/* স্টোর নিচে */}
                           {order.isNewRow ? (
                             <select
                               value={order.storeId}
                               onChange={(e) => handleFieldChange(order.id, order.storeId, 'storeId', e.target.value)}
-                              className="text-[11px] text-slate-900 bg-white border border-slate-300 font-bold px-2 py-1 rounded block w-full mb-1 cursor-pointer"
+                              className="text-[11px] text-slate-900 bg-white border border-slate-300 font-bold px-2 py-1 rounded block w-full cursor-pointer shadow-2xs"
                             >
                               <option value="store1">Ruhama Wear</option>
-                              <option value="store2">Aastha Naturals</option>
+                              <option value="store2">Aastha Naturals BD</option>
                             </select>
                           ) : (
-                            <span className="text-[11px] text-slate-900 bg-slate-100 border border-slate-300 font-bold px-2 py-0.5 rounded block w-fit mb-1">
+                            <div className="text-[11px] text-slate-700 bg-white border border-slate-200 font-bold px-2 py-1 rounded text-center shadow-2xs">
                               {order.storeName}
-                            </span>
+                            </div>
                           )}
-
-                          <span className="font-mono text-[11px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 inline-block">
-                            {order.isNewRow ? '🆕 NEW' : `#${order.invoice}`}
-                          </span>
                         </td>
 
-                        {/* Customer Name: সম্পূর্ণ ক্লিন বর্ডারলেস টেক্সট-এরিয়া */}
+                        {/* 2. Customer Name: পরিচ্ছন্ন ও পুরো নাম দৃশ্যমান */}
                         <td className="p-3 align-top border-r border-slate-200">
                           <textarea
                             rows={3}
@@ -790,33 +809,39 @@ export default function Dashboard() {
                           />
                         </td>
 
-                        {/* Date: 12-Hour Format (AM/PM) */}
-                        <td className="p-3 align-top text-slate-700 whitespace-nowrap font-bold border-r border-slate-200">
-                          <div className="flex items-center gap-1.5 bg-white border border-slate-200 p-1.5 rounded">
+                        {/* 3. Date & Time: সমান সাইজের দুটি আলাদা বক্স */}
+                        <td className="p-3 align-top text-slate-700 font-bold border-r border-slate-200 space-y-1.5">
+                          <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-1.5 rounded shadow-2xs text-[11px]">
                             <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                            <span>{formatDate(order.dateCreated)}</span>
+                            <span className="font-bold text-slate-800">{formatOrderDate(order.dateCreated)}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-1.5 rounded shadow-2xs text-[11px]">
+                            <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                            <span className="font-bold text-slate-800">{formatOrderTime(order.dateCreated)}</span>
                           </div>
                         </td>
 
-                        {/* Phone, Staff & Call */}
+                        {/* 4. Phone, Staff & Call: সুন্দর লম্বা ৩টি ফুল-উইডথ ট্যাব */}
                         <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                          <div className="flex items-center gap-1">
+                          {/* ট্যাব ১: ফোন নাম্বার */}
+                          <div className="flex items-center gap-1.5 bg-white border rounded px-2.5 py-1.5 shadow-2xs border-slate-300">
                             <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                             <input
                               type="text"
                               value={order.phone}
                               placeholder="01XXXXXXXXX"
                               onChange={(e) => handleFieldChange(order.id, order.storeId, 'phone', e.target.value)}
-                              className={`w-full text-xs font-mono font-bold border rounded px-2 py-1 bg-white ${
+                              className={`w-full text-xs font-mono font-bold bg-transparent outline-none ${
                                 isRecent
-                                  ? 'border-red-500 text-red-700'
+                                  ? 'text-red-700 font-black'
                                   : isDuplicate
-                                  ? 'border-amber-500 text-amber-900'
-                                  : 'border-slate-300 text-slate-900'
+                                  ? 'text-amber-900 font-black'
+                                  : 'text-slate-900'
                               }`}
                             />
                           </div>
 
+                          {/* ডুপ্লিকেট অ্যালার্ট */}
                           {isRecent ? (
                             <div className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold">
                               <AlertTriangle className="w-3 h-3 shrink-0 text-red-600" />
@@ -829,44 +854,44 @@ export default function Dashboard() {
                             </div>
                           ) : null}
 
-                          <div className="flex items-center gap-1.5 pt-0.5 border-t border-slate-200">
-                            <div className="flex items-center gap-1 w-1/2">
-                              <UserCheck className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                              <select
-                                value={order.staffName || ''}
-                                onChange={(e) => handleFieldChange(order.id, order.storeId, 'staffName', e.target.value)}
-                                className="w-full text-[11px] font-bold border border-slate-300 rounded px-1.5 py-1 bg-white text-slate-900 cursor-pointer"
-                              >
-                                <option value="">স্টাফ বাছুন</option>
-                                {STAFF_MEMBERS.map((staff) => (
-                                  <option key={staff} value={staff}>
-                                    {staff}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
+                          {/* ট্যাব ২: ফোন নাম্বারের মতো ফুল-উইডথ লম্বা কল বাটন */}
+                          <button
+                            onClick={() => {
+                              const newCallState = !order.callDone;
+                              handleFieldChange(order.id, order.storeId, 'callDone', newCallState);
+                              if (!order.staffName) {
+                                handleFieldChange(order.id, order.storeId, 'staffName', currentUser);
+                              }
+                            }}
+                            className={`w-full flex items-center justify-center gap-1.5 text-xs font-bold py-1.5 rounded transition border cursor-pointer shadow-2xs ${
+                              order.callDone
+                                ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black'
+                                : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            <PhoneCall className="w-3.5 h-3.5" />
+                            {order.callDone ? 'কল সম্পন্ন হয়েছে' : 'কল দিন'}
+                          </button>
 
-                            <button
-                              onClick={() => {
-                                const newCallState = !order.callDone;
-                                handleFieldChange(order.id, order.storeId, 'callDone', newCallState);
-                                if (!order.staffName) {
-                                  handleFieldChange(order.id, order.storeId, 'staffName', currentUser);
-                                }
-                              }}
-                              className={`flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded transition border cursor-pointer ${
-                                order.callDone
-                                  ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                              }`}
+                          {/* ট্যাব ৩: ফুল-উইডথ স্টাফ অ্যাসাইন ট্যাব */}
+                          <div className="flex items-center gap-1.5 bg-white border border-slate-300 rounded px-2 py-1 shadow-2xs">
+                            <UserCheck className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                            <select
+                              value={order.staffName || ''}
+                              onChange={(e) => handleFieldChange(order.id, order.storeId, 'staffName', e.target.value)}
+                              className="w-full text-xs font-bold bg-transparent text-slate-900 cursor-pointer outline-none"
                             >
-                              <PhoneCall className="w-3 h-3" />
-                              {order.callDone ? 'কল হয়েছে' : 'কল দিন'}
-                            </button>
+                              <option value="">স্টাফ নির্বাচন করুন</option>
+                              {STAFF_MEMBERS.map((staff) => (
+                                <option key={staff} value={staff}>
+                                  {staff}
+                                </option>
+                              ))}
+                            </select>
                           </div>
                         </td>
 
-                        {/* Address, District & Thana */}
+                        {/* 5. Address, District & Thana */}
                         <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
                           <div className="flex items-start gap-1">
                             <MapPin className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
@@ -913,7 +938,7 @@ export default function Dashboard() {
                           </div>
                         </td>
 
-                        {/* Items, COD & Size */}
+                        {/* 6. Items, COD & Size */}
                         <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
                           <div className="flex items-start gap-1">
                             <Edit3 className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
@@ -953,7 +978,7 @@ export default function Dashboard() {
                           </div>
                         </td>
 
-                        {/* Status & Save */}
+                        {/* 7. Status & Save */}
                         <td className="p-3 align-top text-center space-y-1.5 border-r border-slate-200">
                           <select
                             value={order.status}
@@ -1009,7 +1034,7 @@ export default function Dashboard() {
                           </div>
                         </td>
 
-                        {/* Steadfast Courier */}
+                        {/* 8. Steadfast Courier */}
                         <td className="p-3 align-top space-y-1.5">
                           <div className="text-left">
                             <input
