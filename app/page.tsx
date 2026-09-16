@@ -73,7 +73,7 @@ const WOO_STATUSES = [
 
 export default function Dashboard() {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<string>('Admin');
+  const [currentUser, setCurrentUser] = useState<string>('omar faruque(Admin)');
   const [orders, setOrders] = useState<Order[]>([]);
   const [initialOrders, setInitialOrders] = useState<Record<string, Order>>({});
   const [loading, setLoading] = useState<boolean>(true);
@@ -532,7 +532,6 @@ export default function Dashboard() {
     return matchesStore && matchesStatus && matchesSearch;
   });
 
-  // তারিখ ও সময় আলাদা ফরম্যাট
   const formatOrderDate = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
@@ -606,42 +605,39 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* ডান পাশের অ্যাকশন প্যানেল (লগইন বক্স + ২ কলাম বাটন) */}
+          {/* ডান পাশের সুষম বিন্যাসিত অ্যাকশন কলামসমূহ */}
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-            {/* ৩য় কলাম (বাঁয়ে): দুই লাইনের সাইজে মোটা ইউজার অ্যাকাউন্ট বক্স */}
-            <div className="flex items-center gap-2.5 bg-slate-100 border border-slate-300 px-4 py-2.5 rounded-xl h-[74px] shadow-2xs">
-              <div className="w-9 h-9 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0">
-                <User className="w-5 h-5 text-amber-400" />
-              </div>
-              <div className="text-left leading-tight">
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">বর্তমান লগইন</div>
-                <div className="text-sm font-black text-slate-950 mt-0.5">{currentUser}</div>
+            {/* ৩য় ব্লক (বাঁয়ে): দুই লাইনের সাইজে প্রোফাইল বক্স */}
+            <div className="flex flex-col justify-center items-center bg-slate-100 border border-slate-300 px-4 py-1.5 rounded-xl h-[78px] min-w-[170px] shadow-2xs">
+              <User className="w-5 h-5 text-slate-700 mb-1" />
+              <div className="text-xs font-black text-slate-900 leading-tight text-center">
+                {currentUser}
               </div>
             </div>
 
-            {/* ২য় কলাম (মাঝে): রিফ্রেশ ও লগআউট বাটন */}
+            {/* ২য় ব্লক (মাঝে): রিফ্রেশ ও লগআউট - একই সাইজের দুটি বক্স */}
             <div className="flex flex-col gap-1.5">
               <button
                 onClick={fetchOrders}
-                className="flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 px-3.5 py-1.5 rounded-lg font-bold text-xs transition border border-slate-300 cursor-pointer active:scale-95 h-[34px] w-36"
+                className="w-36 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition border border-slate-300 cursor-pointer active:scale-95 shadow-2xs"
               >
                 <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${loading ? 'animate-spin' : ''}`} /> Refresh Orders
               </button>
 
               <button
                 onClick={handleLogout}
-                className="flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 px-3.5 py-1.5 rounded-lg font-bold text-xs transition border border-rose-200 cursor-pointer active:scale-95 h-[34px] w-36"
+                className="w-36 h-[36px] flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-xs transition border border-rose-200 cursor-pointer active:scale-95 shadow-2xs"
               >
                 <LogOut className="w-3.5 h-3.5" /> লগআউট
               </button>
             </div>
 
-            {/* ১ম কলাম (একদম ডানপাশে): কুরিয়ার রিপোর্ট ও নতুন অর্ডার যোগ বাটন */}
+            {/* ১ম ব্লক (একদম ডানপাশে): কুরিয়ার রিপোর্ট ও নতুন অর্ডার - একই সাইজের দুটি বক্স */}
             <div className="flex flex-col gap-1.5">
               <button
                 onClick={handleSendCourierReport}
                 disabled={reporting}
-                className="flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white px-3.5 py-1.5 rounded-lg font-bold text-xs transition cursor-pointer border border-slate-800 disabled:opacity-50 h-[34px] w-48 shadow-xs"
+                className="w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg font-bold text-xs transition cursor-pointer border border-slate-800 disabled:opacity-50 shadow-2xs"
               >
                 <BarChart2 className={`w-3.5 h-3.5 text-amber-400 ${reporting ? 'animate-spin' : ''}`} />
                 {reporting ? 'রিপোর্ট যাচ্ছে...' : '📊 কুরিয়ার অডিট রিপোর্ট'}
@@ -649,7 +645,7 @@ export default function Dashboard() {
 
               <button
                 onClick={handleAddNewBlankRow}
-                className="flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 px-3.5 py-1.5 rounded-lg font-bold text-xs transition cursor-pointer border border-slate-300 active:scale-95 h-[34px] w-48 shadow-xs"
+                className="w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition cursor-pointer border border-slate-300 active:scale-95 shadow-2xs"
               >
                 <Plus className="w-3.5 h-3.5 text-emerald-600 font-black" /> + নতুন অর্ডার যোগ করুন
               </button>
@@ -774,31 +770,31 @@ export default function Dashboard() {
                         key={`${order.storeId}-${order.id}`}
                         className={`transition-colors border-b border-slate-200 ${rowBgClass}`}
                       >
-                        {/* 1. Store / Invoice: ইনভয়েস উপরে বড়, স্টোর নিচে */}
+                        {/* 1. Invoice / Store: ইনভয়েস উপরে, স্টোর নিচে - সেম সাইজের দুটি বক্স */}
                         <td className="p-3 align-top font-bold border-r border-slate-200 space-y-1.5">
-                          {/* ইনভয়েস উপরে */}
-                          <div className="font-mono text-xs font-black text-slate-950 bg-slate-100 border border-slate-300 px-2.5 py-1 rounded text-center shadow-2xs">
+                          {/* উপরে ইনভয়েস বক্স */}
+                          <div className="w-full h-[32px] flex items-center justify-center font-mono text-xs font-black text-slate-950 bg-slate-100 border border-slate-300 rounded shadow-2xs">
                             {order.isNewRow ? '🆕 NEW' : `#${order.invoice}`}
                           </div>
 
-                          {/* স্টোর নিচে */}
+                          {/* নিচে স্টোর বক্স (সেম সাইজ) */}
                           {order.isNewRow ? (
                             <select
                               value={order.storeId}
                               onChange={(e) => handleFieldChange(order.id, order.storeId, 'storeId', e.target.value)}
-                              className="text-[11px] text-slate-900 bg-white border border-slate-300 font-bold px-2 py-1 rounded block w-full cursor-pointer shadow-2xs"
+                              className="w-full h-[32px] text-[11px] text-slate-900 bg-white border border-slate-300 font-bold px-2 rounded cursor-pointer shadow-2xs"
                             >
                               <option value="store1">Ruhama Wear</option>
                               <option value="store2">Aastha Naturals BD</option>
                             </select>
                           ) : (
-                            <div className="text-[11px] text-slate-700 bg-white border border-slate-200 font-bold px-2 py-1 rounded text-center shadow-2xs">
+                            <div className="w-full h-[32px] flex items-center justify-center text-[11px] text-slate-700 bg-white border border-slate-200 font-bold px-2 rounded shadow-2xs">
                               {order.storeName}
                             </div>
                           )}
                         </td>
 
-                        {/* 2. Customer Name: পরিচ্ছন্ন ও পুরো নাম দৃশ্যমান */}
+                        {/* 2. Customer Name */}
                         <td className="p-3 align-top border-r border-slate-200">
                           <textarea
                             rows={3}
@@ -809,39 +805,42 @@ export default function Dashboard() {
                           />
                         </td>
 
-                        {/* 3. Date & Time: সমান সাইজের দুটি আলাদা বক্স */}
+                        {/* 3. Date & Time: উপরে টাইম, নিচে তারিখ - সেম সাইজের দুটি বক্স */}
                         <td className="p-3 align-top text-slate-700 font-bold border-r border-slate-200 space-y-1.5">
-                          <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-1.5 rounded shadow-2xs text-[11px]">
+                          {/* উপরে টাইম বক্স */}
+                          <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
+                            <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                            <span className="font-bold text-slate-900">{formatOrderTime(order.dateCreated)}</span>
+                          </div>
+
+                          {/* নিচে তারিখ বক্স (সেম সাইজ) */}
+                          <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
                             <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                             <span className="font-bold text-slate-800">{formatOrderDate(order.dateCreated)}</span>
                           </div>
-                          <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-1.5 rounded shadow-2xs text-[11px]">
-                            <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                            <span className="font-bold text-slate-800">{formatOrderTime(order.dateCreated)}</span>
-                          </div>
                         </td>
 
-                        {/* 4. Phone, Staff & Call: সুন্দর লম্বা ৩টি ফুল-উইডথ ট্যাব */}
+                        {/* 4. Phone, Staff & Call: উপর-নিচ ৩টি হুবহু সেম সাইজের লম্বা বক্স */}
                         <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                          {/* ট্যাব ১: ফোন নাম্বার */}
-                          <div className="flex items-center gap-1.5 bg-white border rounded px-2.5 py-1.5 shadow-2xs border-slate-300">
+                          {/* ১ম বক্স: ফোন নাম্বার (বোল্ড ও পরিষ্কার) */}
+                          <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
                             <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                             <input
                               type="text"
                               value={order.phone}
                               placeholder="01XXXXXXXXX"
                               onChange={(e) => handleFieldChange(order.id, order.storeId, 'phone', e.target.value)}
-                              className={`w-full text-xs font-mono font-bold bg-transparent outline-none ${
+                              className={`w-full text-xs font-mono font-black bg-transparent outline-none tracking-wide ${
                                 isRecent
-                                  ? 'text-red-700 font-black'
+                                  ? 'text-red-700'
                                   : isDuplicate
-                                  ? 'text-amber-900 font-black'
-                                  : 'text-slate-900'
+                                  ? 'text-amber-900'
+                                  : 'text-slate-950'
                               }`}
                             />
                           </div>
 
-                          {/* ডুপ্লিকেট অ্যালার্ট */}
+                          {/* ডুপ্লিকেট নোটিশ */}
                           {isRecent ? (
                             <div className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold">
                               <AlertTriangle className="w-3 h-3 shrink-0 text-red-600" />
@@ -854,7 +853,7 @@ export default function Dashboard() {
                             </div>
                           ) : null}
 
-                          {/* ট্যাব ২: ফোন নাম্বারের মতো ফুল-উইডথ লম্বা কল বাটন */}
+                          {/* ২য় বক্স: ঠিক একই সাইজের কল বাটন */}
                           <button
                             onClick={() => {
                               const newCallState = !order.callDone;
@@ -863,7 +862,7 @@ export default function Dashboard() {
                                 handleFieldChange(order.id, order.storeId, 'staffName', currentUser);
                               }
                             }}
-                            className={`w-full flex items-center justify-center gap-1.5 text-xs font-bold py-1.5 rounded transition border cursor-pointer shadow-2xs ${
+                            className={`w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold rounded transition border cursor-pointer shadow-2xs ${
                               order.callDone
                                 ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black'
                                 : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'
@@ -873,8 +872,8 @@ export default function Dashboard() {
                             {order.callDone ? 'কল সম্পন্ন হয়েছে' : 'কল দিন'}
                           </button>
 
-                          {/* ট্যাব ৩: ফুল-উইডথ স্টাফ অ্যাসাইন ট্যাব */}
-                          <div className="flex items-center gap-1.5 bg-white border border-slate-300 rounded px-2 py-1 shadow-2xs">
+                          {/* ৩য় বক্স: ঠিক একই সাইজের স্টাফ ড্রপডাউন ট্যাব */}
+                          <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
                             <UserCheck className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                             <select
                               value={order.staffName || ''}
