@@ -27,6 +27,7 @@ import {
   Shirt,
   User,
   LogOut,
+  Save,
 } from 'lucide-react';
 
 interface Order {
@@ -80,7 +81,6 @@ export default function Dashboard() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
-  // Group 2 (RUHAMA WEAR DASHBOARD) এ প্রতিটি কাজের লাইভ নোটিফিকেশন
   const sendActivityLog = async (logText: string) => {
     try {
       await fetch('/api/telegram', {
@@ -96,17 +96,10 @@ export default function Dashboard() {
   useEffect(() => {
     fetch('/api/auth/check')
       .then((res) => {
-        if (!res.ok) {
-          router.push('/login');
-        } else {
-          res.json().then((data) => {
-            if (data.username) setCurrentUser(data.username);
-          });
-        }
+        if (!res.ok) router.push('/login');
+        else res.json().then((d) => d.username && setCurrentUser(d.username));
       })
-      .catch(() => {
-        router.push('/login');
-      });
+      .catch(() => router.push('/login'));
   }, [router]);
 
   const fetchOrders = async () => {
@@ -160,11 +153,8 @@ export default function Dashboard() {
     orders.forEach((o) => {
       const cleanPhone = o.phone ? o.phone.replace(/[^0-9]/g, '') : '';
       if (cleanPhone.length >= 10) {
-        if (!data[cleanPhone]) {
-          data[cleanPhone] = { count: 0, recentOrders: [] };
-        }
+        if (!data[cleanPhone]) data[cleanPhone] = { count: 0, recentOrders: [] };
         data[cleanPhone].count += 1;
-
         const orderTime = new Date(o.dateCreated).getTime();
         if (now - orderTime <= 24 * 60 * 60 * 1000) {
           data[cleanPhone].recentOrders.push(o);
@@ -175,12 +165,10 @@ export default function Dashboard() {
   }, [orders]);
 
   const handleFieldChange = (orderId: number, storeId: string, field: keyof Order, value: any) => {
-    setOrders((prevOrders) =>
-      prevOrders.map((order) => {
+    setOrders((prev) =>
+      prev.map((order) => {
         if (order.id === orderId && order.storeId === storeId) {
-          if (field === 'district') {
-            return { ...order, district: value, thana: '' };
-          }
+          if (field === 'district') return { ...order, district: value, thana: '' };
           return { ...order, [field]: value };
         }
         return order;
@@ -188,10 +176,12 @@ export default function Dashboard() {
     );
   };
 
-  const handleUpdateOrderStatus = async (order: Order, newStatus: string) => {
+  // সম্পূর্ণ অর্ডার সেভ ও স্ট্যাটাস আপডেট হ্যান্ডলার
+  const handleSaveOrder = async (order: Order, overrideStatus?: string) => {
     setUpdatingId(order.id);
     setMessage(null);
 
+    const newStatus = overrideStatus || order.status;
     const assignedStaff = order.staffName || currentUser;
 
     try {
@@ -203,34 +193,44 @@ export default function Dashboard() {
           orderId: order.id,
           status: newStatus,
           staffName: assignedStaff,
+          customerName: order.customerName,
+          phone: order.phone,
+          streetAddress: order.streetAddress,
+          district: order.district,
+          thana: order.thana,
+          size: order.size,
+          items: order.items,
+          total: order.total,
         }),
       });
 
       const result = await res.json();
 
       if (res.ok) {
-        setOrders((prevOrders) =>
-          prevOrders.map((o) =>
+        setOrders((prev) =>
+          prev.map((o) =>
             o.id === order.id && o.storeId === order.storeId
               ? { ...o, status: newStatus, staffName: assignedStaff }
               : o
           )
         );
         setMessage({
-          text: `Order #${order.invoice} স্ট্যাটাস "${newStatus}" করা হয়েছে (${assignedStaff})`,
+          text: `Order #${order.invoice} এর সকল তথ্য WooCommerce-এ সেভ করা হয়েছে!`,
           type: 'success',
         });
 
-        const logMsg = `🔄 <b>স্ট্যাটাস আপডেট করা হয়েছে</b>\n` +
+        const logMsg = `💾 <b>অর্ডার আপডেট ও সেভ করা হয়েছে</b>\n` +
           `━━━━━━━━━━━━━━━━━━━\n` +
           `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
           `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
-          `👤 <b>কাস্টমার:</b> ${order.customerName} (${order.phone})\n` +
-          `📌 <b>নতুন স্ট্যাটাস:</b> <code>${newStatus.toUpperCase()}</code>\n` +
+          `👤 <b>কাস্টমার:</b> ${order.customerName} (<code>${order.phone}</code>)\n` +
+          `📍 <b>ঠিকানা:</b> ${order.streetAddress || ''}, ${order.thana || ''}, ${order.district || ''}\n` +
+          `👕 <b>সাইজ:</b> ${order.size || 'N/A'} | <b>টাকা:</b> ৳${order.total}\n` +
+          `📌 <b>স্ট্যাটাস:</b> <code>${newStatus.toUpperCase()}</code>\n` +
           `👨‍💼 <b>স্টাফ:</b> ${assignedStaff}`;
         sendActivityLog(logMsg);
       } else {
-        setMessage({ text: result.error || 'স্ট্যাটাস আপডেট ব্যর্থ হয়েছে', type: 'error' });
+        setMessage({ text: result.error || 'সেভ করতে সমস্যা হয়েছে', type: 'error' });
       }
     } catch (err: any) {
       setMessage({ text: err.message || 'Network error', type: 'error' });
@@ -259,13 +259,10 @@ export default function Dashboard() {
       const result = await res.json();
 
       if (res.ok) {
-        setOrders((prevOrders) => prevOrders.filter((o) => !(o.id === order.id && o.storeId === order.storeId)));
-        setMessage({
-          text: `Order #${order.invoice} মুছে ফেলা হয়েছে!`,
-          type: 'success',
-        });
+        setOrders((prev) => prev.filter((o) => !(o.id === order.id && o.storeId === order.storeId)));
+        setMessage({ text: `Order #${order.invoice} মুছে ফেলা হয়েছে!`, type: 'success' });
 
-        const logMsg = `🗑️ <b>অর্ডার মুছে ফেলা হয়েছে</b>\n` +
+        const logMsg = `🗑️ <b>অর্ডার ডিলিট করা হয়েছে</b>\n` +
           `━━━━━━━━━━━━━━━━━━━\n` +
           `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
           `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
@@ -294,7 +291,6 @@ export default function Dashboard() {
       order.district ? `District: ${order.district}` : '',
     ].filter(Boolean);
     const fullAddress = addressParts.join(', ');
-
     const assignedStaff = order.staffName || currentUser;
 
     try {
@@ -319,8 +315,8 @@ export default function Dashboard() {
         const cid = consignment.consignment_id || '';
         const initialStatus = consignment.status || 'in_review';
 
-        setOrders((prevOrders) =>
-          prevOrders.map((o) =>
+        setOrders((prev) =>
+          prev.map((o) =>
             o.id === order.id && o.storeId === order.storeId
               ? {
                   ...o,
@@ -333,8 +329,11 @@ export default function Dashboard() {
           )
         );
 
+        // সাথে সাথে ডাটাবেসেও সেভ রাখা
+        handleSaveOrder(order);
+
         setMessage({
-          text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে (${assignedStaff})! CID: ${cid}`,
+          text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`,
           type: 'success',
         });
 
@@ -342,8 +341,7 @@ export default function Dashboard() {
           `━━━━━━━━━━━━━━━━━━━\n` +
           `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
           `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
-          `👤 <b>কাস্টমার:</b> ${order.customerName}\n` +
-          `📞 <b>ফোন:</b> ${order.phone}\n` +
+          `👤 <b>কাস্টমার:</b> ${order.customerName} (<code>${order.phone}</code>)\n` +
           `📍 <b>ঠিকানা:</b> ${fullAddress}\n` +
           `💵 <b>COD:</b> ৳${order.total} ${order.size ? `(সাইজ: ${order.size})` : ''}\n` +
           `🏷️ <b>CID:</b> <code>${cid}</code> | <b>Tracking:</b> <code>${tracking}</code>\n` +
@@ -376,8 +374,8 @@ export default function Dashboard() {
       if (res.ok && result.data) {
         const liveStatus = result.data.delivery_status || result.data.status || 'unknown';
 
-        setOrders((prevOrders) =>
-          prevOrders.map((o) =>
+        setOrders((prev) =>
+          prev.map((o) =>
             o.id === order.id && o.storeId === order.storeId ? { ...o, courierStatus: liveStatus } : o
           )
         );
@@ -505,7 +503,6 @@ export default function Dashboard() {
             <button
               onClick={handleLogout}
               className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white px-4 py-2.5 rounded-xl font-black text-sm shadow-md transition active:scale-95 cursor-pointer"
-              title="লগআউট করুন"
             >
               <LogOut className="w-4 h-4" /> লগআউট
             </button>
@@ -590,16 +587,16 @@ export default function Dashboard() {
             <div className="p-20 text-center text-slate-600 font-black text-lg">কোনো অর্ডার পাওয়া যায়নি।</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[1780px]">
+              <table className="w-full text-left border-collapse min-w-[1850px]">
                 <thead>
                   <tr className="bg-slate-950 text-white text-xs uppercase font-black tracking-widest">
                     <th className="p-4 w-36 border-r-2 border-slate-800">Store / Invoice</th>
-                    <th className="p-4 w-40 border-r-2 border-slate-800">Customer Name</th>
+                    <th className="p-4 w-44 border-r-2 border-slate-800">Customer Name</th>
                     <th className="p-4 w-32 border-r-2 border-slate-800">Date & Time</th>
                     <th className="p-4 w-80 border-r-2 border-slate-800">Phone, Staff & Call</th>
-                    <th className="p-4 w-[420px] border-r-2 border-slate-800">Address & District/Thana</th>
+                    <th className="p-4 w-[430px] border-r-2 border-slate-800">Address & District/Thana</th>
                     <th className="p-4 w-72 border-r-2 border-slate-800">Items, COD & Size</th>
-                    <th className="p-4 w-48 text-center border-r-2 border-slate-800">Status & Decision</th>
+                    <th className="p-4 w-52 text-center border-r-2 border-slate-800">Status & Save</th>
                     <th className="p-4 w-80 text-center">Steadfast Push & Live Status</th>
                   </tr>
                 </thead>
@@ -742,7 +739,7 @@ export default function Dashboard() {
                               rows={2}
                               value={order.streetAddress}
                               onChange={(e) => handleFieldChange(order.id, order.storeId, 'streetAddress', e.target.value)}
-                              placeholder="বাড়ি/রোড/এলাকা বিস্তারিত ঠিকানা..."
+                              placeholder="বিস্তারিত ঠিকানা..."
                               className="w-full text-xs font-bold text-slate-900 border-2 border-slate-300 rounded-lg px-2.5 py-1.5 bg-white resize-none shadow-sm focus:border-slate-900"
                             />
                           </div>
@@ -783,7 +780,7 @@ export default function Dashboard() {
                           </div>
                         </td>
 
-                        {/* Items, COD & Editable Size */}
+                        {/* Items, COD & Size */}
                         <td className="p-3.5 align-top space-y-2 border-r-2 border-slate-300">
                           <div className="flex items-start gap-1.5">
                             <Edit3 className="w-4 h-4 text-slate-600 mt-1 shrink-0" />
@@ -791,7 +788,7 @@ export default function Dashboard() {
                               rows={2}
                               value={order.items}
                               onChange={(e) => handleFieldChange(order.id, order.storeId, 'items', e.target.value)}
-                              placeholder="Items note"
+                              placeholder="Items"
                               className="w-full text-xs font-bold text-slate-900 border-2 border-slate-300 rounded-lg px-2.5 py-1.5 bg-white resize-none shadow-sm"
                             />
                           </div>
@@ -814,19 +811,19 @@ export default function Dashboard() {
                                 type="text"
                                 value={order.size || ''}
                                 onChange={(e) => handleFieldChange(order.id, order.storeId, 'size', e.target.value.toUpperCase())}
-                                placeholder="যেমন: XL"
+                                placeholder="XL"
                                 className="w-16 text-xs font-black text-slate-950 uppercase text-center border-2 border-amber-400 rounded bg-white px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs"
                               />
                             </div>
                           </div>
                         </td>
 
-                        {/* Status & Decision */}
+                        {/* Status & Save */}
                         <td className="p-3.5 align-top text-center space-y-2 border-r-2 border-slate-300">
                           <select
                             value={order.status}
                             disabled={updatingId === order.id}
-                            onChange={(e) => handleUpdateOrderStatus(order, e.target.value)}
+                            onChange={(e) => handleSaveOrder(order, e.target.value)}
                             className={`w-full text-xs font-black border-2 rounded-xl px-2.5 py-2 text-center focus:outline-none focus:ring-2 focus:ring-slate-900 cursor-pointer shadow-sm ${getStatusColor(
                               order.status
                             )}`}
@@ -838,37 +835,47 @@ export default function Dashboard() {
                             ))}
                           </select>
 
-                          <div className="grid grid-cols-3 gap-1.5 pt-1">
+                          {/* ডাটাবেস সেভ বাটন */}
+                          <button
+                            onClick={() => handleSaveOrder(order)}
+                            disabled={updatingId === order.id}
+                            className="w-full flex items-center justify-center gap-1.5 text-xs font-black text-white bg-slate-950 hover:bg-slate-800 py-1.5 px-2 rounded-xl transition shadow-sm cursor-pointer disabled:opacity-50"
+                          >
+                            <Save className={`w-3.5 h-3.5 ${updatingId === order.id ? 'animate-spin' : ''}`} />
+                            {updatingId === order.id ? 'সেভ হচ্ছে...' : 'তথ্য সেভ করুন (Save)'}
+                          </button>
+
+                          <div className="grid grid-cols-3 gap-1.5 pt-0.5">
                             <button
-                              onClick={() => handleUpdateOrderStatus(order, 'on-hold')}
+                              onClick={() => handleSaveOrder(order, 'on-hold')}
                               disabled={updatingId === order.id}
-                              title="অর্ডারটি রাখুন"
-                              className="flex items-center justify-center gap-1 text-[11px] font-black text-purple-900 bg-white hover:bg-purple-100 border-2 border-purple-400 py-1.5 rounded-lg transition shadow-sm cursor-pointer"
+                              title="রাখুন"
+                              className="flex items-center justify-center gap-1 text-[11px] font-black text-purple-900 bg-white hover:bg-purple-100 border-2 border-purple-400 py-1 rounded-lg transition shadow-sm cursor-pointer"
                             >
-                              <BookmarkCheck className="w-3.5 h-3.5" /> রাখুন
+                              <BookmarkCheck className="w-3 h-3" /> রাখুন
                             </button>
 
                             <button
-                              onClick={() => handleUpdateOrderStatus(order, 'cancelled')}
+                              onClick={() => handleSaveOrder(order, 'cancelled')}
                               disabled={updatingId === order.id}
-                              title="ক্যানসেল করুন"
-                              className="flex items-center justify-center gap-1 text-[11px] font-black text-rose-900 bg-white hover:bg-rose-100 border-2 border-rose-400 py-1.5 rounded-lg transition shadow-sm cursor-pointer"
+                              title="বাতিল"
+                              className="flex items-center justify-center gap-1 text-[11px] font-black text-rose-900 bg-white hover:bg-rose-100 border-2 border-rose-400 py-1 rounded-lg transition shadow-sm cursor-pointer"
                             >
-                              <XCircle className="w-3.5 h-3.5" /> বাতিল
+                              <XCircle className="w-3 h-3" /> বাতিল
                             </button>
 
                             <button
                               onClick={() => handleDeleteOrder(order)}
                               disabled={updatingId === order.id}
-                              title="ডিলিট করুন"
-                              className="flex items-center justify-center gap-1 text-[11px] font-black text-slate-800 hover:text-red-700 bg-white hover:bg-red-100 border-2 border-slate-300 py-1.5 rounded-lg transition shadow-sm cursor-pointer"
+                              title="ডিলিট"
+                              className="flex items-center justify-center gap-1 text-[11px] font-black text-slate-800 hover:text-red-700 bg-white hover:bg-red-100 border-2 border-slate-300 py-1 rounded-lg transition shadow-sm cursor-pointer"
                             >
-                              <Trash2 className="w-3.5 h-3.5" /> ডিলিট
+                              <Trash2 className="w-3 h-3" /> ডিলিট
                             </button>
                           </div>
                         </td>
 
-                        {/* Steadfast Push, Special Note & Live Status */}
+                        {/* Steadfast Courier */}
                         <td className="p-3.5 align-top space-y-2">
                           <div className="text-left">
                             <label className="text-[11px] font-black text-slate-800 flex items-center gap-1 mb-0.5">
@@ -911,7 +918,7 @@ export default function Dashboard() {
 
                               <div>
                                 <div className="text-[10px] font-black text-slate-600 flex items-center gap-1 mb-1">
-                                  <Activity className="w-3.5 h-3.5 text-emerald-600 animate-pulse" /> বর্তমান অবস্থা (Current Status):
+                                  <Activity className="w-3.5 h-3.5 text-emerald-600 animate-pulse" /> বর্তমান অবস্থা:
                                 </div>
                                 <div
                                   className={`w-full py-1.5 px-2 rounded-lg text-center text-xs font-black uppercase tracking-wider border-2 ${getCourierBadge(
