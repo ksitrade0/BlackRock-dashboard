@@ -29,6 +29,7 @@ import {
   LogOut,
   Save,
   PlusCircle,
+  BarChart3,
 } from 'lucide-react';
 
 interface Order {
@@ -81,6 +82,7 @@ export default function Dashboard() {
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [sendingId, setSendingId] = useState<number | null>(null);
   const [trackingId, setTrackingId] = useState<number | null>(null);
+  const [reporting, setReporting] = useState<boolean>(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
@@ -184,6 +186,25 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। নাম ও তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
+  // কুরিয়ার রিপোর্ট পাঠানোর হ্যান্ডলার
+  const handleSendCourierReport = async () => {
+    setReporting(true);
+    setMessage({ text: 'কুরিয়ার অডিট রিপোর্ট তৈরি ও পাঠানো হচ্ছে...', type: 'success' });
+    try {
+      const res = await fetch('/api/cron/courier-report');
+      const data = await res.json();
+      if (res.ok) {
+        setMessage({ text: '✅ কুরিয়ার রিপোর্ট সফলভাবে RUHAMA COURIER ALERTS গ্রুপে পাঠানো হয়েছে!', type: 'success' });
+      } else {
+        setMessage({ text: data.error || 'রিপোর্ট পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
+      }
+    } catch (err: any) {
+      setMessage({ text: err.message || 'নেটওয়ার্ক এরর', type: 'error' });
+    } finally {
+      setReporting(false);
+    }
+  };
+
   const phoneOrderData = useMemo(() => {
     const data: Record<string, { count: number; recentOrders: Order[] }> = {};
     const now = new Date().getTime();
@@ -230,7 +251,6 @@ export default function Dashboard() {
     const key = `${order.storeId}-${order.id}`;
     const prev = initialOrders[key];
 
-    // কোনো পরিবর্তন না হলে টেলিগ্রাম মেসেজ ব্লক
     if (!order.isNewRow && prev) {
       const isChanged =
         prev.customerName !== order.customerName ||
@@ -368,7 +388,7 @@ export default function Dashboard() {
     }
   };
 
-  // Steadfast কুরিয়ারে পাঠানো (গ্রুপ ৩ এ যাবে)
+  // Steadfast কুরিয়ারে পাঠানো (RUHAMA COURIER ALERTS গ্রুপে যাবে)
   const handleSendToSteadfast = async (order: Order) => {
     if (order.isNewRow) {
       alert('অনুগ্রহ করে আগে তথ্য সেভ (Save) করুন, এরপর কুরিয়ারে পাঠান।');
@@ -431,7 +451,6 @@ export default function Dashboard() {
           type: 'success',
         });
 
-        // কুরিয়ার সংক্রান্ত বার্তা সরাসরি কুরিয়ার গ্রুপে (গ্রুপ ৩) পাঠানো
         const logMsg = `🚀 <b>STEADFAST কুরিয়ারে ডিসপ্যাচ করা হয়েছে</b>\n` +
           `━━━━━━━━━━━━━━━━━━━\n` +
           `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
@@ -516,7 +535,7 @@ export default function Dashboard() {
     return matchesStore && matchesStatus && matchesSearch;
   });
 
-  // ১২ ঘণ্টার ফরম্যাট (AM/PM) - বাংলাদেশ স্ট্যান্ডার্ড টাইম
+  // বাংলাদেশ স্ট্যান্ডার্ড টাইম ১২ ঘণ্টার ফরম্যাট (AM/PM)
   const formatDate = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
@@ -581,11 +600,22 @@ export default function Dashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {/* ব্ল্যাঙ্ক রো অর্ডার বাটন */}
             <button
               onClick={handleAddNewBlankRow}
               className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-black text-sm shadow-md transition active:scale-95 cursor-pointer"
             >
               <PlusCircle className="w-5 h-5" /> + নতুন অর্ডার যোগ করুন
+            </button>
+
+            {/* কুরিয়ার রিপোর্ট বাটন */}
+            <button
+              onClick={handleSendCourierReport}
+              disabled={reporting}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-black text-sm shadow-md transition active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              <BarChart3 className={`w-4 h-4 ${reporting ? 'animate-spin' : ''}`} />
+              {reporting ? 'রিপোর্ট যাচ্ছে...' : '📊 কুরিয়ার রিপোর্ট পাঠান'}
             </button>
 
             <div className="flex items-center gap-2 bg-slate-100 border-2 border-slate-300 px-3.5 py-2 rounded-xl shadow-2xs">
@@ -753,7 +783,7 @@ export default function Dashboard() {
                           </span>
                         </td>
 
-                        {/* Customer Name: পরিচ্ছন্ন বর্ডারহীন এবং সম্পূর্ণ নাম ভিজিবল */}
+                        {/* Customer Name: পরিচ্ছন্ন ও পুরো নাম দৃশ্যমান */}
                         <td className="p-3.5 align-top border-r-2 border-slate-300">
                           <textarea
                             rows={3}

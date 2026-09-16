@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/courier-report",
+      "schedule": "0 16 * * *"
+    }
+  ]
+}
