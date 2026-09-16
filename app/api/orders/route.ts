@@ -1,165 +1,88 @@
 import { NextResponse } from 'next/server';
-import axios from 'axios';
 
-const STORES = [
-  {
-    id: 'ruhama',
-    name: 'Ruhama Wear',
-    url: 'https://ruhamawear.com',
-    key: process.env.STORE1_KEY || '',
-    secret: process.env.STORE1_SECRET || '',
-  },
-  {
-    id: 'aastha',
-    name: 'Aastha Naturals',
-    url: 'https://aasthanaturalsbd.com',
-    key: process.env.STORE2_KEY || '',
-    secret: process.env.STORE2_SECRET || '',
-  },
-];
-
-// গভীর ও নির্ভরযোগ্য অ্যাড্রেস এক্সট্রাকশন ফাংশন
-function extractCustomerAddress(order: any): string {
-  const parts: string[] = [];
-
-  // ১. সাধারণ WooCommerce বিলিং ও শিপিং অ্যাড্রেস
-  if (order.billing?.address_1) parts.push(order.billing.address_1.trim());
-  if (order.billing?.address_2) parts.push(order.billing.address_2.trim());
-  if (order.billing?.city) parts.push(order.billing.city.trim());
-  if (order.billing?.state) parts.push(order.billing.state.trim());
-
-  // ২. মেটা ডাটা (Billing extra fields) ডিপ স্ক্যান
-  if (Array.isArray(order.meta_data)) {
-    for (const meta of order.meta_data) {
-      const rawKey = String(meta.key || '').toLowerCase();
-      let rawVal = meta.value;
-
-      // যদি ভ্যালু কোনো অবজেক্ট বা অ্যারে হয়
-      if (typeof rawVal === 'object' && rawVal !== null) {
-        rawVal = JSON.stringify(rawVal);
-      }
-      const valStr = String(rawVal || '').trim();
-
-      if (!valStr || valStr === 'false' || valStr === 'true') continue;
-
-      // বাংলা ও ইংরেজি সকল সম্ভাব্য কি-ওয়ার্ড ম্যাচিং
-      const isAddressKey =
-        rawKey.includes('ঠিকানা') ||
-        rawKey.includes('সম্পূর্ণ') ||
-        rawKey.includes('address') ||
-        rawKey.includes('thikana') ||
-        rawKey.includes('extra') ||
-        rawKey.includes('location') ||
-        rawKey.includes('district') ||
-        rawKey.includes('thana') ||
-        rawKey.includes('custom');
-
-      if (isAddressKey) {
-        if (!parts.includes(valStr)) {
-          parts.push(valStr);
-        }
-      }
-    }
-  }
-
-  // ৩. শিপিং অ্যাড্রেস ব্যাকআপ
-  if (parts.length === 0 && order.shipping?.address_1) {
-    parts.push(order.shipping.address_1.trim());
-    if (order.shipping?.city) parts.push(order.shipping.city.trim());
-  }
-
-  // ৪. কোনো কারণে যদি মেটা ডাটায় কি-ওয়ার্ড ম্যাচ না করে কিন্তু ভ্যালুতে অ্যাড্রেসের মতো কমা বা টেক্সট থাকে
-  if (parts.length === 0 && Array.isArray(order.meta_data)) {
-    for (const meta of order.meta_data) {
-      const rawKey = String(meta.key || '');
-      const valStr = String(meta.value || '').trim();
-      // ইন্টারনাল হিডেন কি (_wp, _wc ইত্যাদি) বাদ দিয়ে বড় টেক্সট খোঁজা
-      if (!rawKey.startsWith('_') && valStr.length > 8 && !rawKey.toLowerCase().includes('size') && !rawKey.toLowerCase().includes('সাইজ')) {
-        parts.push(valStr);
-        break;
-      }
-    }
-  }
-
-  return parts.filter(Boolean).join(', ');
-}
-
-// সাইজ আলাদাভাবে বের করার ফাংশন
-function extractProductSize(order: any): string {
-  let size = '';
-  if (Array.isArray(order.meta_data)) {
-    for (const meta of order.meta_data) {
-      const key = String(meta.key || '').toLowerCase();
-      const val = typeof meta.value === 'string' ? meta.value.trim() : '';
-      if (!val) continue;
-
-      if (key.includes('সাইজ') || key.includes('size')) {
-        size = val;
-        break;
-      }
-    }
-  }
-  return size;
-}
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    let allOrders: any[] = [];
+    const store1Url = (process.env.STORE1_URL || 'https://ruhamawear.com').replace(/\/$/, '');
+    const store1Key = process.env.STORE1_KEY || '';
+    const store1Secret = process.env.STORE1_SECRET || '';
 
-    for (const store of STORES) {
-      if (!store.key || !store.secret) continue;
+    const store2Url = (process.env.STORE2_URL || 'https://aasthanaturalsbd.com').replace(/\/$/, '');
+    const store2Key = process.env.STORE2_KEY || '';
+    const store2Secret = process.env.STORE2_SECRET || '';
 
+    const fetchStoreOrders = async (storeId: string, storeName: string, url: string, key: string, secret: string) => {
+      if (!key || !secret) return [];
       try {
-        const authHeader = 'Basic ' + Buffer.from(`${store.key}:${store.secret}`).toString('base64');
-        const res = await axios.get(`${store.url}/wp-json/wc/v3/orders?per_page=50`, {
-          headers: {
-            Authorization: authHeader,
-          },
-          timeout: 15000,
+        const auth = 'Basic ' + Buffer.from(`${key}:${secret}`).toString('base64');
+        const res = await fetch(`${url}/wp-json/wc/v3/orders?per_page=50`, {
+          headers: { Authorization: auth },
+          cache: 'no-store',
         });
-
-        if (Array.isArray(res.data)) {
-          const formatted = res.data.map((order: any) => {
-            const customerName =
-              `${order.billing?.first_name || ''} ${order.billing?.last_name || ''}`.trim() ||
-              order.shipping?.first_name ||
-              'Guest';
-
-            const phone = order.billing?.phone || order.shipping?.phone || '';
-            const fullAddress = extractCustomerAddress(order);
-            const extractedSize = extractProductSize(order);
-
-            const items = order.line_items
-              ? order.line_items.map((i: any) => `${i.name} x ${i.quantity}`).join(', ')
-              : '';
-
-            return {
-              id: order.id,
-              storeId: store.id,
-              storeName: store.name,
-              invoice: String(order.id),
-              customerName: customerName,
-              phone: phone,
-              address: fullAddress,
-              size: extractedSize,
-              total: order.total,
-              status: order.status,
-              dateCreated: order.date_created,
-              items: items,
-            };
-          });
-
-          allOrders = [...allOrders, ...formatted];
+        if (!res.ok) {
+          console.error(`Error fetching from ${storeName}:`, res.statusText);
+          return [];
         }
-      } catch (storeError: any) {
-        console.error(`Error fetching from ${store.name}:`, storeError.message);
+        const data = await res.json();
+        if (!Array.isArray(data)) return [];
+
+        return data.map((o: any) => {
+          let extractedDistrict = o.billing?.city || o.billing?.state || '';
+          let extractedThana = '';
+          let customSize = '';
+          let staffName = '';
+
+          if (Array.isArray(o.meta_data)) {
+            o.meta_data.forEach((m: any) => {
+              const k = String(m.key || '').toLowerCase();
+              if (k.includes('thana')) extractedThana = String(m.value || '');
+              if (k.includes('district')) extractedDistrict = String(m.value || '');
+              if (k.includes('size') || k.includes('সাইজ')) customSize = String(m.value || '');
+              if (k === '_processed_by_staff') staffName = String(m.value || '');
+            });
+          }
+
+          const itemsSummary = (o.line_items || [])
+            .map((it: any) => `${it.name} x ${it.quantity}`)
+            .join(', ');
+
+          return {
+            id: o.id,
+            storeId,
+            storeName,
+            invoice: String(o.id),
+            customerName: `${o.billing?.first_name || ''} ${o.billing?.last_name || ''}`.trim() || 'Customer',
+            phone: o.billing?.phone || '',
+            address: o.billing?.address_1 || '',
+            district: extractedDistrict,
+            thana: extractedThana,
+            size: customSize,
+            total: o.total || '0',
+            status: o.status || 'pending',
+            dateCreated: o.date_created || new Date().toISOString(),
+            items: itemsSummary || 'No Items',
+            staffName: staffName,
+          };
+        });
+      } catch (err) {
+        console.error(`Fetch exception for ${storeName}:`, err);
+        return [];
       }
-    }
+    };
 
-    allOrders.sort((a, b) => new Date(b.dateCreated).getTime() - new Date(a.dateCreated).getTime());
+    const [ordersStore1, ordersStore2] = await Promise.all([
+      fetchStoreOrders('store1', 'Ruhama Wear', store1Url, store1Key, store1Secret),
+      fetchStoreOrders('store2', 'Aastha Naturals BD', store2Url, store2Key, store2Secret),
+    ]);
 
-    return NextResponse.json({ orders: allOrders });
+    const combined = [...ordersStore1, ...ordersStore2].sort(
+      (a, b) => new Date(b.dateCreated).getTime() - new Date(a.dateCreated).getTime()
+    );
+
+    return NextResponse.json({ orders: combined });
   } catch (error: any) {
-    return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });
+    console.error('Global orders route error:', error);
+    return NextResponse.json({ orders: [], error: error.message }, { status: 500 });
   }
 }
