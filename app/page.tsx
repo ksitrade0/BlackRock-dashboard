@@ -605,9 +605,9 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* ডান পাশের সুষম বিন্যাসিত অ্যাকশন কলামসমূহ */}
+          {/* ডান পাশের অ্যাকশন কলামসমূহ */}
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-            {/* ৩য় ব্লক (বাঁয়ে): দুই লাইনের সাইজে প্রোফাইল বক্স */}
+            {/* ৩য় ব্লক (বাঁয়ে): প্রোফাইল বক্স */}
             <div className="flex flex-col justify-center items-center bg-slate-100 border border-slate-300 px-4 py-1.5 rounded-xl h-[78px] min-w-[170px] shadow-2xs">
               <User className="w-5 h-5 text-slate-700 mb-1" />
               <div className="text-xs font-black text-slate-900 leading-tight text-center">
@@ -615,7 +615,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* ২য় ব্লক (মাঝে): রিফ্রেশ ও লগআউট - একই সাইজের দুটি বক্স */}
+            {/* ২য় ব্লক (মাঝে): রিফ্রেশ ও লগআউট */}
             <div className="flex flex-col gap-1.5">
               <button
                 onClick={fetchOrders}
@@ -632,7 +632,7 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* ১ম ব্লক (একদম ডানপাশে): কুরিয়ার রিপোর্ট ও নতুন অর্ডার - একই সাইজের দুটি বক্স */}
+            {/* ১ম ব্লক (একদম ডানপাশে): কুরিয়ার রিপোর্ট ও নতুন অর্ডার */}
             <div className="flex flex-col gap-1.5">
               <button
                 onClick={handleSendCourierReport}
@@ -731,16 +731,16 @@ export default function Dashboard() {
             <div className="p-20 text-center text-slate-600 font-bold text-sm">কোনো অর্ডার পাওয়া যায়নি।</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[1850px]">
+              <table className="w-full text-left border-collapse min-w-[1900px]">
                 <thead>
                   <tr className="bg-slate-900 text-white text-[11px] uppercase font-bold tracking-wider">
                     <th className="p-3.5 w-36 border-r border-slate-800">Invoice / Store</th>
                     <th className="p-3.5 w-60 border-r border-slate-800">Customer Name (নাম)</th>
                     <th className="p-3.5 w-40 border-r border-slate-800">Date & Time</th>
                     <th className="p-3.5 w-80 border-r border-slate-800">Phone, Call & Staff</th>
-                    <th className="p-3.5 w-[430px] border-r border-slate-800">Address & District/Thana</th>
-                    <th className="p-3.5 w-72 border-r border-slate-800">Items, COD & Size</th>
-                    <th className="p-3.5 w-52 text-center border-r border-slate-800">Status & Save</th>
+                    <th className="p-3.5 w-[440px] border-r border-slate-800">Address & Thana/District</th>
+                    <th className="p-3.5 w-[440px] border-r border-slate-800">Items, COD & Size</th>
+                    <th className="p-3.5 w-80 text-center border-r border-slate-800">Status & Save</th>
                     <th className="p-3.5 w-80 text-center">Steadfast Push & Live Status</th>
                   </tr>
                 </thead>
@@ -770,14 +770,12 @@ export default function Dashboard() {
                         key={`${order.storeId}-${order.id}`}
                         className={`transition-colors border-b border-slate-200 ${rowBgClass}`}
                       >
-                        {/* 1. Invoice / Store: ইনভয়েস উপরে, স্টোর নিচে - সেম সাইজের দুটি বক্স */}
+                        {/* 1. Invoice / Store: ইনভয়েস উপরে, স্টোর নিচে */}
                         <td className="p-3 align-top font-bold border-r border-slate-200 space-y-1.5">
-                          {/* উপরে ইনভয়েস বক্স */}
                           <div className="w-full h-[32px] flex items-center justify-center font-mono text-xs font-black text-slate-950 bg-slate-100 border border-slate-300 rounded shadow-2xs">
                             {order.isNewRow ? '🆕 NEW' : `#${order.invoice}`}
                           </div>
 
-                          {/* নিচে স্টোর বক্স (সেম সাইজ) */}
                           {order.isNewRow ? (
                             <select
                               value={order.storeId}
@@ -797,7 +795,7 @@ export default function Dashboard() {
                         {/* 2. Customer Name */}
                         <td className="p-3 align-top border-r border-slate-200">
                           <textarea
-                            rows={3}
+                            rows={4}
                             value={order.customerName}
                             onChange={(e) => handleFieldChange(order.id, order.storeId, 'customerName', e.target.value)}
                             placeholder="কাস্টমারের নাম..."
@@ -805,24 +803,21 @@ export default function Dashboard() {
                           />
                         </td>
 
-                        {/* 3. Date & Time: উপরে টাইম, নিচে তারিখ - সেম সাইজের দুটি বক্স */}
+                        {/* 3. Date & Time */}
                         <td className="p-3 align-top text-slate-700 font-bold border-r border-slate-200 space-y-1.5">
-                          {/* উপরে টাইম বক্স */}
                           <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
                             <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                             <span className="font-bold text-slate-900">{formatOrderTime(order.dateCreated)}</span>
                           </div>
 
-                          {/* নিচে তারিখ বক্স (সেম সাইজ) */}
                           <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
                             <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                             <span className="font-bold text-slate-800">{formatOrderDate(order.dateCreated)}</span>
                           </div>
                         </td>
 
-                        {/* 4. Phone, Staff & Call: উপর-নিচ ৩টি হুবহু সেম সাইজের লম্বা বক্স */}
+                        {/* 4. Phone, Call & Staff */}
                         <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                          {/* ১ম বক্স: ফোন নাম্বার (বোল্ড ও পরিষ্কার) */}
                           <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
                             <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                             <input
@@ -840,7 +835,6 @@ export default function Dashboard() {
                             />
                           </div>
 
-                          {/* ডুপ্লিকেট নোটিশ */}
                           {isRecent ? (
                             <div className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold">
                               <AlertTriangle className="w-3 h-3 shrink-0 text-red-600" />
@@ -853,7 +847,6 @@ export default function Dashboard() {
                             </div>
                           ) : null}
 
-                          {/* ২য় বক্স: ঠিক একই সাইজের কল বাটন */}
                           <button
                             onClick={() => {
                               const newCallState = !order.callDone;
@@ -872,7 +865,6 @@ export default function Dashboard() {
                             {order.callDone ? 'কল সম্পন্ন হয়েছে' : 'কল দিন'}
                           </button>
 
-                          {/* ৩য় বক্স: ঠিক একই সাইজের স্টাফ ড্রপডাউন ট্যাব */}
                           <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
                             <UserCheck className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                             <select
@@ -890,41 +882,29 @@ export default function Dashboard() {
                           </div>
                         </td>
 
-                        {/* 5. Address, District & Thana */}
+                        {/* 5. Address & Thana/District: ডবল সাইজ ঠিকানা, নিচে আগে থানা পরে জেলা */}
                         <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                          <div className="flex items-start gap-1">
+                          {/* ঠিকানার বড় ডবল কলাম সাইজ বক্স */}
+                          <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs">
                             <MapPin className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
                             <textarea
-                              rows={2}
+                              rows={3}
                               value={order.streetAddress}
                               onChange={(e) => handleFieldChange(order.id, order.storeId, 'streetAddress', e.target.value)}
-                              placeholder="ঠিকানা..."
-                              className="w-full text-xs font-bold text-slate-900 border border-slate-300 rounded px-2 py-1 bg-white resize-y leading-snug"
+                              placeholder="বিস্তারিত ঠিকানা..."
+                              className="w-full text-xs font-bold text-slate-900 bg-transparent resize-y leading-snug outline-none min-h-[58px]"
                             />
                           </div>
 
+                          {/* নিচে আগে থানা, পরে জেলা */}
                           <div className="grid grid-cols-2 gap-1.5">
-                            <div>
-                              <select
-                                value={order.district || ''}
-                                onChange={(e) => handleFieldChange(order.id, order.storeId, 'district', e.target.value)}
-                                className="w-full text-[11px] border border-slate-300 rounded px-1.5 py-1 bg-white text-slate-900 font-bold cursor-pointer"
-                              >
-                                <option value="">জেলা বাছুন</option>
-                                {BANGLADESH_DISTRICTS.map((d) => (
-                                  <option key={d.district} value={d.district}>
-                                    {d.district}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div>
+                            {/* আগে থানা */}
+                            <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
                               <select
                                 value={order.thana || ''}
                                 disabled={!order.district}
                                 onChange={(e) => handleFieldChange(order.id, order.storeId, 'thana', e.target.value)}
-                                className="w-full text-[11px] border border-slate-300 rounded px-1.5 py-1 bg-white text-slate-900 font-bold disabled:bg-slate-100 disabled:text-slate-400 cursor-pointer"
+                                className="w-full text-[11px] bg-transparent text-slate-900 font-bold disabled:text-slate-400 cursor-pointer outline-none"
                               >
                                 <option value="">থানা বাছুন</option>
                                 {availableThanas.map((thana) => (
@@ -934,56 +914,77 @@ export default function Dashboard() {
                                 ))}
                               </select>
                             </div>
+
+                            {/* পরে জেলা */}
+                            <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
+                              <select
+                                value={order.district || ''}
+                                onChange={(e) => handleFieldChange(order.id, order.storeId, 'district', e.target.value)}
+                                className="w-full text-[11px] bg-transparent text-slate-900 font-bold cursor-pointer outline-none"
+                              >
+                                <option value="">জেলা বাছুন</option>
+                                {BANGLADESH_DISTRICTS.map((d) => (
+                                  <option key={d.district} value={d.district}>
+                                    {d.district}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
                         </td>
 
-                        {/* 6. Items, COD & Size */}
+                        {/* 6. Items, COD & Size: ঠিকানার সাথে হুবহু সামঞ্জস্যপূর্ণ উইডথ ও গভীরতা */}
                         <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                          <div className="flex items-start gap-1">
+                          {/* আইটেমের বড় বক্স */}
+                          <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs">
                             <Edit3 className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
                             <textarea
-                              rows={2}
+                              rows={3}
                               value={order.items}
                               onChange={(e) => handleFieldChange(order.id, order.storeId, 'items', e.target.value)}
-                              placeholder="আইটেমের নাম..."
-                              className="w-full text-xs font-bold text-slate-900 border border-slate-300 rounded px-2 py-1 bg-white resize-y leading-snug"
+                              placeholder="আইটেমের নাম ও বিবরণ..."
+                              className="w-full text-xs font-bold text-slate-900 bg-transparent resize-y leading-snug outline-none min-h-[58px]"
                             />
                           </div>
 
-                          <div className="flex items-center gap-2 pt-0.5">
-                            <div className="flex items-center gap-1">
-                              <span className="text-[11px] font-bold text-slate-700">COD:</span>
+                          {/* নিচের সারিতে বড় COD এবং সমান সাইজ ট্যাব */}
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {/* COD বক্স বড় করা হয়েছে */}
+                            <div className="h-[34px] flex items-center gap-1.5 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
+                              <span className="text-xs font-black text-slate-700">COD:</span>
                               <input
                                 type="number"
                                 value={order.total}
                                 onFocus={(e) => e.target.select()}
                                 onChange={(e) => handleFieldChange(order.id, order.storeId, 'total', e.target.value)}
                                 placeholder="৳"
-                                className="w-18 text-xs font-bold text-slate-900 border border-slate-300 rounded px-1.5 py-0.5 bg-white"
+                                className="w-full text-xs font-black text-emerald-800 bg-transparent outline-none"
                               />
                             </div>
 
-                            <div className="flex items-center gap-1 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">
-                              <Shirt className="w-3 h-3 text-slate-600 shrink-0" />
-                              <span className="text-[10px] font-bold text-slate-600">সাইজ:</span>
+                            {/* সাইজ বক্স */}
+                            <div className="h-[34px] flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded px-2.5 shadow-2xs">
+                              <Shirt className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                              <span className="text-[11px] font-black text-slate-600">সাইজ:</span>
                               <input
                                 type="text"
                                 value={order.size || ''}
                                 onChange={(e) => handleFieldChange(order.id, order.storeId, 'size', e.target.value.toUpperCase())}
                                 placeholder="XL"
-                                className="w-14 text-[11px] font-bold text-slate-900 uppercase text-center border border-slate-300 rounded bg-white px-1 py-0.5"
+                                className="w-full text-xs font-black text-slate-950 uppercase text-center bg-white border border-slate-200 rounded py-0.5 outline-none"
                               />
                             </div>
                           </div>
                         </td>
 
-                        {/* 7. Status & Save */}
+                        {/* 7. Status & Save: Phone/Staff কলামের সমান চওড়া উইডথ ও ৩ লাইন */}
                         <td className="p-3 align-top text-center space-y-1.5 border-r border-slate-200">
+                          {/* লাইন ১: চওড়া স্ট্যাটাস ড্রপডাউন */}
                           <select
                             value={order.status}
                             disabled={updatingId === order.id}
                             onChange={(e) => handleSaveOrder(order, e.target.value)}
-                            className={`w-full text-xs font-bold border rounded px-2 py-1.5 text-center cursor-pointer ${getStatusColor(
+                            className={`w-full h-[34px] text-xs font-bold border rounded px-2.5 text-center cursor-pointer shadow-2xs ${getStatusColor(
                               order.status
                             )}`}
                           >
@@ -994,61 +995,63 @@ export default function Dashboard() {
                             ))}
                           </select>
 
+                          {/* লাইন ২: ফুল-উইডথ সেভ বাটন */}
                           <button
                             onClick={() => handleSaveOrder(order)}
                             disabled={updatingId === order.id}
-                            className="w-full flex items-center justify-center gap-1 text-[11px] font-bold text-white bg-slate-900 hover:bg-black py-1.5 px-2 rounded transition cursor-pointer disabled:opacity-50"
+                            className="w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded transition cursor-pointer disabled:opacity-50 shadow-2xs"
                           >
-                            <Save className={`w-3 h-3 ${updatingId === order.id ? 'animate-spin' : ''}`} />
+                            <Save className={`w-3.5 h-3.5 ${updatingId === order.id ? 'animate-spin' : ''}`} />
                             {updatingId === order.id ? 'সেভ হচ্ছে...' : 'তথ্য সেভ করুন (Save)'}
                           </button>
 
-                          <div className="grid grid-cols-3 gap-1 pt-0.5">
+                          {/* লাইন ৩: ৩টি সমানুপাতিক বাটন */}
+                          <div className="grid grid-cols-3 gap-1.5">
                             <button
                               onClick={() => handleSaveOrder(order, 'on-hold')}
                               disabled={updatingId === order.id}
                               title="রাখুন"
-                              className="flex items-center justify-center gap-0.5 text-[10px] font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-300 py-0.5 rounded cursor-pointer"
+                              className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-300 rounded cursor-pointer shadow-2xs"
                             >
-                              <BookmarkCheck className="w-2.5 h-2.5" /> রাখুন
+                              <BookmarkCheck className="w-3 h-3" /> রাখুন
                             </button>
 
                             <button
                               onClick={() => handleSaveOrder(order, 'cancelled')}
                               disabled={updatingId === order.id}
                               title="বাতিল"
-                              className="flex items-center justify-center gap-0.5 text-[10px] font-bold text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-300 py-0.5 rounded cursor-pointer"
+                              className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-300 rounded cursor-pointer shadow-2xs"
                             >
-                              <XCircle className="w-2.5 h-2.5" /> বাতিল
+                              <XCircle className="w-3 h-3" /> বাতিল
                             </button>
 
                             <button
                               onClick={() => handleDeleteOrder(order)}
                               disabled={updatingId === order.id}
                               title="ডিলিট"
-                              className="flex items-center justify-center gap-0.5 text-[10px] font-bold text-slate-700 hover:text-red-700 bg-slate-50 hover:bg-red-50 border border-slate-200 py-0.5 rounded cursor-pointer"
+                              className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-slate-700 hover:text-red-700 bg-slate-50 hover:bg-red-50 border border-slate-200 rounded cursor-pointer shadow-2xs"
                             >
-                              <Trash2 className="w-2.5 h-2.5" /> ডিলিট
+                              <Trash2 className="w-3 h-3" /> ডিলিট
                             </button>
                           </div>
                         </td>
 
-                        {/* 8. Steadfast Courier */}
+                        {/* 8. Steadfast Courier: পুরো বক্স সুন্দরভাবে ফিলাপ করা */}
                         <td className="p-3 align-top space-y-1.5">
-                          <div className="text-left">
+                          <div className="w-full h-[34px] flex items-center bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
                             <input
                               type="text"
                               value={order.customNote || ''}
                               onChange={(e) => handleFieldChange(order.id, order.storeId, 'customNote', e.target.value)}
                               placeholder="কুরিয়ার স্পেশাল নোট..."
-                              className="w-full text-xs font-bold border border-slate-300 rounded px-2 py-1 bg-white text-slate-900 placeholder:text-slate-400"
+                              className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 bg-transparent outline-none"
                             />
                           </div>
 
                           <button
                             onClick={() => handleSendToSteadfast(order)}
                             disabled={sendingId === order.id}
-                            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold transition w-full cursor-pointer ${
+                            className={`w-full h-[34px] flex items-center justify-center gap-1.5 rounded text-xs font-bold transition cursor-pointer shadow-2xs ${
                               order.trackingCode || order.consignmentId
                                 ? 'bg-slate-900 hover:bg-black text-white'
                                 : 'bg-slate-800 hover:bg-slate-900 text-white'
@@ -1063,7 +1066,7 @@ export default function Dashboard() {
                           </button>
 
                           {(order.trackingCode || order.consignmentId) && (
-                            <div className="bg-slate-50 border border-slate-200 rounded p-2 space-y-1.5 text-left">
+                            <div className="bg-slate-50 border border-slate-200 rounded p-2 space-y-1.5 text-left shadow-2xs">
                               <div className="flex justify-between items-center text-xs pb-1 border-b border-slate-200">
                                 <span className="font-bold text-slate-600 flex items-center gap-1">
                                   <Package className="w-3 h-3 text-slate-800" /> CID:
@@ -1082,7 +1085,7 @@ export default function Dashboard() {
                               <button
                                 onClick={() => handleCheckCourierStatus(order)}
                                 disabled={trackingId === order.id}
-                                className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-800 bg-white hover:bg-slate-100 py-1 px-2 rounded w-full border border-slate-300 transition cursor-pointer"
+                                className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-800 bg-white hover:bg-slate-100 py-1 px-2 rounded w-full border border-slate-300 transition cursor-pointer shadow-2xs"
                               >
                                 <RotateCw className={`w-3 h-3 ${trackingId === order.id ? 'animate-spin' : ''}`} />
                                 {trackingId === order.id ? 'চেক হচ্ছে...' : '🔄 লাইভ স্ট্যাটাস'}
