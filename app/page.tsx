@@ -6,7 +6,7 @@ import { BANGLADESH_DISTRICTS } from '@/lib/geoData';
 import {
   Search, RefreshCw, Send, CheckCircle, AlertCircle, Calendar, Clock,
   MapPin, Phone, Edit3, UserCheck, PhoneCall, RotateCw, AlertTriangle,
-  XCircle, Trash2, BookmarkCheck, FileText, Activity, Package, Layers,
+  XCircle, Trash2, BookmarkCheck, Package, Layers,
   Shirt, User, LogOut, Save, Plus, BarChart2,
 } from 'lucide-react';
 
@@ -82,70 +82,37 @@ export default function Dashboard() {
       const data = await res.json();
       if (data && Array.isArray(data.orders)) {
         const mappedOrders: Order[] = data.orders.map((o: any) => ({
-          ...o,
-          streetAddress: o.address || '',
-          district: o.district || '',
-          thana: o.thana || '',
-          size: o.size || '',
-          customNote: '',
-          staffName: o.staffName || '',
-          courierStatus: o.courierStatus || '',
-          isNewRow: false,
+          ...o, streetAddress: o.address || '', district: o.district || '',
+          thana: o.thana || '', size: o.size || '', customNote: '',
+          staffName: o.staffName || '', courierStatus: o.courierStatus || '', isNewRow: false,
         }));
         setOrders(mappedOrders);
-
         const snapshot: Record<string, Order> = {};
-        mappedOrders.forEach((item) => {
-          snapshot[`${item.storeId}-${item.id}`] = JSON.parse(JSON.stringify(item));
-        });
+        mappedOrders.forEach((item) => { snapshot[`${item.storeId}-${item.id}`] = JSON.parse(JSON.stringify(item)); });
         setInitialOrders(snapshot);
-      } else {
-        setOrders([]);
-      }
+      } else { setOrders([]); }
     } catch (err: any) {
       setMessage({ text: err.message || 'অর্ডার লোড করতে সমস্যা হয়েছে', type: 'error' });
       setOrders([]);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  useEffect(() => { fetchOrders(); }, []);
 
   const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/login');
-    } catch {
-      router.push('/login');
-    }
+    try { await fetch('/api/auth/logout', { method: 'POST' }); router.push('/login'); } 
+    catch { router.push('/login'); }
   };
 
   const handleAddNewBlankRow = () => {
     const tempId = -Date.now();
     const blankOrder: Order = {
-      id: tempId,
-      storeId: 'store1',
-      storeName: 'Ruhama Wear',
-      invoice: 'NEW',
-      customerName: '',
-      phone: '',
-      streetAddress: '',
-      district: 'Patuakhali',
-      thana: 'Patuakhali Sadar',
-      size: 'XL',
-      customNote: '',
-      total: '',
-      status: 'processing',
-      dateCreated: new Date().toISOString(),
-      items: '',
-      staffName: currentUser,
-      callDone: false,
-      isNewRow: true,
+      id: tempId, storeId: 'store1', storeName: 'Ruhama Wear', invoice: 'NEW',
+      customerName: '', phone: '', streetAddress: '', district: 'Patuakhali',
+      thana: 'Patuakhali Sadar', size: 'XL', customNote: '', total: '',
+      status: 'processing', dateCreated: new Date().toISOString(), items: '',
+      staffName: currentUser, callDone: false, isNewRow: true,
     };
-
     setOrders((prev) => [blankOrder, ...prev]);
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
@@ -157,31 +124,23 @@ export default function Dashboard() {
       const loggedUser = currentUser || 'omar faruque(Admin)';
       const res = await fetch(`/api/cron/courier-report?user=${encodeURIComponent(loggedUser)}`);
       const data = await res.json();
-      if (res.ok) {
-        setMessage({ text: '✅ কুরিয়ার রিপোর্ট সফলভাবে RUHAMA COURIER ALERTS গ্রুপে পাঠানো হয়েছে!', type: 'success' });
-      } else {
-        setMessage({ text: data.error || 'রিপোর্ট পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
-      }
+      if (res.ok) setMessage({ text: '✅ কুরিয়ার রিপোর্ট সফলভাবে RUHAMA COURIER ALERTS গ্রুপে পাঠানো হয়েছে!', type: 'success' });
+      else setMessage({ text: data.error || 'রিপোর্ট পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
     } catch (err: any) {
       setMessage({ text: err.message || 'নেটওয়ার্ক এরর', type: 'error' });
-    } finally {
-      setReporting(false);
-    }
+    } finally { setReporting(false); }
   };
 
   const phoneOrderData = useMemo(() => {
     const data: Record<string, { count: number; recentOrders: Order[] }> = {};
     const now = new Date().getTime();
-
     orders.forEach((o) => {
       const cleanPhone = o.phone ? o.phone.replace(/[^0-9]/g, '') : '';
       if (cleanPhone.length >= 10) {
         if (!data[cleanPhone]) data[cleanPhone] = { count: 0, recentOrders: [] };
         data[cleanPhone].count += 1;
         const orderTime = new Date(o.dateCreated).getTime();
-        if (now - orderTime <= 24 * 60 * 60 * 1000) {
-          data[cleanPhone].recentOrders.push(o);
-        }
+        if (now - orderTime <= 24 * 60 * 60 * 1000) data[cleanPhone].recentOrders.push(o);
       }
     });
     return data;
@@ -208,176 +167,93 @@ export default function Dashboard() {
       setMessage({ text: 'অনুগ্রহ করে কাস্টমারের নাম এবং ফোন নম্বর লিখুন।', type: 'error' });
       return;
     }
-
     const newStatus = overrideStatus || order.status;
     const assignedStaff = order.staffName || currentUser;
     const key = `${order.storeId}-${order.id}`;
     const prev = initialOrders[key];
 
     if (!order.isNewRow && prev) {
-      const isChanged =
-        prev.customerName !== order.customerName ||
-        prev.phone !== order.phone ||
-        prev.streetAddress !== order.streetAddress ||
-        prev.district !== order.district ||
-        prev.thana !== order.thana ||
-        prev.size !== order.size ||
-        prev.total !== order.total ||
-        prev.items !== order.items ||
-        prev.status !== newStatus ||
-        prev.staffName !== assignedStaff;
-
+      const isChanged = prev.customerName !== order.customerName || prev.phone !== order.phone ||
+        prev.streetAddress !== order.streetAddress || prev.district !== order.district ||
+        prev.thana !== order.thana || prev.size !== order.size || prev.total !== order.total ||
+        prev.items !== order.items || prev.status !== newStatus || prev.staffName !== assignedStaff;
       if (!isChanged && !overrideStatus) {
-        setMessage({ text: `Order #${order.invoice}-এ কোনো পরিবর্তন করা হয়নি।`, type: 'success' });
-        return;
+        setMessage({ text: `Order #${order.invoice}-এ কোনো পরিবর্তন করা হয়নি।`, type: 'success' }); return;
       }
     }
-
     setUpdatingId(order.id);
     setMessage(null);
-
     try {
       const res = await fetch('/api/orders/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          storeId: order.storeId,
-          orderId: order.isNewRow ? 0 : order.id,
-          status: newStatus,
-          staffName: assignedStaff,
-          customerName: order.customerName,
-          phone: order.phone,
-          streetAddress: order.streetAddress,
-          district: order.district,
-          thana: order.thana,
-          size: order.size,
-          items: order.items,
-          total: order.total || '0',
+          storeId: order.storeId, orderId: order.isNewRow ? 0 : order.id, status: newStatus,
+          staffName: assignedStaff, customerName: order.customerName, phone: order.phone,
+          streetAddress: order.streetAddress, district: order.district, thana: order.thana,
+          size: order.size, items: order.items, total: order.total || '0',
         }),
       });
-
       const result = await res.json();
-
       if (res.ok) {
         const returnedId = result.order?.id || order.id;
         const finalInvoice = String(returnedId);
-
-        const updatedOrder: Order = {
-          ...order,
-          id: returnedId,
-          invoice: finalInvoice,
-          status: newStatus,
-          staffName: assignedStaff,
-          isNewRow: false,
-        };
-
-        setOrders((prevOrders) =>
-          prevOrders.map((o) => (o.id === order.id ? updatedOrder : o))
-        );
-
-        setInitialOrders((prevInit) => ({
-          ...prevInit,
-          [`${order.storeId}-${returnedId}`]: JSON.parse(JSON.stringify(updatedOrder)),
-        }));
-
-        setMessage({ text: `Order #${finalInvoice} সফলভাবে WooCommerce-এ সেভ করা হয়েছে!`, type: 'success' });
-      } else {
-        setMessage({ text: result.error || 'সেভ করতে সমস্যা হয়েছে', type: 'error' });
-      }
-    } catch (err: any) {
-      setMessage({ text: err.message || 'Network error', type: 'error' });
-    } finally {
-      setUpdatingId(null);
-    }
+        const updatedOrder: Order = { ...order, id: returnedId, invoice: finalInvoice, status: newStatus, staffName: assignedStaff, isNewRow: false };
+        setOrders((prevOrders) => prevOrders.map((o) => (o.id === order.id ? updatedOrder : o)));
+        setInitialOrders((prevInit) => ({ ...prevInit, [`${order.storeId}-${returnedId}`]: JSON.parse(JSON.stringify(updatedOrder)) }));
+        setMessage({ text: `Order #${finalInvoice} সফলভাবে সেভ করা হয়েছে!`, type: 'success' });
+      } else { setMessage({ text: result.error || 'সেভ করতে সমস্যা হয়েছে', type: 'error' }); }
+    } catch (err: any) { setMessage({ text: err.message || 'Network error', type: 'error' }); } 
+    finally { setUpdatingId(null); }
   };
 
   const handleDeleteOrder = async (order: Order) => {
-    if (order.isNewRow) {
-      setOrders((prev) => prev.filter((o) => o.id !== order.id));
-      return;
-    }
+    if (order.isNewRow) { setOrders((prev) => prev.filter((o) => o.id !== order.id)); return; }
     if (!confirm(`⚠️ সতর্কবার্তা! আপনি কি Order #${order.invoice} স্থায়ীভাবে মুছে ফেলতে চান?`)) return;
-
     setUpdatingId(order.id);
     setMessage(null);
-
     try {
       const res = await fetch('/api/orders/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ storeId: order.storeId, orderId: order.id, action: 'delete' }),
       });
       const result = await res.json();
       if (res.ok) {
         setOrders((prev) => prev.filter((o) => !(o.id === order.id && o.storeId === order.storeId)));
         setMessage({ text: `Order #${order.invoice} মুছে ফেলা হয়েছে!`, type: 'success' });
-      } else {
-        setMessage({ text: result.error || 'ডিলিট করতে সমস্যা হয়েছে', type: 'error' });
-      }
-    } catch (err: any) {
-      setMessage({ text: err.message || 'Network error', type: 'error' });
-    } finally {
-      setUpdatingId(null);
-    }
+      } else { setMessage({ text: result.error || 'ডিলিট করতে সমস্যা হয়েছে', type: 'error' }); }
+    } catch (err: any) { setMessage({ text: err.message || 'Network error', type: 'error' }); } 
+    finally { setUpdatingId(null); }
   };
 
   const handleSendToSteadfast = async (order: Order) => {
-    if (order.isNewRow) {
-      alert('অনুগ্রহ করে আগে তথ্য সেভ (Save) করুন, এরপর কুরিয়ারে পাঠান।');
-      return;
-    }
-    if (!confirm(`আপনি কি অর্ডার #${order.invoice} স্টেডফাস্ট কুরিয়ারে পাঠাতে চান?`)) return;
-
+    if (order.isNewRow) { alert('আগে তথ্য সেভ করুন, এরপর কুরিয়ারে পাঠান।'); return; }
+    if (!confirm(`অর্ডার #${order.invoice} স্টেডফাস্ট কুরিয়ারে পাঠাতে চান?`)) return;
     setSendingId(order.id);
     setMessage(null);
-
-    const addressParts = [
-      order.streetAddress,
-      order.thana ? `Thana: ${order.thana}` : '',
-      order.district ? `District: ${order.district}` : '',
-    ].filter(Boolean);
+    const addressParts = [order.streetAddress, order.thana ? `Thana: ${order.thana}` : '', order.district ? `District: ${order.district}` : ''].filter(Boolean);
     const fullAddress = addressParts.join(', ');
     const assignedStaff = order.staffName || currentUser;
 
     try {
       const res = await fetch('/api/courier/steadfast', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          invoice: order.invoice,
-          recipient_name: order.customerName,
-          recipient_phone: order.phone,
-          recipient_address: fullAddress,
-          cod_amount: order.total,
-          note: order.customNote ? order.customNote.trim() : '',
+          invoice: order.invoice, recipient_name: order.customerName, recipient_phone: order.phone,
+          recipient_address: fullAddress, cod_amount: order.total, note: order.customNote ? order.customNote.trim() : '',
         }),
       });
-
       const result = await res.json();
-
       if (res.ok && result.data) {
         const consignment = result.data.consignment || result.data;
         const tracking = consignment.tracking_code || 'Sent';
         const cid = consignment.consignment_id || '';
         const initialStatus = consignment.status || 'in_review';
-
-        setOrders((prev) =>
-          prev.map((o) =>
-            o.id === order.id && o.storeId === order.storeId
-              ? { ...o, trackingCode: tracking, consignmentId: cid, courierStatus: initialStatus, staffName: assignedStaff }
-              : o
-          )
-        );
+        setOrders((prev) => prev.map((o) => o.id === order.id && o.storeId === order.storeId ? { ...o, trackingCode: tracking, consignmentId: cid, courierStatus: initialStatus, staffName: assignedStaff } : o));
         handleSaveOrder(order);
         setMessage({ text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`, type: 'success' });
-      } else {
-        setMessage({ text: result.error || 'কুরিয়ারে পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
-      }
-    } catch (err: any) {
-      setMessage({ text: err.message || 'Network error', type: 'error' });
-    } finally {
-      setSendingId(null);
-    }
+      } else { setMessage({ text: result.error || 'কুরিয়ারে পাঠাতে ব্যর্থ হয়েছে', type: 'error' }); }
+    } catch (err: any) { setMessage({ text: err.message || 'Network error', type: 'error' }); } 
+    finally { setSendingId(null); }
   };
 
   const handleCheckCourierStatus = async (order: Order) => {
@@ -388,23 +264,13 @@ export default function Dashboard() {
       const queryParam = order.consignmentId ? `consignment_id=${order.consignmentId}` : `tracking_code=${order.trackingCode}`;
       const res = await fetch(`/api/courier/track?${queryParam}`);
       const result = await res.json();
-
       if (res.ok && result.data) {
         const liveStatus = result.data.delivery_status || result.data.status || 'unknown';
-        setOrders((prev) =>
-          prev.map((o) =>
-            o.id === order.id && o.storeId === order.storeId ? { ...o, courierStatus: liveStatus } : o
-          )
-        );
+        setOrders((prev) => prev.map((o) => o.id === order.id && o.storeId === order.storeId ? { ...o, courierStatus: liveStatus } : o));
         setMessage({ text: `Order #${order.invoice} বর্তমান স্ট্যাটাস: ${liveStatus.toUpperCase()}`, type: 'success' });
-      } else {
-        setMessage({ text: result.error || 'ট্র্যাকিং আপডেট পাওয়া যায়নি', type: 'error' });
-      }
-    } catch (err: any) {
-      setMessage({ text: err.message || 'Tracking error', type: 'error' });
-    } finally {
-      setTrackingId(null);
-    }
+      } else { setMessage({ text: result.error || 'ট্র্যাকিং আপডেট পাওয়া যায়নি', type: 'error' }); }
+    } catch (err: any) { setMessage({ text: err.message || 'Tracking error', type: 'error' }); } 
+    finally { setTrackingId(null); }
   };
 
   const getCourierBadge = (status: string) => {
@@ -422,8 +288,7 @@ export default function Dashboard() {
     const matchesStore = selectedStore === 'all' || order.storeName.toLowerCase().includes(selectedStore.toLowerCase());
     const matchesStatus = selectedStatus === 'all' || order.status.toLowerCase() === selectedStatus.toLowerCase();
     const matchesSearch =
-      order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.phone.includes(searchTerm) ||
+      order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || order.phone.includes(searchTerm) ||
       order.invoice.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (order.staffName && order.staffName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (order.district && order.district.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -435,19 +300,13 @@ export default function Dashboard() {
   });
 
   const formatOrderDate = (dateStr: string) => {
-    try {
-      return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-      return dateStr;
-    }
+    try { return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); } 
+    catch { return dateStr; }
   };
 
   const formatOrderTime = (dateStr: string) => {
-    try {
-      return new Date(dateStr).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
-    } catch {
-      return '';
-    }
+    try { return new Date(dateStr).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true }); } 
+    catch { return ''; }
   };
 
   const getStatusColor = (status: string) => {
@@ -469,7 +328,7 @@ export default function Dashboard() {
           <div onClick={() => (window.location.href = '/')} className="flex items-center gap-3.5 cursor-pointer select-none transition hover:opacity-90">
             {hasLogoImg ? (
               <div className="w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center p-1.5 shadow-sm border border-slate-800 shrink-0">
-                <img src="/logo.png" alt="Black Rock Logo" className="w-full h-full object-contain" onError={() => setHasLogoImg(false)} />
+                <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" onError={() => setHasLogoImg(false)} />
               </div>
             ) : (
               <div className="w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center text-white shadow-sm border border-slate-700 shrink-0">
@@ -495,7 +354,7 @@ export default function Dashboard() {
 
             <div className="flex flex-col gap-1.5">
               <button onClick={fetchOrders} className="w-36 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition border border-slate-300 cursor-pointer shadow-2xs">
-                <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${loading ? 'animate-spin' : ''}`} /> Refresh Orders
+                <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${loading ? 'animate-spin' : ''}`} /> Refresh
               </button>
               <button onClick={handleLogout} className="w-36 h-[36px] flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-xs transition border border-rose-200 cursor-pointer shadow-2xs">
                 <LogOut className="w-3.5 h-3.5" /> লগআউট
@@ -514,20 +373,12 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {message && (
-          <div className={`p-3.5 mb-4 rounded-xl flex items-center gap-2.5 shadow-sm font-bold text-xs ${message.type === 'success' ? 'bg-emerald-50 text-emerald-900 border border-emerald-300' : 'bg-rose-50 text-rose-900 border border-rose-300'}`}>
-            {message.type === 'success' ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />}
-            <span>{message.text}</span>
-          </div>
-        )}
-
         {/* Filters */}
-        <div className="flex flex-col lg:flex-row justify-between items-center gap-4 bg-white p-3.5 rounded-xl shadow-sm border border-slate-300 mb-6">
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-4 bg-white p-3.5 rounded-xl shadow-sm border border-slate-300 mb-4">
           <div className="flex gap-2 overflow-x-auto w-full lg:w-auto pb-1 lg:pb-0">
             {['all', 'Ruhama Wear', 'Aastha Naturals'].map((storeName) => (
               <button
-                key={storeName}
-                onClick={() => setSelectedStore(storeName)}
+                key={storeName} onClick={() => setSelectedStore(storeName)}
                 className={`px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${selectedStore === storeName ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
               >
                 {storeName === 'all' ? 'All Stores' : storeName === 'Aastha Naturals' ? 'Aastha Naturals BD' : storeName}
@@ -536,50 +387,36 @@ export default function Dashboard() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2.5 w-full lg:w-auto items-center">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full sm:w-auto border border-slate-300 rounded-lg px-3 py-2 text-xs bg-white text-slate-900 font-bold focus:outline-none focus:border-slate-900 cursor-pointer"
-            >
+            <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="w-full sm:w-auto border border-slate-300 rounded-lg px-3 py-2 text-xs bg-white text-slate-900 font-bold focus:outline-none focus:border-slate-900 cursor-pointer">
               <option value="all">All Statuses (সব অর্ডার)</option>
-              {WOO_STATUSES.map((st) => (
-                <option key={st.value} value={st.value}>{st.label}</option>
-              ))}
+              {WOO_STATUSES.map((st) => ( <option key={st.value} value={st.value}>{st.label}</option> ))}
             </select>
-
             <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search phone, size, thana, CID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg font-bold focus:outline-none focus:border-slate-900 text-xs bg-white"
-              />
+              <input type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg font-bold focus:outline-none focus:border-slate-900 text-xs bg-white" />
             </div>
           </div>
         </div>
 
-        {/* Table - FIXED SCROLLBAR & STICKY HEADER */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden flex flex-col mb-10">
+        {/* ✅ MAGIC HAPPENS HERE: height: calc(100vh - 260px) ensures scrollbar is glued to screen bottom */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden flex flex-col">
           {loading ? (
             <div className="p-20 text-center text-slate-600 font-bold text-sm">অর্ডার লোড হচ্ছে...</div>
           ) : filteredOrders.length === 0 ? (
             <div className="p-20 text-center text-slate-600 font-bold text-sm">কোনো অর্ডার পাওয়া যায়নি।</div>
           ) : (
-            /* এখানে maxHeight '65vh' দেওয়া হয়েছে, যাতে টেবিলটি স্ক্রিনের 65% এর বেশি লম্বা না হয় এবং স্ক্রলবার চোখের সামনেই থাকে */
-            <div className="overflow-auto w-full" style={{ maxHeight: '65vh' }}>
+            <div className="overflow-auto w-full relative" style={{ height: 'calc(100vh - 260px)' }}>
               <table className="w-full text-left border-collapse min-w-[1900px]">
                 <thead className="sticky top-0 z-50 shadow-md">
                   <tr className="bg-slate-900 text-white text-[11px] uppercase font-bold tracking-wider">
-                    <th className="p-3.5 w-36 border-r border-slate-800 bg-slate-900 sticky top-0">Invoice / Store</th>
-                    <th className="p-3.5 w-60 border-r border-slate-800 bg-slate-900 sticky top-0">Customer Name (নাম)</th>
-                    <th className="p-3.5 w-40 border-r border-slate-800 bg-slate-900 sticky top-0">Date & Time</th>
-                    <th className="p-3.5 w-80 border-r border-slate-800 bg-slate-900 sticky top-0">Phone, Call & Staff</th>
-                    <th className="p-3.5 w-[440px] border-r border-slate-800 bg-slate-900 sticky top-0">Address & Thana/District</th>
-                    <th className="p-3.5 w-[440px] border-r border-slate-800 bg-slate-900 sticky top-0">Items, COD & Size</th>
-                    <th className="p-3.5 w-80 text-center border-r border-slate-800 bg-slate-900 sticky top-0">Status & Save</th>
-                    <th className="p-3.5 w-80 text-center bg-slate-900 sticky top-0">Steadfast Push & Live Status</th>
+                    <th className="p-3.5 w-36 border-r border-slate-800 bg-slate-900">Invoice / Store</th>
+                    <th className="p-3.5 w-60 border-r border-slate-800 bg-slate-900">Customer Name (নাম)</th>
+                    <th className="p-3.5 w-40 border-r border-slate-800 bg-slate-900">Date & Time</th>
+                    <th className="p-3.5 w-80 border-r border-slate-800 bg-slate-900">Phone, Call & Staff</th>
+                    <th className="p-3.5 w-[440px] border-r border-slate-800 bg-slate-900">Address & Thana/District</th>
+                    <th className="p-3.5 w-[440px] border-r border-slate-800 bg-slate-900">Items, COD & Size</th>
+                    <th className="p-3.5 w-80 text-center border-r border-slate-800 bg-slate-900">Status & Save</th>
+                    <th className="p-3.5 w-80 text-center bg-slate-900">Steadfast Push & Live Status</th>
                   </tr>
                 </thead>
                 <tbody className="text-xs">
@@ -630,12 +467,10 @@ export default function Dashboard() {
 
                             <td className="p-3 align-top text-slate-700 font-bold border-r border-slate-200 space-y-1.5">
                               <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
-                                <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                <span className="font-bold text-slate-900">{formatOrderTime(order.dateCreated)}</span>
+                                <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" /> <span className="font-bold text-slate-900">{formatOrderTime(order.dateCreated)}</span>
                               </div>
                               <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
-                                <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                <span className="font-bold text-slate-800">{formatOrderDate(order.dateCreated)}</span>
+                                <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" /> <span className="font-bold text-slate-800">{formatOrderDate(order.dateCreated)}</span>
                               </div>
                             </td>
 
@@ -646,13 +481,11 @@ export default function Dashboard() {
                               </div>
                               {isRecent ? (
                                 <div className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold">
-                                  <AlertTriangle className="w-3 h-3 shrink-0 text-red-600" />
-                                  <span>🚩 রিসেন্ট ডুপ্লিকেট ({phoneInfo.recentOrders.length}টি)</span>
+                                  <AlertTriangle className="w-3 h-3 shrink-0 text-red-600" /> <span>🚩 রিসেন্ট ডুপ্লিকেট ({phoneInfo.recentOrders.length}টি)</span>
                                 </div>
                               ) : isDuplicate ? (
                                 <div className="flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold">
-                                  <AlertTriangle className="w-3 h-3 shrink-0 text-amber-600" />
-                                  <span>মোট অর্ডার: {phoneInfo.count}টি</span>
+                                  <AlertTriangle className="w-3 h-3 shrink-0 text-amber-600" /> <span>মোট অর্ডার: {phoneInfo.count}টি</span>
                                 </div>
                               ) : null}
                               <button onClick={() => { const newCallState = !order.callDone; handleFieldChange(order.id, order.storeId, 'callDone', newCallState); if (!order.staffName) { handleFieldChange(order.id, order.storeId, 'staffName', currentUser); } }} className={`w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold rounded transition border cursor-pointer shadow-2xs ${order.callDone ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'}`}>
@@ -746,7 +579,7 @@ export default function Dashboard() {
                                     {order.courierStatus ? order.courierStatus.replace(/_/g, ' ') : 'IN REVIEW'}
                                   </div>
                                   <button onClick={() => handleCheckCourierStatus(order)} disabled={trackingId === order.id} className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-800 bg-white hover:bg-slate-100 py-1.5 px-2 rounded w-full border border-slate-300 transition cursor-pointer shadow-2xs">
-                                    <RotateCw className={`w-3 h-3 ${trackingId === order.id ? 'animate-spin' : ''}`} /> {trackingId === order.id ? 'চেক হচ্ছে...' : '🔄 লাইভ স্ট্যাটাস আপডেট'}
+                                    <RotateCw className={`w-3 h-3 ${trackingId === order.id ? 'animate-spin' : ''}`} /> {trackingId === order.id ? 'চেক হচ্ছে...' : '🔄 লাইভ আপডেট'}
                                   </button>
                                 </div>
                               )}
