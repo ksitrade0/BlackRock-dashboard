@@ -4,33 +4,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { BANGLADESH_DISTRICTS } from '@/lib/geoData';
 import {
-  Search,
-  RefreshCw,
-  Send,
-  CheckCircle,
-  AlertCircle,
-  Calendar,
-  Clock,
-  MapPin,
-  Phone,
-  Edit3,
-  UserCheck,
-  PhoneCall,
-  RotateCw,
-  AlertTriangle,
-  XCircle,
-  Trash2,
-  BookmarkCheck,
-  FileText,
-  Activity,
-  Package,
-  Layers,
-  Shirt,
-  User,
-  LogOut,
-  Save,
-  Plus,
-  BarChart2,
+  Search, RefreshCw, Send, CheckCircle, AlertCircle, Calendar, Clock,
+  MapPin, Phone, Edit3, UserCheck, PhoneCall, RotateCw, AlertTriangle,
+  XCircle, Trash2, BookmarkCheck, FileText, Activity, Package, Layers,
+  Shirt, User, LogOut, Save, Plus, BarChart2,
 } from 'lucide-react';
 
 interface Order {
@@ -87,18 +64,6 @@ export default function Dashboard() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
-  const sendActivityLog = async (logText: string, targetType: 'activity' | 'courier' = 'activity') => {
-    try {
-      await fetch('/api/telegram', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: logText, type: targetType }),
-      });
-    } catch (err) {
-      console.error('Telegram Log Error:', err);
-    }
-  };
-
   useEffect(() => {
     fetch('/api/auth/check')
       .then((res) => {
@@ -138,7 +103,6 @@ export default function Dashboard() {
         setOrders([]);
       }
     } catch (err: any) {
-      console.error('Failed to load orders', err);
       setMessage({ text: err.message || 'অর্ডার লোড করতে সমস্যা হয়েছে', type: 'error' });
       setOrders([]);
     } finally {
@@ -316,10 +280,7 @@ export default function Dashboard() {
           [`${order.storeId}-${returnedId}`]: JSON.parse(JSON.stringify(updatedOrder)),
         }));
 
-        setMessage({
-          text: `Order #${finalInvoice} সফলভাবে WooCommerce-এ সেভ করা হয়েছে!`,
-          type: 'success',
-        });
+        setMessage({ text: `Order #${finalInvoice} সফলভাবে WooCommerce-এ সেভ করা হয়েছে!`, type: 'success' });
       } else {
         setMessage({ text: result.error || 'সেভ করতে সমস্যা হয়েছে', type: 'error' });
       }
@@ -335,7 +296,6 @@ export default function Dashboard() {
       setOrders((prev) => prev.filter((o) => o.id !== order.id));
       return;
     }
-
     if (!confirm(`⚠️ সতর্কবার্তা! আপনি কি Order #${order.invoice} স্থায়ীভাবে মুছে ফেলতে চান?`)) return;
 
     setUpdatingId(order.id);
@@ -345,15 +305,9 @@ export default function Dashboard() {
       const res = await fetch('/api/orders/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storeId: order.storeId,
-          orderId: order.id,
-          action: 'delete',
-        }),
+        body: JSON.stringify({ storeId: order.storeId, orderId: order.id, action: 'delete' }),
       });
-
       const result = await res.json();
-
       if (res.ok) {
         setOrders((prev) => prev.filter((o) => !(o.id === order.id && o.storeId === order.storeId)));
         setMessage({ text: `Order #${order.invoice} মুছে ফেলা হয়েছে!`, type: 'success' });
@@ -372,7 +326,6 @@ export default function Dashboard() {
       alert('অনুগ্রহ করে আগে তথ্য সেভ (Save) করুন, এরপর কুরিয়ারে পাঠান।');
       return;
     }
-
     if (!confirm(`আপনি কি অর্ডার #${order.invoice} স্টেডফাস্ট কুরিয়ারে পাঠাতে চান?`)) return;
 
     setSendingId(order.id);
@@ -411,17 +364,10 @@ export default function Dashboard() {
         setOrders((prev) =>
           prev.map((o) =>
             o.id === order.id && o.storeId === order.storeId
-              ? {
-                  ...o,
-                  trackingCode: tracking,
-                  consignmentId: cid,
-                  courierStatus: initialStatus,
-                  staffName: assignedStaff,
-                }
+              ? { ...o, trackingCode: tracking, consignmentId: cid, courierStatus: initialStatus, staffName: assignedStaff }
               : o
           )
         );
-
         handleSaveOrder(order);
         setMessage({ text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`, type: 'success' });
       } else {
@@ -436,27 +382,20 @@ export default function Dashboard() {
 
   const handleCheckCourierStatus = async (order: Order) => {
     if (!order.trackingCode && !order.consignmentId) return;
-
     setTrackingId(order.id);
     setMessage(null);
-
     try {
-      const queryParam = order.consignmentId
-        ? `consignment_id=${order.consignmentId}`
-        : `tracking_code=${order.trackingCode}`;
-
+      const queryParam = order.consignmentId ? `consignment_id=${order.consignmentId}` : `tracking_code=${order.trackingCode}`;
       const res = await fetch(`/api/courier/track?${queryParam}`);
       const result = await res.json();
 
       if (res.ok && result.data) {
         const liveStatus = result.data.delivery_status || result.data.status || 'unknown';
-
         setOrders((prev) =>
           prev.map((o) =>
             o.id === order.id && o.storeId === order.storeId ? { ...o, courierStatus: liveStatus } : o
           )
         );
-
         setMessage({ text: `Order #${order.invoice} বর্তমান স্ট্যাটাস: ${liveStatus.toUpperCase()}`, type: 'success' });
       } else {
         setMessage({ text: result.error || 'ট্র্যাকিং আপডেট পাওয়া যায়নি', type: 'error' });
@@ -497,12 +436,7 @@ export default function Dashboard() {
 
   const formatOrderDate = (dateStr: string) => {
     try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      });
+      return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     } catch {
       return dateStr;
     }
@@ -510,12 +444,7 @@ export default function Dashboard() {
 
   const formatOrderTime = (dateStr: string) => {
     try {
-      const d = new Date(dateStr);
-      return d.toLocaleTimeString('en-GB', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      });
+      return new Date(dateStr).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
     } catch {
       return '';
     }
@@ -537,26 +466,16 @@ export default function Dashboard() {
       <div className="max-w-[1950px] mx-auto">
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-300">
-          <div
-            onClick={() => (window.location.href = '/')}
-            className="flex items-center gap-3.5 cursor-pointer select-none transition hover:opacity-90"
-            title="Dashboard Reload"
-          >
+          <div onClick={() => (window.location.href = '/')} className="flex items-center gap-3.5 cursor-pointer select-none transition hover:opacity-90">
             {hasLogoImg ? (
               <div className="w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center p-1.5 shadow-sm border border-slate-800 shrink-0">
-                <img
-                  src="/logo.png"
-                  alt="Black Rock Logo"
-                  className="w-full h-full object-contain"
-                  onError={() => setHasLogoImg(false)}
-                />
+                <img src="/logo.png" alt="Black Rock Logo" className="w-full h-full object-contain" onError={() => setHasLogoImg(false)} />
               </div>
             ) : (
               <div className="w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center text-white shadow-sm border border-slate-700 shrink-0">
                 <Layers className="w-6 h-6 text-amber-400" />
               </div>
             )}
-
             <div>
               <h1 className="text-xl md:text-2xl lg:text-3xl font-black tracking-wider text-slate-950 uppercase flex items-center gap-2">
                 BLACK ROCK CORPORATION
@@ -571,56 +490,32 @@ export default function Dashboard() {
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
             <div className="flex flex-col justify-center items-center bg-slate-100 border border-slate-300 px-4 py-1.5 rounded-xl h-[78px] min-w-[170px] shadow-2xs">
               <User className="w-5 h-5 text-slate-700 mb-1" />
-              <div className="text-xs font-black text-slate-900 leading-tight text-center">
-                {currentUser}
-              </div>
+              <div className="text-xs font-black text-slate-900 leading-tight text-center">{currentUser}</div>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <button
-                onClick={fetchOrders}
-                className="w-36 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition border border-slate-300 cursor-pointer active:scale-95 shadow-2xs"
-              >
+              <button onClick={fetchOrders} className="w-36 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition border border-slate-300 cursor-pointer shadow-2xs">
                 <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${loading ? 'animate-spin' : ''}`} /> Refresh Orders
               </button>
-
-              <button
-                onClick={handleLogout}
-                className="w-36 h-[36px] flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-xs transition border border-rose-200 cursor-pointer active:scale-95 shadow-2xs"
-              >
+              <button onClick={handleLogout} className="w-36 h-[36px] flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-xs transition border border-rose-200 cursor-pointer shadow-2xs">
                 <LogOut className="w-3.5 h-3.5" /> লগআউট
               </button>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <button
-                onClick={handleSendCourierReport}
-                disabled={reporting}
-                className="w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg font-bold text-xs transition cursor-pointer border border-slate-800 disabled:opacity-50 shadow-2xs"
-              >
+              <button onClick={handleSendCourierReport} disabled={reporting} className="w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg font-bold text-xs transition cursor-pointer border border-slate-800 disabled:opacity-50 shadow-2xs">
                 <BarChart2 className={`w-3.5 h-3.5 text-amber-400 ${reporting ? 'animate-spin' : ''}`} />
                 {reporting ? 'রিপোর্ট যাচ্ছে...' : '📊 কুরিয়ার অডিট রিপোর্ট'}
               </button>
-
-              <button
-                onClick={handleAddNewBlankRow}
-                className="w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition cursor-pointer border border-slate-300 active:scale-95 shadow-2xs"
-              >
+              <button onClick={handleAddNewBlankRow} className="w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition cursor-pointer border border-slate-300 shadow-2xs">
                 <Plus className="w-3.5 h-3.5 text-emerald-600 font-black" /> + নতুন অর্ডার যোগ করুন
               </button>
             </div>
           </div>
         </div>
 
-        {/* Alerts */}
         {message && (
-          <div
-            className={`p-3.5 mb-4 rounded-xl flex items-center gap-2.5 shadow-sm font-bold text-xs ${
-              message.type === 'success'
-                ? 'bg-emerald-50 text-emerald-900 border border-emerald-300'
-                : 'bg-rose-50 text-rose-900 border border-rose-300'
-            }`}
-          >
+          <div className={`p-3.5 mb-4 rounded-xl flex items-center gap-2.5 shadow-sm font-bold text-xs ${message.type === 'success' ? 'bg-emerald-50 text-emerald-900 border border-emerald-300' : 'bg-rose-50 text-rose-900 border border-rose-300'}`}>
             {message.type === 'success' ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />}
             <span>{message.text}</span>
           </div>
@@ -629,30 +524,15 @@ export default function Dashboard() {
         {/* Filters */}
         <div className="flex flex-col lg:flex-row justify-between items-center gap-4 bg-white p-3.5 rounded-xl shadow-sm border border-slate-300 mb-6">
           <div className="flex gap-2 overflow-x-auto w-full lg:w-auto pb-1 lg:pb-0">
-            <button
-              onClick={() => setSelectedStore('all')}
-              className={`px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${
-                selectedStore === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              All Stores
-            </button>
-            <button
-              onClick={() => setSelectedStore('Ruhama Wear')}
-              className={`px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${
-                selectedStore === 'Ruhama Wear' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              Ruhama Wear
-            </button>
-            <button
-              onClick={() => setSelectedStore('Aastha Naturals')}
-              className={`px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${
-                selectedStore === 'Aastha Naturals' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              Aastha Naturals BD
-            </button>
+            {['all', 'Ruhama Wear', 'Aastha Naturals'].map((storeName) => (
+              <button
+                key={storeName}
+                onClick={() => setSelectedStore(storeName)}
+                className={`px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${selectedStore === storeName ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+              >
+                {storeName === 'all' ? 'All Stores' : storeName === 'Aastha Naturals' ? 'Aastha Naturals BD' : storeName}
+              </button>
+            ))}
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2.5 w-full lg:w-auto items-center">
@@ -663,9 +543,7 @@ export default function Dashboard() {
             >
               <option value="all">All Statuses (সব অর্ডার)</option>
               {WOO_STATUSES.map((st) => (
-                <option key={st.value} value={st.value}>
-                  {st.label}
-                </option>
+                <option key={st.value} value={st.value}>{st.label}</option>
               ))}
             </select>
 
@@ -682,25 +560,26 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Table - FIXED SCROLLING & STICKY HEADER */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden">
+        {/* Table - FIXED SCROLLBAR & STICKY HEADER */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden flex flex-col mb-10">
           {loading ? (
             <div className="p-20 text-center text-slate-600 font-bold text-sm">অর্ডার লোড হচ্ছে...</div>
           ) : filteredOrders.length === 0 ? (
             <div className="p-20 text-center text-slate-600 font-bold text-sm">কোনো অর্ডার পাওয়া যায়নি।</div>
           ) : (
-            <div className="overflow-auto h-[calc(100vh-260px)] min-h-[500px]">
+            /* এখানে maxHeight '65vh' দেওয়া হয়েছে, যাতে টেবিলটি স্ক্রিনের 65% এর বেশি লম্বা না হয় এবং স্ক্রলবার চোখের সামনেই থাকে */
+            <div className="overflow-auto w-full" style={{ maxHeight: '65vh' }}>
               <table className="w-full text-left border-collapse min-w-[1900px]">
-                <thead className="sticky top-0 z-40 shadow-md">
+                <thead className="sticky top-0 z-50 shadow-md">
                   <tr className="bg-slate-900 text-white text-[11px] uppercase font-bold tracking-wider">
-                    <th className="p-3.5 w-36 border-r border-slate-800 bg-slate-900 outline outline-1 outline-slate-800">Invoice / Store</th>
-                    <th className="p-3.5 w-60 border-r border-slate-800 bg-slate-900 outline outline-1 outline-slate-800">Customer Name (নাম)</th>
-                    <th className="p-3.5 w-40 border-r border-slate-800 bg-slate-900 outline outline-1 outline-slate-800">Date & Time</th>
-                    <th className="p-3.5 w-80 border-r border-slate-800 bg-slate-900 outline outline-1 outline-slate-800">Phone, Call & Staff</th>
-                    <th className="p-3.5 w-[440px] border-r border-slate-800 bg-slate-900 outline outline-1 outline-slate-800">Address & Thana/District</th>
-                    <th className="p-3.5 w-[440px] border-r border-slate-800 bg-slate-900 outline outline-1 outline-slate-800">Items, COD & Size</th>
-                    <th className="p-3.5 w-80 text-center border-r border-slate-800 bg-slate-900 outline outline-1 outline-slate-800">Status & Save</th>
-                    <th className="p-3.5 w-80 text-center bg-slate-900 outline outline-1 outline-slate-800">Steadfast Push & Live Status</th>
+                    <th className="p-3.5 w-36 border-r border-slate-800 bg-slate-900 sticky top-0">Invoice / Store</th>
+                    <th className="p-3.5 w-60 border-r border-slate-800 bg-slate-900 sticky top-0">Customer Name (নাম)</th>
+                    <th className="p-3.5 w-40 border-r border-slate-800 bg-slate-900 sticky top-0">Date & Time</th>
+                    <th className="p-3.5 w-80 border-r border-slate-800 bg-slate-900 sticky top-0">Phone, Call & Staff</th>
+                    <th className="p-3.5 w-[440px] border-r border-slate-800 bg-slate-900 sticky top-0">Address & Thana/District</th>
+                    <th className="p-3.5 w-[440px] border-r border-slate-800 bg-slate-900 sticky top-0">Items, COD & Size</th>
+                    <th className="p-3.5 w-80 text-center border-r border-slate-800 bg-slate-900 sticky top-0">Status & Save</th>
+                    <th className="p-3.5 w-80 text-center bg-slate-900 sticky top-0">Steadfast Push & Live Status</th>
                   </tr>
                 </thead>
                 <tbody className="text-xs">
@@ -711,25 +590,13 @@ export default function Dashboard() {
                       const phoneInfo = phoneOrderData[cleanPhone];
                       const isDuplicate = phoneInfo && phoneInfo.count > 1;
                       const isRecent = phoneInfo && phoneInfo.recentOrders.length > 1;
-
                       const selectedDistrictObj = BANGLADESH_DISTRICTS.find((d) => d.district === order.district);
                       const availableThanas = selectedDistrictObj ? selectedDistrictObj.thanas : [];
-
                       const currentDateStr = formatOrderDate(order.dateCreated);
                       const showDateDivider = currentDateStr !== lastDateStr;
                       lastDateStr = currentDateStr;
-
                       const isEven = index % 2 === 0;
-                      const rowBgClass = order.isNewRow
-                        ? 'bg-emerald-50 border-2 border-emerald-500'
-                        : isRecent
-                        ? 'bg-rose-50 hover:bg-rose-100/70'
-                        : isDuplicate
-                        ? 'bg-amber-50 hover:bg-amber-100/70'
-                        : isEven
-                        ? 'bg-white hover:bg-slate-50'
-                        : 'bg-slate-50/70 hover:bg-slate-100/70';
-
+                      const rowBgClass = order.isNewRow ? 'bg-emerald-50 border-2 border-emerald-500' : isRecent ? 'bg-rose-50 hover:bg-rose-100/70' : isDuplicate ? 'bg-amber-50 hover:bg-amber-100/70' : isEven ? 'bg-white hover:bg-slate-50' : 'bg-slate-50/70 hover:bg-slate-100/70';
                       const isSentToCourier = Boolean(order.trackingCode || order.consignmentId);
 
                       return (
@@ -742,75 +609,41 @@ export default function Dashboard() {
                               </td>
                             </tr>
                           )}
-                          <tr
-                            key={`${order.storeId}-${order.id}`}
-                            className={`transition-colors border-b border-slate-200 ${rowBgClass}`}
-                          >
-                            {/* 1. Invoice / Store */}
+                          <tr key={`${order.storeId}-${order.id}`} className={`transition-colors border-b border-slate-200 ${rowBgClass}`}>
                             <td className="p-3 align-top font-bold border-r border-slate-200 space-y-1.5">
                               <div className="w-full h-[32px] flex items-center justify-center font-mono text-xs font-black text-slate-950 bg-slate-100 border border-slate-300 rounded shadow-2xs">
                                 {order.isNewRow ? '🆕 NEW' : `#${order.invoice}`}
                               </div>
-
                               {order.isNewRow ? (
-                                <select
-                                  value={order.storeId}
-                                  onChange={(e) => handleFieldChange(order.id, order.storeId, 'storeId', e.target.value)}
-                                  className="w-full h-[32px] text-[11px] text-slate-900 bg-white border border-slate-300 font-bold px-2 rounded cursor-pointer shadow-2xs"
-                                >
+                                <select value={order.storeId} onChange={(e) => handleFieldChange(order.id, order.storeId, 'storeId', e.target.value)} className="w-full h-[32px] text-[11px] text-slate-900 bg-white border border-slate-300 font-bold px-2 rounded cursor-pointer shadow-2xs">
                                   <option value="store1">Ruhama Wear</option>
                                   <option value="store2">Aastha Naturals BD</option>
                                 </select>
                               ) : (
-                                <div className="w-full h-[32px] flex items-center justify-center text-[11px] text-slate-700 bg-white border border-slate-200 font-bold px-2 rounded shadow-2xs">
-                                  {order.storeName}
-                                </div>
+                                <div className="w-full h-[32px] flex items-center justify-center text-[11px] text-slate-700 bg-white border border-slate-200 font-bold px-2 rounded shadow-2xs">{order.storeName}</div>
                               )}
                             </td>
 
-                            {/* 2. Customer Name */}
                             <td className="p-3 align-top border-r border-slate-200">
-                              <textarea
-                                rows={4}
-                                value={order.customerName}
-                                onChange={(e) => handleFieldChange(order.id, order.storeId, 'customerName', e.target.value)}
-                                placeholder="কাস্টমারের নাম..."
-                                className="w-full font-black text-sm text-slate-950 bg-transparent focus:bg-white border border-transparent focus:border-slate-300 rounded p-1 transition resize-none outline-none leading-snug whitespace-normal break-words placeholder:text-slate-400 placeholder:text-xs"
-                              />
+                              <textarea rows={4} value={order.customerName} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customerName', e.target.value)} placeholder="কাস্টমারের নাম..." className="w-full font-black text-sm text-slate-950 bg-transparent focus:bg-white border border-transparent focus:border-slate-300 rounded p-1 transition resize-none outline-none leading-snug whitespace-normal break-words placeholder:text-slate-400 placeholder:text-xs" />
                             </td>
 
-                            {/* 3. Date & Time */}
                             <td className="p-3 align-top text-slate-700 font-bold border-r border-slate-200 space-y-1.5">
                               <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
                                 <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                                 <span className="font-bold text-slate-900">{formatOrderTime(order.dateCreated)}</span>
                               </div>
-
                               <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
                                 <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                                 <span className="font-bold text-slate-800">{formatOrderDate(order.dateCreated)}</span>
                               </div>
                             </td>
 
-                            {/* 4. Phone, Call & Staff */}
                             <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
                               <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
                                 <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                <input
-                                  type="text"
-                                  value={order.phone}
-                                  placeholder="01XXXXXXXXX"
-                                  onChange={(e) => handleFieldChange(order.id, order.storeId, 'phone', e.target.value)}
-                                  className={`w-full text-xs font-mono font-black bg-transparent outline-none tracking-wide ${
-                                    isRecent
-                                      ? 'text-red-700'
-                                      : isDuplicate
-                                      ? 'text-amber-900'
-                                      : 'text-slate-950'
-                                  }`}
-                                />
+                                <input type="text" value={order.phone} placeholder="01XXXXXXXXX" onChange={(e) => handleFieldChange(order.id, order.storeId, 'phone', e.target.value)} className={`w-full text-xs font-mono font-black bg-transparent outline-none tracking-wide ${isRecent ? 'text-red-700' : isDuplicate ? 'text-amber-900' : 'text-slate-950'}`} />
                               </div>
-
                               {isRecent ? (
                                 <div className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold">
                                   <AlertTriangle className="w-3 h-3 shrink-0 text-red-600" />
@@ -822,232 +655,98 @@ export default function Dashboard() {
                                   <span>মোট অর্ডার: {phoneInfo.count}টি</span>
                                 </div>
                               ) : null}
-
-                              <button
-                                onClick={() => {
-                                  const newCallState = !order.callDone;
-                                  handleFieldChange(order.id, order.storeId, 'callDone', newCallState);
-                                  if (!order.staffName) {
-                                    handleFieldChange(order.id, order.storeId, 'staffName', currentUser);
-                                  }
-                                }}
-                                className={`w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold rounded transition border cursor-pointer shadow-2xs ${
-                                  order.callDone
-                                    ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black'
-                                    : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'
-                                }`}
-                              >
-                                <PhoneCall className="w-3.5 h-3.5" />
-                                {order.callDone ? 'কল সম্পন্ন হয়েছে' : 'কল দিন'}
+                              <button onClick={() => { const newCallState = !order.callDone; handleFieldChange(order.id, order.storeId, 'callDone', newCallState); if (!order.staffName) { handleFieldChange(order.id, order.storeId, 'staffName', currentUser); } }} className={`w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold rounded transition border cursor-pointer shadow-2xs ${order.callDone ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'}`}>
+                                <PhoneCall className="w-3.5 h-3.5" /> {order.callDone ? 'কল সম্পন্ন হয়েছে' : 'কল দিন'}
                               </button>
-
                               <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
                                 <UserCheck className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                <select
-                                  value={order.staffName || ''}
-                                  onChange={(e) => handleFieldChange(order.id, order.storeId, 'staffName', e.target.value)}
-                                  className="w-full text-xs font-bold bg-transparent text-slate-900 cursor-pointer outline-none"
-                                >
+                                <select value={order.staffName || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'staffName', e.target.value)} className="w-full text-xs font-bold bg-transparent text-slate-900 cursor-pointer outline-none">
                                   <option value="">স্টাফ নির্বাচন করুন</option>
-                                  {STAFF_MEMBERS.map((staff) => (
-                                    <option key={staff} value={staff}>
-                                      {staff}
-                                    </option>
-                                  ))}
+                                  {STAFF_MEMBERS.map((staff) => (<option key={staff} value={staff}>{staff}</option>))}
                                 </select>
                               </div>
                             </td>
 
-                            {/* 5. Address & Thana/District */}
                             <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
                               <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs">
                                 <MapPin className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
-                                <textarea
-                                  rows={3}
-                                  value={order.streetAddress}
-                                  onChange={(e) => handleFieldChange(order.id, order.storeId, 'streetAddress', e.target.value)}
-                                  placeholder="বিস্তারিত ঠিকানা..."
-                                  className="w-full text-xs font-bold text-slate-900 bg-transparent resize-y leading-snug outline-none min-h-[58px]"
-                                />
+                                <textarea rows={3} value={order.streetAddress} onChange={(e) => handleFieldChange(order.id, order.storeId, 'streetAddress', e.target.value)} placeholder="বিস্তারিত ঠিকানা..." className="w-full text-xs font-bold text-slate-900 bg-transparent resize-y leading-snug outline-none min-h-[58px]" />
                               </div>
-
                               <div className="grid grid-cols-2 gap-1.5">
                                 <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
-                                  <select
-                                    value={order.thana || ''}
-                                    disabled={!order.district}
-                                    onChange={(e) => handleFieldChange(order.id, order.storeId, 'thana', e.target.value)}
-                                    className="w-full text-[11px] bg-transparent text-slate-900 font-bold disabled:text-slate-400 cursor-pointer outline-none"
-                                  >
+                                  <select value={order.thana || ''} disabled={!order.district} onChange={(e) => handleFieldChange(order.id, order.storeId, 'thana', e.target.value)} className="w-full text-[11px] bg-transparent text-slate-900 font-bold disabled:text-slate-400 cursor-pointer outline-none">
                                     <option value="">থানা বাছুন</option>
-                                    {availableThanas.map((thana) => (
-                                      <option key={thana} value={thana}>
-                                        {thana}
-                                      </option>
-                                    ))}
+                                    {availableThanas.map((thana) => (<option key={thana} value={thana}>{thana}</option>))}
                                   </select>
                                 </div>
-
                                 <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
-                                  <select
-                                    value={order.district || ''}
-                                    onChange={(e) => handleFieldChange(order.id, order.storeId, 'district', e.target.value)}
-                                    className="w-full text-[11px] bg-transparent text-slate-900 font-bold cursor-pointer outline-none"
-                                  >
+                                  <select value={order.district || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'district', e.target.value)} className="w-full text-[11px] bg-transparent text-slate-900 font-bold cursor-pointer outline-none">
                                     <option value="">জেলা বাছুন</option>
-                                    {BANGLADESH_DISTRICTS.map((d) => (
-                                      <option key={d.district} value={d.district}>
-                                        {d.district}
-                                      </option>
-                                    ))}
+                                    {BANGLADESH_DISTRICTS.map((d) => (<option key={d.district} value={d.district}>{d.district}</option>))}
                                   </select>
                                 </div>
                               </div>
                             </td>
 
-                            {/* 6. Items, COD & Size */}
                             <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
                               <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs">
                                 <Edit3 className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
-                                <textarea
-                                  rows={3}
-                                  value={order.items}
-                                  onChange={(e) => handleFieldChange(order.id, order.storeId, 'items', e.target.value)}
-                                  placeholder="আইটেমের নাম ও বিবরণ..."
-                                  className="w-full text-xs font-bold text-slate-900 bg-transparent resize-y leading-snug outline-none min-h-[58px]"
-                                />
+                                <textarea rows={3} value={order.items} onChange={(e) => handleFieldChange(order.id, order.storeId, 'items', e.target.value)} placeholder="আইটেমের নাম ও বিবরণ..." className="w-full text-xs font-bold text-slate-900 bg-transparent resize-y leading-snug outline-none min-h-[58px]" />
                               </div>
-
                               <div className="grid grid-cols-2 gap-1.5">
                                 <div className="h-[34px] flex items-center gap-1.5 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
                                   <span className="text-xs font-black text-slate-700">COD:</span>
-                                  <input
-                                    type="number"
-                                    value={order.total}
-                                    onFocus={(e) => e.target.select()}
-                                    onChange={(e) => handleFieldChange(order.id, order.storeId, 'total', e.target.value)}
-                                    placeholder="৳"
-                                    className="w-full text-xs font-black text-emerald-800 bg-transparent outline-none"
-                                  />
+                                  <input type="number" value={order.total} onFocus={(e) => e.target.select()} onChange={(e) => handleFieldChange(order.id, order.storeId, 'total', e.target.value)} placeholder="৳" className="w-full text-xs font-black text-emerald-800 bg-transparent outline-none" />
                                 </div>
-
                                 <div className="h-[34px] flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded px-2.5 shadow-2xs">
                                   <Shirt className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                                   <span className="text-[11px] font-black text-slate-600">সাইজ:</span>
-                                  <input
-                                    type="text"
-                                    value={order.size || ''}
-                                    onChange={(e) => handleFieldChange(order.id, order.storeId, 'size', e.target.value.toUpperCase())}
-                                    placeholder="XL"
-                                    className="w-full text-xs font-black text-slate-950 uppercase text-center bg-white border border-slate-200 rounded py-0.5 outline-none"
-                                  />
+                                  <input type="text" value={order.size || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'size', e.target.value.toUpperCase())} placeholder="XL" className="w-full text-xs font-black text-slate-950 uppercase text-center bg-white border border-slate-200 rounded py-0.5 outline-none" />
                                 </div>
                               </div>
                             </td>
 
-                            {/* 7. Status & Save */}
                             <td className="p-3 align-top text-center space-y-1.5 border-r border-slate-200">
-                              <select
-                                value={order.status}
-                                disabled={updatingId === order.id}
-                                onChange={(e) => handleSaveOrder(order, e.target.value)}
-                                className={`w-full h-[34px] text-xs font-bold border rounded px-2.5 text-center cursor-pointer shadow-2xs ${getStatusColor(
-                                  order.status
-                                )}`}
-                              >
-                                {WOO_STATUSES.map((st) => (
-                                  <option key={st.value} value={st.value} className="bg-white text-slate-900">
-                                    {st.label}
-                                  </option>
-                                ))}
+                              <select value={order.status} disabled={updatingId === order.id} onChange={(e) => handleSaveOrder(order, e.target.value)} className={`w-full h-[34px] text-xs font-bold border rounded px-2.5 text-center cursor-pointer shadow-2xs ${getStatusColor(order.status)}`}>
+                                {WOO_STATUSES.map((st) => (<option key={st.value} value={st.value} className="bg-white text-slate-900">{st.label}</option>))}
                               </select>
-
-                              <button
-                                onClick={() => handleSaveOrder(order)}
-                                disabled={updatingId === order.id}
-                                className="w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded transition cursor-pointer disabled:opacity-50 shadow-2xs"
-                              >
-                                <Save className={`w-3.5 h-3.5 ${updatingId === order.id ? 'animate-spin' : ''}`} />
-                                {updatingId === order.id ? 'সেভ হচ্ছে...' : 'তথ্য সেভ করুন (Save)'}
+                              <button onClick={() => handleSaveOrder(order)} disabled={updatingId === order.id} className="w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded transition cursor-pointer disabled:opacity-50 shadow-2xs">
+                                <Save className={`w-3.5 h-3.5 ${updatingId === order.id ? 'animate-spin' : ''}`} /> {updatingId === order.id ? 'সেভ হচ্ছে...' : 'তথ্য সেভ করুন (Save)'}
                               </button>
-
                               <div className="grid grid-cols-3 gap-1.5">
-                                <button
-                                  onClick={() => handleSaveOrder(order, 'on-hold')}
-                                  disabled={updatingId === order.id}
-                                  title="রাখুন"
-                                  className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-300 rounded cursor-pointer shadow-2xs"
-                                >
+                                <button onClick={() => handleSaveOrder(order, 'on-hold')} disabled={updatingId === order.id} title="রাখুন" className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-300 rounded cursor-pointer shadow-2xs">
                                   <BookmarkCheck className="w-3 h-3" /> রাখুন
                                 </button>
-
-                                <button
-                                  onClick={() => handleSaveOrder(order, 'cancelled')}
-                                  disabled={updatingId === order.id}
-                                  title="বাতিল"
-                                  className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-300 rounded cursor-pointer shadow-2xs"
-                                >
+                                <button onClick={() => handleSaveOrder(order, 'cancelled')} disabled={updatingId === order.id} title="বাতিল" className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-300 rounded cursor-pointer shadow-2xs">
                                   <XCircle className="w-3 h-3" /> বাতিল
                                 </button>
-
-                                <button
-                                  onClick={() => handleDeleteOrder(order)}
-                                  disabled={updatingId === order.id}
-                                  title="ডিলিট"
-                                  className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-slate-700 hover:text-red-700 bg-slate-50 hover:bg-red-50 border border-slate-200 rounded cursor-pointer shadow-2xs"
-                                >
+                                <button onClick={() => handleDeleteOrder(order)} disabled={updatingId === order.id} title="ডিলিট" className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-slate-700 hover:text-red-700 bg-slate-50 hover:bg-red-50 border border-slate-200 rounded cursor-pointer shadow-2xs">
                                   <Trash2 className="w-3 h-3" /> ডিলিট
                                 </button>
                               </div>
                             </td>
 
-                            {/* 8. Steadfast Courier */}
                             <td className="p-3 align-top space-y-1.5">
                               {!isSentToCourier ? (
                                 <>
                                   <div className="w-full h-[34px] flex items-center bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                                    <input
-                                      type="text"
-                                      value={order.customNote || ''}
-                                      onChange={(e) => handleFieldChange(order.id, order.storeId, 'customNote', e.target.value)}
-                                      placeholder="কুরিয়ার স্পেশাল নোট..."
-                                      className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 bg-transparent outline-none"
-                                    />
+                                    <input type="text" value={order.customNote || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customNote', e.target.value)} placeholder="কুরিয়ার স্পেশাল নোট..." className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 bg-transparent outline-none" />
                                   </div>
-
-                                  <button
-                                    onClick={() => handleSendToSteadfast(order)}
-                                    disabled={sendingId === order.id}
-                                    className="w-full h-[34px] flex items-center justify-center gap-1.5 rounded text-xs font-bold bg-slate-900 hover:bg-black text-white transition cursor-pointer shadow-2xs"
-                                  >
-                                    <Send className="w-3.5 h-3.5" />
-                                    {sendingId === order.id ? 'Sending...' : 'Send to Steadfast'}
+                                  <button onClick={() => handleSendToSteadfast(order)} disabled={sendingId === order.id} className="w-full h-[34px] flex items-center justify-center gap-1.5 rounded text-xs font-bold bg-slate-900 hover:bg-black text-white transition cursor-pointer shadow-2xs">
+                                    <Send className="w-3.5 h-3.5" /> {sendingId === order.id ? 'Sending...' : 'Send to Steadfast'}
                                   </button>
                                 </>
                               ) : (
                                 <div className="bg-slate-50 border border-slate-200 rounded p-2.5 space-y-2 text-left shadow-2xs">
                                   <div className="flex justify-between items-center text-xs pb-1.5 border-b border-slate-200">
-                                    <span className="font-bold text-slate-600 flex items-center gap-1">
-                                      <Package className="w-3.5 h-3.5 text-slate-800" /> CID:
-                                    </span>
+                                    <span className="font-bold text-slate-600 flex items-center gap-1"><Package className="w-3.5 h-3.5 text-slate-800" /> CID:</span>
                                     <span className="font-mono font-black text-slate-950 text-xs">{order.consignmentId || 'N/A'}</span>
                                   </div>
-
-                                  <div
-                                    className={`w-full py-1.5 px-2 rounded text-center text-[11px] font-black uppercase tracking-wider border ${getCourierBadge(
-                                      order.courierStatus || 'in_review'
-                                    )}`}
-                                  >
+                                  <div className={`w-full py-1.5 px-2 rounded text-center text-[11px] font-black uppercase tracking-wider border ${getCourierBadge(order.courierStatus || 'in_review')}`}>
                                     {order.courierStatus ? order.courierStatus.replace(/_/g, ' ') : 'IN REVIEW'}
                                   </div>
-
-                                  <button
-                                    onClick={() => handleCheckCourierStatus(order)}
-                                    disabled={trackingId === order.id}
-                                    className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-800 bg-white hover:bg-slate-100 py-1.5 px-2 rounded w-full border border-slate-300 transition cursor-pointer shadow-2xs"
-                                  >
-                                    <RotateCw className={`w-3 h-3 ${trackingId === order.id ? 'animate-spin' : ''}`} />
-                                    {trackingId === order.id ? 'চেক হচ্ছে...' : '🔄 লাইভ স্ট্যাটাস আপডেট'}
+                                  <button onClick={() => handleCheckCourierStatus(order)} disabled={trackingId === order.id} className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-800 bg-white hover:bg-slate-100 py-1.5 px-2 rounded w-full border border-slate-300 transition cursor-pointer shadow-2xs">
+                                    <RotateCw className={`w-3 h-3 ${trackingId === order.id ? 'animate-spin' : ''}`} /> {trackingId === order.id ? 'চেক হচ্ছে...' : '🔄 লাইভ স্ট্যাটাস আপডেট'}
                                   </button>
                                 </div>
                               )}
