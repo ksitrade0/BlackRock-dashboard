@@ -320,18 +320,6 @@ export default function Dashboard() {
           text: `Order #${finalInvoice} সফলভাবে WooCommerce-এ সেভ করা হয়েছে!`,
           type: 'success',
         });
-
-        const logMsg = `✅ <b>${order.isNewRow ? 'নতুন অর্ডার তৈরি ও কনফার্ম' : 'অর্ডার আপডেট ও সেভ'}</b>\n` +
-          `━━━━━━━━━━━━━━━━━━━\n` +
-          `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
-          `📦 <b>ইনভয়েস:</b> #${finalInvoice}\n` +
-          `👤 <b>কাস্টমার:</b> ${order.customerName} (<code>${order.phone}</code>)\n` +
-          `📍 <b>ঠিকানা:</b> ${order.streetAddress || ''}, ${order.thana ? `${order.thana}, ` : ''}${order.district || ''}\n` +
-          `👕 <b>আইটেম/সাইজ:</b> ${order.items || 'N/A'} ${order.size ? `[সাইজ: ${order.size}]` : ''}\n` +
-          `💵 <b>টাকা:</b> ৳${order.total || '0'}\n` +
-          `📌 <b>স্ট্যাটাস:</b> <code>${newStatus.toUpperCase()}</code>\n` +
-          `👨‍💼 <b>কনফার্ম করেছেন:</b> ${currentUser}`;
-        sendActivityLog(logMsg, 'activity');
       } else {
         setMessage({ text: result.error || 'সেভ করতে সমস্যা হয়েছে', type: 'error' });
       }
@@ -369,14 +357,6 @@ export default function Dashboard() {
       if (res.ok) {
         setOrders((prev) => prev.filter((o) => !(o.id === order.id && o.storeId === order.storeId)));
         setMessage({ text: `Order #${order.invoice} মুছে ফেলা হয়েছে!`, type: 'success' });
-
-        const logMsg = `🗑️ <b>অর্ডার ডিলিট করা হয়েছে</b>\n` +
-          `━━━━━━━━━━━━━━━━━━━\n` +
-          `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
-          `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
-          `👤 <b>কাস্টমার:</b> ${order.customerName}\n` +
-          `👨‍💼 <b>ডিলিট করেছেন:</b> ${currentUser}`;
-        sendActivityLog(logMsg, 'activity');
       } else {
         setMessage({ text: result.error || 'ডিলিট করতে সমস্যা হয়েছে', type: 'error' });
       }
@@ -443,22 +423,7 @@ export default function Dashboard() {
         );
 
         handleSaveOrder(order);
-
-        setMessage({
-          text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`,
-          type: 'success',
-        });
-
-        const logMsg = `🚀 <b>STEADFAST কুরিয়ারে ডিসপ্যাচ করা হয়েছে</b>\n` +
-          `━━━━━━━━━━━━━━━━━━━\n` +
-          `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
-          `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
-          `👤 <b>কাস্টমার:</b> ${order.customerName} (<code>${order.phone}</code>)\n` +
-          `📍 <b>ঠিকানা:</b> ${fullAddress}\n` +
-          `💵 <b>COD:</b> ৳${order.total} ${order.size ? `(সাইজ: ${order.size})` : ''}\n` +
-          `🏷️ <b>CID:</b> <code>${cid}</code> | <b>Tracking:</b> <code>${tracking}</code>\n` +
-          `👨‍💼 <b>ডিসপ্যাচ করেছেন:</b> ${currentUser}`;
-        sendActivityLog(logMsg, 'courier');
+        setMessage({ text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`, type: 'success' });
       } else {
         setMessage({ text: result.error || 'কুরিয়ারে পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
       }
@@ -492,10 +457,7 @@ export default function Dashboard() {
           )
         );
 
-        setMessage({
-          text: `Order #${order.invoice} বর্তমান স্ট্যাটাস: ${liveStatus.toUpperCase()}`,
-          type: 'success',
-        });
+        setMessage({ text: `Order #${order.invoice} বর্তমান স্ট্যাটাস: ${liveStatus.toUpperCase()}`, type: 'success' });
       } else {
         setMessage({ text: result.error || 'ট্র্যাকিং আপডেট পাওয়া যায়নি', type: 'error' });
       }
@@ -511,7 +473,7 @@ export default function Dashboard() {
     if (s === 'delivered') return 'bg-emerald-600 text-white border-emerald-800 shadow-sm';
     if (s === 'partial_delivered') return 'bg-teal-600 text-white border-teal-800';
     if (s === 'cancelled' || s === 'cancelled_approval_pending') return 'bg-rose-600 text-white border-rose-800';
-    if (s === 'in_review' || s === 'pending') return 'bg-amber-400 text-slate-950 font-black border-amber-600';
+    if (s === 'in_review' || s === 'pending' || s === 'unassigned') return 'bg-amber-400 text-slate-950 font-black border-amber-600';
     if (s.includes('transit') || s.includes('hold')) return 'bg-blue-600 text-white border-blue-800';
     return 'bg-slate-800 text-white border-slate-900';
   };
@@ -606,9 +568,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* ডান পাশের অ্যাকশন কলামসমূহ */}
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-            {/* ৩য় ব্লক (বাঁয়ে): প্রোফাইল বক্স */}
             <div className="flex flex-col justify-center items-center bg-slate-100 border border-slate-300 px-4 py-1.5 rounded-xl h-[78px] min-w-[170px] shadow-2xs">
               <User className="w-5 h-5 text-slate-700 mb-1" />
               <div className="text-xs font-black text-slate-900 leading-tight text-center">
@@ -616,7 +576,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* ২য় ব্লক (মাঝে): রিফ্রেশ ও লগআউট */}
             <div className="flex flex-col gap-1.5">
               <button
                 onClick={fetchOrders}
@@ -633,7 +592,6 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* ১ম ব্লক (একদম ডানপাশে): কুরিয়ার রিপোর্ট ও নতুন অর্ডার */}
             <div className="flex flex-col gap-1.5">
               <button
                 onClick={handleSendCourierReport}
@@ -746,346 +704,359 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="text-xs">
-                  {filteredOrders.map((order, index) => {
-                    const cleanPhone = order.phone ? order.phone.replace(/[^0-9]/g, '') : '';
-                    const phoneInfo = phoneOrderData[cleanPhone];
-                    const isDuplicate = phoneInfo && phoneInfo.count > 1;
-                    const isRecent = phoneInfo && phoneInfo.recentOrders.length > 1;
+                  {(() => {
+                    let lastDateStr = '';
+                    return filteredOrders.map((order, index) => {
+                      const cleanPhone = order.phone ? order.phone.replace(/[^0-9]/g, '') : '';
+                      const phoneInfo = phoneOrderData[cleanPhone];
+                      const isDuplicate = phoneInfo && phoneInfo.count > 1;
+                      const isRecent = phoneInfo && phoneInfo.recentOrders.length > 1;
 
-                    const selectedDistrictObj = BANGLADESH_DISTRICTS.find((d) => d.district === order.district);
-                    const availableThanas = selectedDistrictObj ? selectedDistrictObj.thanas : [];
+                      const selectedDistrictObj = BANGLADESH_DISTRICTS.find((d) => d.district === order.district);
+                      const availableThanas = selectedDistrictObj ? selectedDistrictObj.thanas : [];
 
-                    const isEven = index % 2 === 0;
-                    const rowBgClass = order.isNewRow
-                      ? 'bg-emerald-50 border-2 border-emerald-500'
-                      : isRecent
-                      ? 'bg-rose-50 hover:bg-rose-100/70'
-                      : isDuplicate
-                      ? 'bg-amber-50 hover:bg-amber-100/70'
-                      : isEven
-                      ? 'bg-white hover:bg-slate-50'
-                      : 'bg-slate-50/70 hover:bg-slate-100/70';
+                      const currentDateStr = formatOrderDate(order.dateCreated);
+                      const showDateDivider = currentDateStr !== lastDateStr;
+                      lastDateStr = currentDateStr;
 
-                    return (
-                      <tr
-                        key={`${order.storeId}-${order.id}`}
-                        className={`transition-colors border-b border-slate-200 ${rowBgClass}`}
-                      >
-                        {/* 1. Invoice / Store */}
-                        <td className="p-3 align-top font-bold border-r border-slate-200 space-y-1.5">
-                          <div className="w-full h-[32px] flex items-center justify-center font-mono text-xs font-black text-slate-950 bg-slate-100 border border-slate-300 rounded shadow-2xs">
-                            {order.isNewRow ? '🆕 NEW' : `#${order.invoice}`}
-                          </div>
+                      const isEven = index % 2 === 0;
+                      const rowBgClass = order.isNewRow
+                        ? 'bg-emerald-50 border-2 border-emerald-500'
+                        : isRecent
+                        ? 'bg-rose-50 hover:bg-rose-100/70'
+                        : isDuplicate
+                        ? 'bg-amber-50 hover:bg-amber-100/70'
+                        : isEven
+                        ? 'bg-white hover:bg-slate-50'
+                        : 'bg-slate-50/70 hover:bg-slate-100/70';
 
-                          {order.isNewRow ? (
-                            <select
-                              value={order.storeId}
-                              onChange={(e) => handleFieldChange(order.id, order.storeId, 'storeId', e.target.value)}
-                              className="w-full h-[32px] text-[11px] text-slate-900 bg-white border border-slate-300 font-bold px-2 rounded cursor-pointer shadow-2xs"
-                            >
-                              <option value="store1">Ruhama Wear</option>
-                              <option value="store2">Aastha Naturals BD</option>
-                            </select>
-                          ) : (
-                            <div className="w-full h-[32px] flex items-center justify-center text-[11px] text-slate-700 bg-white border border-slate-200 font-bold px-2 rounded shadow-2xs">
-                              {order.storeName}
-                            </div>
+                      const isSentToCourier = Boolean(order.trackingCode || order.consignmentId);
+
+                      return (
+                        <>
+                          {showDateDivider && (
+                            <tr key={`divider-${currentDateStr}-${index}`} className="bg-slate-800 text-white font-bold text-xs">
+                              <td colSpan={8} className="px-4 py-2 tracking-wide uppercase flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-amber-400" />
+                                <span>তারিখ: {currentDateStr}</span>
+                              </td>
+                            </tr>
                           )}
-                        </td>
-
-                        {/* 2. Customer Name */}
-                        <td className="p-3 align-top border-r border-slate-200">
-                          <textarea
-                            rows={4}
-                            value={order.customerName}
-                            onChange={(e) => handleFieldChange(order.id, order.storeId, 'customerName', e.target.value)}
-                            placeholder="কাস্টমারের নাম..."
-                            className="w-full font-black text-sm text-slate-950 bg-transparent focus:bg-white border border-transparent focus:border-slate-300 rounded p-1 transition resize-none outline-none leading-snug whitespace-normal break-words placeholder:text-slate-400 placeholder:text-xs"
-                          />
-                        </td>
-
-                        {/* 3. Date & Time */}
-                        <td className="p-3 align-top text-slate-700 font-bold border-r border-slate-200 space-y-1.5">
-                          <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
-                            <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                            <span className="font-bold text-slate-900">{formatOrderTime(order.dateCreated)}</span>
-                          </div>
-
-                          <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
-                            <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                            <span className="font-bold text-slate-800">{formatOrderDate(order.dateCreated)}</span>
-                          </div>
-                        </td>
-
-                        {/* 4. Phone, Call & Staff */}
-                        <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                          <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                            <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                            <input
-                              type="text"
-                              value={order.phone}
-                              placeholder="01XXXXXXXXX"
-                              onChange={(e) => handleFieldChange(order.id, order.storeId, 'phone', e.target.value)}
-                              className={`w-full text-xs font-mono font-black bg-transparent outline-none tracking-wide ${
-                                isRecent
-                                  ? 'text-red-700'
-                                  : isDuplicate
-                                  ? 'text-amber-900'
-                                  : 'text-slate-950'
-                              }`}
-                            />
-                          </div>
-
-                          {isRecent ? (
-                            <div className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold">
-                              <AlertTriangle className="w-3 h-3 shrink-0 text-red-600" />
-                              <span>🚩 রিসেন্ট ডুপ্লিকেট ({phoneInfo.recentOrders.length}টি)</span>
-                            </div>
-                          ) : isDuplicate ? (
-                            <div className="flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold">
-                              <AlertTriangle className="w-3 h-3 shrink-0 text-amber-600" />
-                              <span>মোট অর্ডার: {phoneInfo.count}টি</span>
-                            </div>
-                          ) : null}
-
-                          <button
-                            onClick={() => {
-                              const newCallState = !order.callDone;
-                              handleFieldChange(order.id, order.storeId, 'callDone', newCallState);
-                              if (!order.staffName) {
-                                handleFieldChange(order.id, order.storeId, 'staffName', currentUser);
-                              }
-                            }}
-                            className={`w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold rounded transition border cursor-pointer shadow-2xs ${
-                              order.callDone
-                                ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black'
-                                : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'
-                            }`}
+                          <tr
+                            key={`${order.storeId}-${order.id}`}
+                            className={`transition-colors border-b border-slate-200 ${rowBgClass}`}
                           >
-                            <PhoneCall className="w-3.5 h-3.5" />
-                            {order.callDone ? 'কল সম্পন্ন হয়েছে' : 'কল দিন'}
-                          </button>
-
-                          <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                            <UserCheck className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                            <select
-                              value={order.staffName || ''}
-                              onChange={(e) => handleFieldChange(order.id, order.storeId, 'staffName', e.target.value)}
-                              className="w-full text-xs font-bold bg-transparent text-slate-900 cursor-pointer outline-none"
-                            >
-                              <option value="">স্টাফ নির্বাচন করুন</option>
-                              {STAFF_MEMBERS.map((staff) => (
-                                <option key={staff} value={staff}>
-                                  {staff}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </td>
-
-                        {/* 5. Address & Thana/District */}
-                        <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                          <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs">
-                            <MapPin className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
-                            <textarea
-                              rows={3}
-                              value={order.streetAddress}
-                              onChange={(e) => handleFieldChange(order.id, order.storeId, 'streetAddress', e.target.value)}
-                              placeholder="বিস্তারিত ঠিকানা..."
-                              className="w-full text-xs font-bold text-slate-900 bg-transparent resize-y leading-snug outline-none min-h-[58px]"
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-1.5">
-                            <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
-                              <select
-                                value={order.thana || ''}
-                                disabled={!order.district}
-                                onChange={(e) => handleFieldChange(order.id, order.storeId, 'thana', e.target.value)}
-                                className="w-full text-[11px] bg-transparent text-slate-900 font-bold disabled:text-slate-400 cursor-pointer outline-none"
-                              >
-                                <option value="">থানা বাছুন</option>
-                                {availableThanas.map((thana) => (
-                                  <option key={thana} value={thana}>
-                                    {thana}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
-                              <select
-                                value={order.district || ''}
-                                onChange={(e) => handleFieldChange(order.id, order.storeId, 'district', e.target.value)}
-                                className="w-full text-[11px] bg-transparent text-slate-900 font-bold cursor-pointer outline-none"
-                              >
-                                <option value="">জেলা বাছুন</option>
-                                {BANGLADESH_DISTRICTS.map((d) => (
-                                  <option key={d.district} value={d.district}>
-                                    {d.district}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* 6. Items, COD & Size */}
-                        <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                          <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs">
-                            <Edit3 className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
-                            <textarea
-                              rows={3}
-                              value={order.items}
-                              onChange={(e) => handleFieldChange(order.id, order.storeId, 'items', e.target.value)}
-                              placeholder="আইটেমের নাম ও বিবরণ..."
-                              className="w-full text-xs font-bold text-slate-900 bg-transparent resize-y leading-snug outline-none min-h-[58px]"
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-1.5">
-                            <div className="h-[34px] flex items-center gap-1.5 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                              <span className="text-xs font-black text-slate-700">COD:</span>
-                              <input
-                                type="number"
-                                value={order.total}
-                                onFocus={(e) => e.target.select()}
-                                onChange={(e) => handleFieldChange(order.id, order.storeId, 'total', e.target.value)}
-                                placeholder="৳"
-                                className="w-full text-xs font-black text-emerald-800 bg-transparent outline-none"
-                              />
-                            </div>
-
-                            <div className="h-[34px] flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded px-2.5 shadow-2xs">
-                              <Shirt className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                              <span className="text-[11px] font-black text-slate-600">সাইজ:</span>
-                              <input
-                                type="text"
-                                value={order.size || ''}
-                                onChange={(e) => handleFieldChange(order.id, order.storeId, 'size', e.target.value.toUpperCase())}
-                                placeholder="XL"
-                                className="w-full text-xs font-black text-slate-950 uppercase text-center bg-white border border-slate-200 rounded py-0.5 outline-none"
-                              />
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* 7. Status & Save */}
-                        <td className="p-3 align-top text-center space-y-1.5 border-r border-slate-200">
-                          <select
-                            value={order.status}
-                            disabled={updatingId === order.id}
-                            onChange={(e) => handleSaveOrder(order, e.target.value)}
-                            className={`w-full h-[34px] text-xs font-bold border rounded px-2.5 text-center cursor-pointer shadow-2xs ${getStatusColor(
-                              order.status
-                            )}`}
-                          >
-                            {WOO_STATUSES.map((st) => (
-                              <option key={st.value} value={st.value} className="bg-white text-slate-900">
-                                {st.label}
-                              </option>
-                            ))}
-                          </select>
-
-                          <button
-                            onClick={() => handleSaveOrder(order)}
-                            disabled={updatingId === order.id}
-                            className="w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded transition cursor-pointer disabled:opacity-50 shadow-2xs"
-                          >
-                            <Save className={`w-3.5 h-3.5 ${updatingId === order.id ? 'animate-spin' : ''}`} />
-                            {updatingId === order.id ? 'সেভ হচ্ছে...' : 'তথ্য সেভ করুন (Save)'}
-                          </button>
-
-                          <div className="grid grid-cols-3 gap-1.5">
-                            <button
-                              onClick={() => handleSaveOrder(order, 'on-hold')}
-                              disabled={updatingId === order.id}
-                              title="রাখুন"
-                              className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-300 rounded cursor-pointer shadow-2xs"
-                            >
-                              <BookmarkCheck className="w-3 h-3" /> রাখুন
-                            </button>
-
-                            <button
-                              onClick={() => handleSaveOrder(order, 'cancelled')}
-                              disabled={updatingId === order.id}
-                              title="বাতিল"
-                              className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-300 rounded cursor-pointer shadow-2xs"
-                            >
-                              <XCircle className="w-3 h-3" /> বাতিল
-                            </button>
-
-                            <button
-                              onClick={() => handleDeleteOrder(order)}
-                              disabled={updatingId === order.id}
-                              title="ডিলিট"
-                              className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-slate-700 hover:text-red-700 bg-slate-50 hover:bg-red-50 border border-slate-200 rounded cursor-pointer shadow-2xs"
-                            >
-                              <Trash2 className="w-3 h-3" /> ডিলিট
-                            </button>
-                          </div>
-                        </td>
-
-                        {/* 8. Steadfast Courier */}
-                        <td className="p-3 align-top space-y-1.5">
-                          <div className="w-full h-[34px] flex items-center bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                            <input
-                              type="text"
-                              value={order.customNote || ''}
-                              onChange={(e) => handleFieldChange(order.id, order.storeId, 'customNote', e.target.value)}
-                              placeholder="কুরিয়ার স্পেশাল নোট..."
-                              className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 bg-transparent outline-none"
-                            />
-                          </div>
-
-                          <button
-                            onClick={() => handleSendToSteadfast(order)}
-                            disabled={sendingId === order.id}
-                            className={`w-full h-[34px] flex items-center justify-center gap-1.5 rounded text-xs font-bold transition cursor-pointer shadow-2xs ${
-                              order.trackingCode || order.consignmentId
-                                ? 'bg-slate-900 hover:bg-black text-white'
-                                : 'bg-slate-800 hover:bg-slate-900 text-white'
-                            }`}
-                          >
-                            <Send className="w-3.5 h-3.5" />
-                            {sendingId === order.id
-                              ? 'Sending...'
-                              : order.trackingCode || order.consignmentId
-                              ? 'Re-send Steadfast'
-                              : 'Send to Steadfast'}
-                          </button>
-
-                          {(order.trackingCode || order.consignmentId) && (
-                            <div className="bg-slate-50 border border-slate-200 rounded p-2 space-y-1.5 text-left shadow-2xs">
-                              <div className="flex justify-between items-center text-xs pb-1 border-b border-slate-200">
-                                <span className="font-bold text-slate-600 flex items-center gap-1">
-                                  <Package className="w-3 h-3 text-slate-800" /> CID:
-                                </span>
-                                <span className="font-mono font-bold text-slate-900">{order.consignmentId || 'N/A'}</span>
+                            {/* 1. Invoice / Store */}
+                            <td className="p-3 align-top font-bold border-r border-slate-200 space-y-1.5">
+                              <div className="w-full h-[32px] flex items-center justify-center font-mono text-xs font-black text-slate-950 bg-slate-100 border border-slate-300 rounded shadow-2xs">
+                                {order.isNewRow ? '🆕 NEW' : `#${order.invoice}`}
                               </div>
 
-                              <div
-                                className={`w-full py-1 px-1.5 rounded text-center text-[10px] font-bold uppercase tracking-wider border ${getCourierBadge(
-                                  order.courierStatus || 'in_review'
-                                )}`}
-                              >
-                                {order.courierStatus ? order.courierStatus.replace(/_/g, ' ') : 'IN REVIEW'}
+                              {order.isNewRow ? (
+                                <select
+                                  value={order.storeId}
+                                  onChange={(e) => handleFieldChange(order.id, order.storeId, 'storeId', e.target.value)}
+                                  className="w-full h-[32px] text-[11px] text-slate-900 bg-white border border-slate-300 font-bold px-2 rounded cursor-pointer shadow-2xs"
+                                >
+                                  <option value="store1">Ruhama Wear</option>
+                                  <option value="store2">Aastha Naturals BD</option>
+                                </select>
+                              ) : (
+                                <div className="w-full h-[32px] flex items-center justify-center text-[11px] text-slate-700 bg-white border border-slate-200 font-bold px-2 rounded shadow-2xs">
+                                  {order.storeName}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* 2. Customer Name */}
+                            <td className="p-3 align-top border-r border-slate-200">
+                              <textarea
+                                rows={4}
+                                value={order.customerName}
+                                onChange={(e) => handleFieldChange(order.id, order.storeId, 'customerName', e.target.value)}
+                                placeholder="কাস্টমারের নাম..."
+                                className="w-full font-black text-sm text-slate-950 bg-transparent focus:bg-white border border-transparent focus:border-slate-300 rounded p-1 transition resize-none outline-none leading-snug whitespace-normal break-words placeholder:text-slate-400 placeholder:text-xs"
+                              />
+                            </td>
+
+                            {/* 3. Date & Time */}
+                            <td className="p-3 align-top text-slate-700 font-bold border-r border-slate-200 space-y-1.5">
+                              <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
+                                <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                <span className="font-bold text-slate-900">{formatOrderTime(order.dateCreated)}</span>
                               </div>
+
+                              <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
+                                <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                <span className="font-bold text-slate-800">{formatOrderDate(order.dateCreated)}</span>
+                              </div>
+                            </td>
+
+                            {/* 4. Phone, Call & Staff */}
+                            <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
+                              <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
+                                <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                <input
+                                  type="text"
+                                  value={order.phone}
+                                  placeholder="01XXXXXXXXX"
+                                  onChange={(e) => handleFieldChange(order.id, order.storeId, 'phone', e.target.value)}
+                                  className={`w-full text-xs font-mono font-black bg-transparent outline-none tracking-wide ${
+                                    isRecent
+                                      ? 'text-red-700'
+                                      : isDuplicate
+                                      ? 'text-amber-900'
+                                      : 'text-slate-950'
+                                  }`}
+                                />
+                              </div>
+
+                              {isRecent ? (
+                                <div className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold">
+                                  <AlertTriangle className="w-3 h-3 shrink-0 text-red-600" />
+                                  <span>🚩 রিসেন্ট ডুপ্লিকেট ({phoneInfo.recentOrders.length}টি)</span>
+                                </div>
+                              ) : isDuplicate ? (
+                                <div className="flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold">
+                                  <AlertTriangle className="w-3 h-3 shrink-0 text-amber-600" />
+                                  <span>মোট অর্ডার: {phoneInfo.count}টি</span>
+                                </div>
+                              ) : null}
 
                               <button
-                                onClick={() => handleCheckCourierStatus(order)}
-                                disabled={trackingId === order.id}
-                                className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-800 bg-white hover:bg-slate-100 py-1 px-2 rounded w-full border border-slate-300 transition cursor-pointer shadow-2xs"
+                                onClick={() => {
+                                  const newCallState = !order.callDone;
+                                  handleFieldChange(order.id, order.storeId, 'callDone', newCallState);
+                                  if (!order.staffName) {
+                                    handleFieldChange(order.id, order.storeId, 'staffName', currentUser);
+                                  }
+                                }}
+                                className={`w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold rounded transition border cursor-pointer shadow-2xs ${
+                                  order.callDone
+                                    ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black'
+                                    : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'
+                                }`}
                               >
-                                <RotateCw className={`w-3 h-3 ${trackingId === order.id ? 'animate-spin' : ''}`} />
-                                {trackingId === order.id ? 'চেক হচ্ছে...' : '🔄 লাইভ স্ট্যাটাস'}
+                                <PhoneCall className="w-3.5 h-3.5" />
+                                {order.callDone ? 'কল সম্পন্ন হয়েছে' : 'কল দিন'}
                               </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
+
+                              <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
+                                <UserCheck className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                <select
+                                  value={order.staffName || ''}
+                                  onChange={(e) => handleFieldChange(order.id, order.storeId, 'staffName', e.target.value)}
+                                  className="w-full text-xs font-bold bg-transparent text-slate-900 cursor-pointer outline-none"
+                                >
+                                  <option value="">স্টাফ নির্বাচন করুন</option>
+                                  {STAFF_MEMBERS.map((staff) => (
+                                    <option key={staff} value={staff}>
+                                      {staff}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </td>
+
+                            {/* 5. Address & Thana/District */}
+                            <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
+                              <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs">
+                                <MapPin className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
+                                <textarea
+                                  rows={3}
+                                  value={order.streetAddress}
+                                  onChange={(e) => handleFieldChange(order.id, order.storeId, 'streetAddress', e.target.value)}
+                                  placeholder="বিস্তারিত ঠিকানা..."
+                                  className="w-full text-xs font-bold text-slate-900 bg-transparent resize-y leading-snug outline-none min-h-[58px]"
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
+                                  <select
+                                    value={order.thana || ''}
+                                    disabled={!order.district}
+                                    onChange={(e) => handleFieldChange(order.id, order.storeId, 'thana', e.target.value)}
+                                    className="w-full text-[11px] bg-transparent text-slate-900 font-bold disabled:text-slate-400 cursor-pointer outline-none"
+                                  >
+                                    <option value="">থানা বাছুন</option>
+                                    {availableThanas.map((thana) => (
+                                      <option key={thana} value={thana}>
+                                        {thana}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
+                                  <select
+                                    value={order.district || ''}
+                                    onChange={(e) => handleFieldChange(order.id, order.storeId, 'district', e.target.value)}
+                                    className="w-full text-[11px] bg-transparent text-slate-900 font-bold cursor-pointer outline-none"
+                                  >
+                                    <option value="">জেলা বাছুন</option>
+                                    {BANGLADESH_DISTRICTS.map((d) => (
+                                      <option key={d.district} value={d.district}>
+                                        {d.district}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* 6. Items, COD & Size */}
+                            <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
+                              <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs">
+                                <Edit3 className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
+                                <textarea
+                                  rows={3}
+                                  value={order.items}
+                                  onChange={(e) => handleFieldChange(order.id, order.storeId, 'items', e.target.value)}
+                                  placeholder="আইটেমের নাম ও বিবরণ..."
+                                  className="w-full text-xs font-bold text-slate-900 bg-transparent resize-y leading-snug outline-none min-h-[58px]"
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <div className="h-[34px] flex items-center gap-1.5 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
+                                  <span className="text-xs font-black text-slate-700">COD:</span>
+                                  <input
+                                    type="number"
+                                    value={order.total}
+                                    onFocus={(e) => e.target.select()}
+                                    onChange={(e) => handleFieldChange(order.id, order.storeId, 'total', e.target.value)}
+                                    placeholder="৳"
+                                    className="w-full text-xs font-black text-emerald-800 bg-transparent outline-none"
+                                  />
+                                </div>
+
+                                <div className="h-[34px] flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded px-2.5 shadow-2xs">
+                                  <Shirt className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                                  <span className="text-[11px] font-black text-slate-600">সাইজ:</span>
+                                  <input
+                                    type="text"
+                                    value={order.size || ''}
+                                    onChange={(e) => handleFieldChange(order.id, order.storeId, 'size', e.target.value.toUpperCase())}
+                                    placeholder="XL"
+                                    className="w-full text-xs font-black text-slate-950 uppercase text-center bg-white border border-slate-200 rounded py-0.5 outline-none"
+                                  />
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* 7. Status & Save */}
+                            <td className="p-3 align-top text-center space-y-1.5 border-r border-slate-200">
+                              <select
+                                value={order.status}
+                                disabled={updatingId === order.id}
+                                onChange={(e) => handleSaveOrder(order, e.target.value)}
+                                className={`w-full h-[34px] text-xs font-bold border rounded px-2.5 text-center cursor-pointer shadow-2xs ${getStatusColor(
+                                  order.status
+                                )}`}
+                              >
+                                {WOO_STATUSES.map((st) => (
+                                  <option key={st.value} value={st.value} className="bg-white text-slate-900">
+                                    {st.label}
+                                  </option>
+                                ))}
+                              </select>
+
+                              <button
+                                onClick={() => handleSaveOrder(order)}
+                                disabled={updatingId === order.id}
+                                className="w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded transition cursor-pointer disabled:opacity-50 shadow-2xs"
+                              >
+                                <Save className={`w-3.5 h-3.5 ${updatingId === order.id ? 'animate-spin' : ''}`} />
+                                {updatingId === order.id ? 'সেভ হচ্ছে...' : 'তথ্য সেভ করুন (Save)'}
+                              </button>
+
+                              <div className="grid grid-cols-3 gap-1.5">
+                                <button
+                                  onClick={() => handleSaveOrder(order, 'on-hold')}
+                                  disabled={updatingId === order.id}
+                                  title="রাখুন"
+                                  className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-300 rounded cursor-pointer shadow-2xs"
+                                >
+                                  <BookmarkCheck className="w-3 h-3" /> রাখুন
+                                </button>
+
+                                <button
+                                  onClick={() => handleSaveOrder(order, 'cancelled')}
+                                  disabled={updatingId === order.id}
+                                  title="বাতিল"
+                                  className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-300 rounded cursor-pointer shadow-2xs"
+                                >
+                                  <XCircle className="w-3 h-3" /> বাতিল
+                                </button>
+
+                                <button
+                                  onClick={() => handleDeleteOrder(order)}
+                                  disabled={updatingId === order.id}
+                                  title="ডিলিট"
+                                  className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-slate-700 hover:text-red-700 bg-slate-50 hover:bg-red-50 border border-slate-200 rounded cursor-pointer shadow-2xs"
+                                >
+                                  <Trash2 className="w-3 h-3" /> ডিলিট
+                                </button>
+                              </div>
+                            </td>
+
+                            {/* 8. Steadfast Courier */}
+                            <td className="p-3 align-top space-y-1.5">
+                              {!isSentToCourier ? (
+                                <>
+                                  <div className="w-full h-[34px] flex items-center bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
+                                    <input
+                                      type="text"
+                                      value={order.customNote || ''}
+                                      onChange={(e) => handleFieldChange(order.id, order.storeId, 'customNote', e.target.value)}
+                                      placeholder="কুরিয়ার স্পেশাল নোট..."
+                                      className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 bg-transparent outline-none"
+                                    />
+                                  </div>
+
+                                  <button
+                                    onClick={() => handleSendToSteadfast(order)}
+                                    disabled={sendingId === order.id}
+                                    className="w-full h-[34px] flex items-center justify-center gap-1.5 rounded text-xs font-bold bg-slate-900 hover:bg-black text-white transition cursor-pointer shadow-2xs"
+                                  >
+                                    <Send className="w-3.5 h-3.5" />
+                                    {sendingId === order.id ? 'Sending...' : 'Send to Steadfast'}
+                                  </button>
+                                </>
+                              ) : (
+                                <div className="bg-slate-50 border border-slate-200 rounded p-2.5 space-y-2 text-left shadow-2xs">
+                                  <div className="flex justify-between items-center text-xs pb-1.5 border-b border-slate-200">
+                                    <span className="font-bold text-slate-600 flex items-center gap-1">
+                                      <Package className="w-3.5 h-3.5 text-slate-800" /> CID:
+                                    </span>
+                                    <span className="font-mono font-black text-slate-950 text-xs">{order.consignmentId || 'N/A'}</span>
+                                  </div>
+
+                                  <div
+                                    className={`w-full py-1.5 px-2 rounded text-center text-[11px] font-black uppercase tracking-wider border ${getCourierBadge(
+                                      order.courierStatus || 'in_review'
+                                    )}`}
+                                  >
+                                    {order.courierStatus ? order.courierStatus.replace(/_/g, ' ') : 'IN REVIEW'}
+                                  </div>
+
+                                  <button
+                                    onClick={() => handleCheckCourierStatus(order)}
+                                    disabled={trackingId === order.id}
+                                    className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-800 bg-white hover:bg-slate-100 py-1.5 px-2 rounded w-full border border-slate-300 transition cursor-pointer shadow-2xs"
+                                  >
+                                    <RotateCw className={`w-3 h-3 ${trackingId === order.id ? 'animate-spin' : ''}`} />
+                                    {trackingId === order.id ? 'চেক হচ্ছে...' : '🔄 লাইভ স্ট্যাটাস আপডেট'}
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        </>
+                      );
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
