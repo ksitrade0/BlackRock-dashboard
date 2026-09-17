@@ -320,11 +320,13 @@ export default function Dashboard() {
     return 'bg-slate-200 text-slate-800 border-slate-400';
   };
 
+  // ✅ APP-LIKE LAYOUT: h-[100dvh] and flex-col ensures the main page NEVER scrolls vertically.
   return (
-    <div className="min-h-screen bg-slate-200/70 text-slate-900 p-4 md:p-6">
-      <div className="max-w-[1950px] mx-auto">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-300">
+    <div className="h-[100dvh] bg-slate-200/70 text-slate-900 p-4 md:p-6 flex flex-col overflow-hidden">
+      <div className="max-w-[1950px] mx-auto w-full flex flex-col h-full">
+        
+        {/* Header - Fixed at Top (shrink-0) */}
+        <div className="shrink-0 flex flex-col lg:flex-row justify-between items-center mb-4 gap-4 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-300">
           <div onClick={() => (window.location.href = '/')} className="flex items-center gap-3.5 cursor-pointer select-none transition hover:opacity-90">
             {hasLogoImg ? (
               <div className="w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center p-1.5 shadow-sm border border-slate-800 shrink-0">
@@ -351,7 +353,6 @@ export default function Dashboard() {
               <User className="w-5 h-5 text-slate-700 mb-1" />
               <div className="text-xs font-black text-slate-900 leading-tight text-center">{currentUser}</div>
             </div>
-
             <div className="flex flex-col gap-1.5">
               <button onClick={fetchOrders} className="w-36 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition border border-slate-300 cursor-pointer shadow-2xs">
                 <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${loading ? 'animate-spin' : ''}`} /> Refresh
@@ -360,7 +361,6 @@ export default function Dashboard() {
                 <LogOut className="w-3.5 h-3.5" /> লগআউট
               </button>
             </div>
-
             <div className="flex flex-col gap-1.5">
               <button onClick={handleSendCourierReport} disabled={reporting} className="w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg font-bold text-xs transition cursor-pointer border border-slate-800 disabled:opacity-50 shadow-2xs">
                 <BarChart2 className={`w-3.5 h-3.5 text-amber-400 ${reporting ? 'animate-spin' : ''}`} />
@@ -373,8 +373,15 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col lg:flex-row justify-between items-center gap-4 bg-white p-3.5 rounded-xl shadow-sm border border-slate-300 mb-4">
+        {message && (
+          <div className={`shrink-0 p-3.5 mb-4 rounded-xl flex items-center gap-2.5 shadow-sm font-bold text-xs ${message.type === 'success' ? 'bg-emerald-50 text-emerald-900 border border-emerald-300' : 'bg-rose-50 text-rose-900 border border-rose-300'}`}>
+            {message.type === 'success' ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />}
+            <span>{message.text}</span>
+          </div>
+        )}
+
+        {/* Filters - Fixed below Header (shrink-0) */}
+        <div className="shrink-0 flex flex-col lg:flex-row justify-between items-center gap-4 bg-white p-3.5 rounded-xl shadow-sm border border-slate-300 mb-4">
           <div className="flex gap-2 overflow-x-auto w-full lg:w-auto pb-1 lg:pb-0">
             {['all', 'Ruhama Wear', 'Aastha Naturals'].map((storeName) => (
               <button
@@ -398,25 +405,25 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ✅ MAGIC HAPPENS HERE: height: calc(100vh - 260px) ensures scrollbar is glued to screen bottom */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden flex flex-col">
+        {/* ✅ TABLE CONTAINER (flex-1) - Takes the exact remaining space, so the scrollbar NEVER leaves the screen */}
+        <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-300 flex flex-col min-h-0 overflow-hidden mb-2">
           {loading ? (
             <div className="p-20 text-center text-slate-600 font-bold text-sm">অর্ডার লোড হচ্ছে...</div>
           ) : filteredOrders.length === 0 ? (
             <div className="p-20 text-center text-slate-600 font-bold text-sm">কোনো অর্ডার পাওয়া যায়নি।</div>
           ) : (
-            <div className="overflow-auto w-full relative" style={{ height: 'calc(100vh - 260px)' }}>
+            <div className="flex-1 overflow-auto w-full">
               <table className="w-full text-left border-collapse min-w-[1900px]">
                 <thead className="sticky top-0 z-50 shadow-md">
                   <tr className="bg-slate-900 text-white text-[11px] uppercase font-bold tracking-wider">
-                    <th className="p-3.5 w-36 border-r border-slate-800 bg-slate-900">Invoice / Store</th>
-                    <th className="p-3.5 w-60 border-r border-slate-800 bg-slate-900">Customer Name (নাম)</th>
-                    <th className="p-3.5 w-40 border-r border-slate-800 bg-slate-900">Date & Time</th>
-                    <th className="p-3.5 w-80 border-r border-slate-800 bg-slate-900">Phone, Call & Staff</th>
-                    <th className="p-3.5 w-[440px] border-r border-slate-800 bg-slate-900">Address & Thana/District</th>
-                    <th className="p-3.5 w-[440px] border-r border-slate-800 bg-slate-900">Items, COD & Size</th>
-                    <th className="p-3.5 w-80 text-center border-r border-slate-800 bg-slate-900">Status & Save</th>
-                    <th className="p-3.5 w-80 text-center bg-slate-900">Steadfast Push & Live Status</th>
+                    <th className="p-3.5 w-36 border-r border-slate-800 bg-slate-900 sticky top-0">Invoice / Store</th>
+                    <th className="p-3.5 w-60 border-r border-slate-800 bg-slate-900 sticky top-0">Customer Name (নাম)</th>
+                    <th className="p-3.5 w-40 border-r border-slate-800 bg-slate-900 sticky top-0">Date & Time</th>
+                    <th className="p-3.5 w-80 border-r border-slate-800 bg-slate-900 sticky top-0">Phone, Call & Staff</th>
+                    <th className="p-3.5 w-[440px] border-r border-slate-800 bg-slate-900 sticky top-0">Address & Thana/District</th>
+                    <th className="p-3.5 w-[440px] border-r border-slate-800 bg-slate-900 sticky top-0">Items, COD & Size</th>
+                    <th className="p-3.5 w-80 text-center border-r border-slate-800 bg-slate-900 sticky top-0">Status & Save</th>
+                    <th className="p-3.5 w-80 text-center bg-slate-900 sticky top-0">Steadfast Push & Live Status</th>
                   </tr>
                 </thead>
                 <tbody className="text-xs">
@@ -594,6 +601,7 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
       </div>
     </div>
   );
