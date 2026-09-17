@@ -139,7 +139,7 @@ export default function Dashboard() {
       }
     } catch (err: any) {
       console.error('Failed to load orders', err);
-      setMessage({ text: err.message || 'অর্ডার লোড করতে সমস্যা হয়েছে', type: 'error' });
+      setMessage({ text: err.message || 'অর্ডার লোড করতে সমস্যা হয়েছে', type: 'error' });
       setOrders([]);
     } finally {
       setLoading(false);
@@ -183,22 +183,23 @@ export default function Dashboard() {
     };
 
     setOrders((prev) => [blankOrder, ...prev]);
-    setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
+    setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
   const handleSendCourierReport = async () => {
     setReporting(true);
-    setMessage({ text: 'কুরিয়ার অডিট রিপোর্ট তৈরি ও পাঠানো হচ্ছে...', type: 'success' });
+    setMessage({ text: 'কুরিয়ার অডিট রিপোর্ট তৈরি ও পাঠানো হচ্ছে...', type: 'success' });
     try {
-      const res = await fetch('/api/cron/courier-report');
+      const loggedUser = currentUser || 'omar faruque(Admin)';
+      const res = await fetch(`/api/cron/courier-report?user=${encodeURIComponent(loggedUser)}`);
       const data = await res.json();
       if (res.ok) {
-        setMessage({ text: '✅ কুরিয়ার রিপোর্ট সফলভাবে RUHAMA COURIER ALERTS গ্রুপে পাঠানো হয়েছে!', type: 'success' });
+        setMessage({ text: '✅ কুরিয়ার রিপোর্ট সফলভাবে RUHAMA COURIER ALERTS গ্রুপে পাঠানো হয়েছে!', type: 'success' });
       } else {
-        setMessage({ text: data.error || 'রিপোর্ট পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
+        setMessage({ text: data.error || 'রিপোর্ট পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
       }
     } catch (err: any) {
-      setMessage({ text: err.message || 'নেটওয়ার্ক এরর', type: 'error' });
+      setMessage({ text: err.message || 'নেটওয়ার্ক এরর', type: 'error' });
     } finally {
       setReporting(false);
     }
@@ -263,7 +264,7 @@ export default function Dashboard() {
         prev.staffName !== assignedStaff;
 
       if (!isChanged && !overrideStatus) {
-        setMessage({ text: `Order #${order.invoice}-এ কোনো পরিবর্তন করা হয়নি।`, type: 'success' });
+        setMessage({ text: `Order #${order.invoice}-এ কোনো পরিবর্তন করা হয়নি।`, type: 'success' });
         return;
       }
     }
@@ -316,14 +317,14 @@ export default function Dashboard() {
         }));
 
         setMessage({
-          text: `Order #${finalInvoice} সফলভাবে WooCommerce-এ সেভ করা হয়েছে!`,
+          text: `Order #${finalInvoice} সফলভাবে WooCommerce-এ সেভ করা হয়েছে!`,
           type: 'success',
         });
 
         const logMsg = `✅ <b>${order.isNewRow ? 'নতুন অর্ডার তৈরি ও কনফার্ম' : 'অর্ডার আপডেট ও সেভ'}</b>\n` +
           `━━━━━━━━━━━━━━━━━━━\n` +
           `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
-          `📦 <b>ইনভয়েস:</b> #${finalInvoice}\n` +
+          `📦 <b>ইনভয়েস:</b> #${finalInvoice}\n` +
           `👤 <b>কাস্টমার:</b> ${order.customerName} (<code>${order.phone}</code>)\n` +
           `📍 <b>ঠিকানা:</b> ${order.streetAddress || ''}, ${order.thana ? `${order.thana}, ` : ''}${order.district || ''}\n` +
           `👕 <b>আইটেম/সাইজ:</b> ${order.items || 'N/A'} ${order.size ? `[সাইজ: ${order.size}]` : ''}\n` +
@@ -332,7 +333,7 @@ export default function Dashboard() {
           `👨‍💼 <b>কনফার্ম করেছেন:</b> ${currentUser}`;
         sendActivityLog(logMsg, 'activity');
       } else {
-        setMessage({ text: result.error || 'সেভ করতে সমস্যা হয়েছে', type: 'error' });
+        setMessage({ text: result.error || 'সেভ করতে সমস্যা হয়েছে', type: 'error' });
       }
     } catch (err: any) {
       setMessage({ text: err.message || 'Network error', type: 'error' });
@@ -347,7 +348,7 @@ export default function Dashboard() {
       return;
     }
 
-    if (!confirm(`⚠️ সতর্কবার্তা! আপনি কি Order #${order.invoice} স্থায়ীভাবে মুছে ফেলতে চান?`)) return;
+    if (!confirm(`⚠️ সতর্কবার্তা! আপনি কি Order #${order.invoice} স্থায়ীভাবে মুছে ফেলতে চান?`)) return;
 
     setUpdatingId(order.id);
     setMessage(null);
@@ -367,17 +368,17 @@ export default function Dashboard() {
 
       if (res.ok) {
         setOrders((prev) => prev.filter((o) => !(o.id === order.id && o.storeId === order.storeId)));
-        setMessage({ text: `Order #${order.invoice} মুছে ফেলা হয়েছে!`, type: 'success' });
+        setMessage({ text: `Order #${order.invoice} মুছে ফেলা হয়েছে!`, type: 'success' });
 
-        const logMsg = `🗑️ <b>অর্ডার ডিলিট করা হয়েছে</b>\n` +
+        const logMsg = `🗑️ <b>অর্ডার ডিলিট করা হয়েছে</b>\n` +
           `━━━━━━━━━━━━━━━━━━━\n` +
           `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
-          `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
+          `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
           `👤 <b>কাস্টমার:</b> ${order.customerName}\n` +
           `👨‍💼 <b>ডিলিট করেছেন:</b> ${currentUser}`;
         sendActivityLog(logMsg, 'activity');
       } else {
-        setMessage({ text: result.error || 'ডিলিট করতে সমস্যা হয়েছে', type: 'error' });
+        setMessage({ text: result.error || 'ডিলিট করতে সমস্যা হয়েছে', type: 'error' });
       }
     } catch (err: any) {
       setMessage({ text: err.message || 'Network error', type: 'error' });
@@ -388,11 +389,11 @@ export default function Dashboard() {
 
   const handleSendToSteadfast = async (order: Order) => {
     if (order.isNewRow) {
-      alert('অনুগ্রহ করে আগে তথ্য সেভ (Save) করুন, এরপর কুরিয়ারে পাঠান।');
+      alert('অনুগ্রহ করে আগে তথ্য সেভ (Save) করুন, এরপর কুরিয়ারে পাঠান।');
       return;
     }
 
-    if (!confirm(`আপনি কি অর্ডার #${order.invoice} স্টেডফাস্ট কুরিয়ারে পাঠাতে চান?`)) return;
+    if (!confirm(`আপনি কি অর্ডার #${order.invoice} স্টেডফাস্ট কুরিয়ারে পাঠাতে চান?`)) return;
 
     setSendingId(order.id);
     setMessage(null);
@@ -444,14 +445,14 @@ export default function Dashboard() {
         handleSaveOrder(order);
 
         setMessage({
-          text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`,
+          text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`,
           type: 'success',
         });
 
-        const logMsg = `🚀 <b>STEADFAST কুরিয়ারে ডিসপ্যাচ করা হয়েছে</b>\n` +
+        const logMsg = `🚀 <b>STEADFAST কুরিয়ারে ডিসপ্যাচ করা হয়েছে</b>\n` +
           `━━━━━━━━━━━━━━━━━━━\n` +
           `🏪 <b>স্টোর:</b> ${order.storeName}\n` +
-          `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
+          `📦 <b>ইনভয়েস:</b> #${order.invoice}\n` +
           `👤 <b>কাস্টমার:</b> ${order.customerName} (<code>${order.phone}</code>)\n` +
           `📍 <b>ঠিকানা:</b> ${fullAddress}\n` +
           `💵 <b>COD:</b> ৳${order.total} ${order.size ? `(সাইজ: ${order.size})` : ''}\n` +
@@ -459,7 +460,7 @@ export default function Dashboard() {
           `👨‍💼 <b>ডিসপ্যাচ করেছেন:</b> ${currentUser}`;
         sendActivityLog(logMsg, 'courier');
       } else {
-        setMessage({ text: result.error || 'কুরিয়ারে পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
+        setMessage({ text: result.error || 'কুরিয়ারে পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
       }
     } catch (err: any) {
       setMessage({ text: err.message || 'Network error', type: 'error' });
@@ -496,7 +497,7 @@ export default function Dashboard() {
           type: 'success',
         });
       } else {
-        setMessage({ text: result.error || 'ট্র্যাকিং আপডেট পাওয়া যায়নি', type: 'error' });
+        setMessage({ text: result.error || 'ট্র্যাকিং আপডেট পাওয়া যায়নি', type: 'error' });
       }
     } catch (err: any) {
       setMessage({ text: err.message || 'Tracking error', type: 'error' });
@@ -572,7 +573,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-200/70 text-slate-900 p-4 md:p-6">
       <div className="max-w-[1950px] mx-auto">
-        {/* Header - ডান দিক থেকে সুশৃঙ্খল বিন্যাস */}
+        {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-300">
           <div
             onClick={() => (window.location.href = '/')}
@@ -632,7 +633,7 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* ১ম ব্লক (একদম ডানপাশে): কুরিয়ার রিপোর্ট ও নতুন অর্ডার */}
+            {/* ১ম ব্লক (একদম ডানপাশে): কুরিয়ার রিপোর্ট ও নতুন অর্ডার */}
             <div className="flex flex-col gap-1.5">
               <button
                 onClick={handleSendCourierReport}
@@ -640,7 +641,7 @@ export default function Dashboard() {
                 className="w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg font-bold text-xs transition cursor-pointer border border-slate-800 disabled:opacity-50 shadow-2xs"
               >
                 <BarChart2 className={`w-3.5 h-3.5 text-amber-400 ${reporting ? 'animate-spin' : ''}`} />
-                {reporting ? 'রিপোর্ট যাচ্ছে...' : '📊 কুরিয়ার অডিট রিপোর্ট'}
+                {reporting ? 'রিপোর্ট যাচ্ছে...' : '📊 কুরিয়ার অডিট রিপোর্ট'}
               </button>
 
               <button
@@ -728,7 +729,7 @@ export default function Dashboard() {
           {loading ? (
             <div className="p-20 text-center text-slate-600 font-bold text-sm">অর্ডার লোড হচ্ছে...</div>
           ) : filteredOrders.length === 0 ? (
-            <div className="p-20 text-center text-slate-600 font-bold text-sm">কোনো অর্ডার পাওয়া যায়নি।</div>
+            <div className="p-20 text-center text-slate-600 font-bold text-sm">কোনো অর্ডার পাওয়া যায়নি।</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[1900px]">
@@ -770,7 +771,7 @@ export default function Dashboard() {
                         key={`${order.storeId}-${order.id}`}
                         className={`transition-colors border-b border-slate-200 ${rowBgClass}`}
                       >
-                        {/* 1. Invoice / Store: ইনভয়েস উপরে, স্টোর নিচে */}
+                        {/* 1. Invoice / Store */}
                         <td className="p-3 align-top font-bold border-r border-slate-200 space-y-1.5">
                           <div className="w-full h-[32px] flex items-center justify-center font-mono text-xs font-black text-slate-950 bg-slate-100 border border-slate-300 rounded shadow-2xs">
                             {order.isNewRow ? '🆕 NEW' : `#${order.invoice}`}
@@ -862,7 +863,7 @@ export default function Dashboard() {
                             }`}
                           >
                             <PhoneCall className="w-3.5 h-3.5" />
-                            {order.callDone ? 'কল সম্পন্ন হয়েছে' : 'কল দিন'}
+                            {order.callDone ? 'কল সম্পন্ন হয়েছে' : 'কল দিন'}
                           </button>
 
                           <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
@@ -882,9 +883,8 @@ export default function Dashboard() {
                           </div>
                         </td>
 
-                        {/* 5. Address & Thana/District: ডবল সাইজ ঠিকানা, নিচে আগে থানা পরে জেলা */}
+                        {/* 5. Address & Thana/District */}
                         <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                          {/* ঠিকানার বড় ডবল কলাম সাইজ বক্স */}
                           <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs">
                             <MapPin className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
                             <textarea
@@ -896,9 +896,7 @@ export default function Dashboard() {
                             />
                           </div>
 
-                          {/* নিচে আগে থানা, পরে জেলা */}
                           <div className="grid grid-cols-2 gap-1.5">
-                            {/* আগে থানা */}
                             <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
                               <select
                                 value={order.thana || ''}
@@ -915,7 +913,6 @@ export default function Dashboard() {
                               </select>
                             </div>
 
-                            {/* পরে জেলা */}
                             <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
                               <select
                                 value={order.district || ''}
@@ -933,9 +930,8 @@ export default function Dashboard() {
                           </div>
                         </td>
 
-                        {/* 6. Items, COD & Size: ঠিকানার সাথে হুবহু সামঞ্জস্যপূর্ণ উইডথ ও গভীরতা */}
+                        {/* 6. Items, COD & Size */}
                         <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                          {/* আইটেমের বড় বক্স */}
                           <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs">
                             <Edit3 className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
                             <textarea
@@ -947,9 +943,7 @@ export default function Dashboard() {
                             />
                           </div>
 
-                          {/* নিচের সারিতে বড় COD এবং সমান সাইজ ট্যাব */}
                           <div className="grid grid-cols-2 gap-1.5">
-                            {/* COD বক্স বড় করা হয়েছে */}
                             <div className="h-[34px] flex items-center gap-1.5 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
                               <span className="text-xs font-black text-slate-700">COD:</span>
                               <input
@@ -962,7 +956,6 @@ export default function Dashboard() {
                               />
                             </div>
 
-                            {/* সাইজ বক্স */}
                             <div className="h-[34px] flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded px-2.5 shadow-2xs">
                               <Shirt className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                               <span className="text-[11px] font-black text-slate-600">সাইজ:</span>
@@ -977,9 +970,8 @@ export default function Dashboard() {
                           </div>
                         </td>
 
-                        {/* 7. Status & Save: Phone/Staff কলামের সমান চওড়া উইডথ ও ৩ লাইন */}
+                        {/* 7. Status & Save */}
                         <td className="p-3 align-top text-center space-y-1.5 border-r border-slate-200">
-                          {/* লাইন ১: চওড়া স্ট্যাটাস ড্রপডাউন */}
                           <select
                             value={order.status}
                             disabled={updatingId === order.id}
@@ -995,7 +987,6 @@ export default function Dashboard() {
                             ))}
                           </select>
 
-                          {/* লাইন ২: ফুল-উইডথ সেভ বাটন */}
                           <button
                             onClick={() => handleSaveOrder(order)}
                             disabled={updatingId === order.id}
@@ -1005,7 +996,6 @@ export default function Dashboard() {
                             {updatingId === order.id ? 'সেভ হচ্ছে...' : 'তথ্য সেভ করুন (Save)'}
                           </button>
 
-                          {/* লাইন ৩: ৩টি সমানুপাতিক বাটন */}
                           <div className="grid grid-cols-3 gap-1.5">
                             <button
                               onClick={() => handleSaveOrder(order, 'on-hold')}
@@ -1036,7 +1026,7 @@ export default function Dashboard() {
                           </div>
                         </td>
 
-                        {/* 8. Steadfast Courier: পুরো বক্স সুন্দরভাবে ফিলাপ করা */}
+                        {/* 8. Steadfast Courier */}
                         <td className="p-3 align-top space-y-1.5">
                           <div className="w-full h-[34px] flex items-center bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
                             <input
