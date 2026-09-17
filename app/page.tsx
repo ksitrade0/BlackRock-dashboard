@@ -682,25 +682,25 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Table */}
+        {/* Table - FIXED SCROLLING & STICKY HEADER */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden">
           {loading ? (
             <div className="p-20 text-center text-slate-600 font-bold text-sm">অর্ডার লোড হচ্ছে...</div>
           ) : filteredOrders.length === 0 ? (
             <div className="p-20 text-center text-slate-600 font-bold text-sm">কোনো অর্ডার পাওয়া যায়নি।</div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-auto h-[calc(100vh-260px)] min-h-[500px]">
               <table className="w-full text-left border-collapse min-w-[1900px]">
-                <thead>
+                <thead className="sticky top-0 z-40 shadow-md">
                   <tr className="bg-slate-900 text-white text-[11px] uppercase font-bold tracking-wider">
-                    <th className="p-3.5 w-36 border-r border-slate-800">Invoice / Store</th>
-                    <th className="p-3.5 w-60 border-r border-slate-800">Customer Name (নাম)</th>
-                    <th className="p-3.5 w-40 border-r border-slate-800">Date & Time</th>
-                    <th className="p-3.5 w-80 border-r border-slate-800">Phone, Call & Staff</th>
-                    <th className="p-3.5 w-[440px] border-r border-slate-800">Address & Thana/District</th>
-                    <th className="p-3.5 w-[440px] border-r border-slate-800">Items, COD & Size</th>
-                    <th className="p-3.5 w-80 text-center border-r border-slate-800">Status & Save</th>
-                    <th className="p-3.5 w-80 text-center">Steadfast Push & Live Status</th>
+                    <th className="p-3.5 w-36 border-r border-slate-800 bg-slate-900 outline outline-1 outline-slate-800">Invoice / Store</th>
+                    <th className="p-3.5 w-60 border-r border-slate-800 bg-slate-900 outline outline-1 outline-slate-800">Customer Name (নাম)</th>
+                    <th className="p-3.5 w-40 border-r border-slate-800 bg-slate-900 outline outline-1 outline-slate-800">Date & Time</th>
+                    <th className="p-3.5 w-80 border-r border-slate-800 bg-slate-900 outline outline-1 outline-slate-800">Phone, Call & Staff</th>
+                    <th className="p-3.5 w-[440px] border-r border-slate-800 bg-slate-900 outline outline-1 outline-slate-800">Address & Thana/District</th>
+                    <th className="p-3.5 w-[440px] border-r border-slate-800 bg-slate-900 outline outline-1 outline-slate-800">Items, COD & Size</th>
+                    <th className="p-3.5 w-80 text-center border-r border-slate-800 bg-slate-900 outline outline-1 outline-slate-800">Status & Save</th>
+                    <th className="p-3.5 w-80 text-center bg-slate-900 outline outline-1 outline-slate-800">Steadfast Push & Live Status</th>
                   </tr>
                 </thead>
                 <tbody className="text-xs">
