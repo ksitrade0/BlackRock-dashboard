@@ -55,7 +55,6 @@ export default function StockBar() {
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
           লাইভ ইনভেন্টরি স্টক বার (N ও D ১৬ ভ্যারিয়েশন)
         </h2>
-        <span className="text-[10px] text-slate-400 font-bold">⚠️ স্টক ২০ বা তার নিচে নামলে লাল বাতি জ্বলবে</span>
       </div>
 
       <div className="overflow-x-auto pb-1 custom-top-scrollbar">

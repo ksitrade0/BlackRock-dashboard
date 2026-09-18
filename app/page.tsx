@@ -4,8 +4,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { BANGLADESH_DISTRICTS } from '@/lib/geoData';
-import StockBar from '@/app/component/StockBar';
-import SupplierLedger from '@/app/component/SupplierLedger';
+import StockBar from '@/app/components/StockBar';
+import SupplierLedger from '@/app/components/SupplierLedger';
 import {
   Search,
   RefreshCw,
@@ -161,7 +161,15 @@ export default function Dashboard() {
   useEffect(() => {
     fetchOrders();
   }, []);
-
+// মেসেজ বা নোটিফিকেশন ৫ সেকেন্ড পর নিজে থেকেই মুছে যাওয়ার জন্য
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => {
+        setMessage(null);
+      }, 5000); // ৫০০০ মিলিসেকেন্ড = ৫ সেকেন্ড
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
