@@ -4,8 +4,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { BANGLADESH_DISTRICTS } from '@/lib/geoData';
-import StockBar from '@/app/component/StockBar';
-import SupplierLedger from '@/app/component/SupplierLedger';
+import StockBar from '@/app/components/StockBar';
+import SupplierLedger from '@/app/components/SupplierLedger';
 import {
   Search,
   RefreshCw,
