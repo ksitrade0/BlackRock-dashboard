@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { BANGLADESH_DISTRICTS } from '@/lib/geoData';
 import StockBar from '@/app/component/StockBar';
 import SupplierLedger from '@/app/component/SupplierLedger';
+import PurchaseManagement from '@/app/components/PurchaseModal';
 import {
   Search,
   RefreshCw,
@@ -783,7 +784,8 @@ export default function Dashboard() {
         </div>
 
         {/* লাইভ ইনভেন্টরি স্টক বার (১৬টি ভ্যারিয়েশন ও লাল বাতি ওয়ার্নিং সহ) */}
-        <StockBar />
+<StockBar />
+<PurchaseManagement existingItems={PRODUCT_VARIATIONS} />
 
         {/* Alerts */}
         {message && (
