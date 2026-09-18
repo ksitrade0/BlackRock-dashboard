@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { Package, Plus, X, Save, User, ShoppingCart } from 'lucide-react';
 
 export default function PurchaseManagement({ existingItems }: { existingItems: string[] }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -7,130 +8,197 @@ export default function PurchaseManagement({ existingItems }: { existingItems: s
   const [purchaseItems, setPurchaseItems] = useState([
     { itemName: '', quantity: 1, buyingPrice: 0 }
   ]);
+  const [isSaving, setIsSaving] = useState(false);
 
   const addItemRow = () => {
     setPurchaseItems([...purchaseItems, { itemName: '', quantity: 1, buyingPrice: 0 }]);
   };
 
+  const removeItemRow = (indexToRemove: number) => {
+    setPurchaseItems(purchaseItems.filter((_, index) => index !== indexToRemove));
+  };
+
   const handleItemChange = (index: number, field: string, value: any) => {
     const updated = [...purchaseItems];
-    // TypeScript Error ফিক্স করা হয়েছে
     (updated[index] as any)[field] = value;
     setPurchaseItems(updated);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/purchases', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ partyName, items: purchaseItems }),
-    });
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/purchases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partyName, items: purchaseItems }),
+      });
+      
+      const data = await res.json();
 
-    if (res.ok) {
-      alert('সফলভাবে স্টক ও পারচেজ যুক্ত হয়েছে!');
-      setIsOpen(false);
-      setPartyName('');
-      setPurchaseItems([{ itemName: '', quantity: 1, buyingPrice: 0 }]);
-      window.location.reload(); // স্টক সাথে সাথে আপডেট দেখানোর জন্য
-    } else {
-      alert('সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+      if (res.ok) {
+        alert('🎉 সফলভাবে স্টক ও পারচেজ যুক্ত হয়েছে!');
+        setIsOpen(false);
+        setPartyName('');
+        setPurchaseItems([{ itemName: '', quantity: 1, buyingPrice: 0 }]);
+        window.location.reload(); 
+      } else {
+        // ডেটাবেজে ঠিক কী সমস্যা হয়েছে সেটা এখানে দেখাবে
+        alert(`❌ ডেটাবেজ এরর: ${data.error || 'অজানা সমস্যা'}\n\nআপনার .env ফাইল এবং ডেটাবেজ টেবিলের নামগুলো ঠিক আছে কি না চেক করুন।`);
+      }
+    } catch (error) {
+      alert('❌ সার্ভারে কানেক্ট করা যাচ্ছে না!');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
     <div>
-      {/* ইনভেন্টরি অ্যাড করার ছোট বাটন */}
+      {/* ইনভেন্টরি অ্যাড করার স্মার্ট বাটন */}
       <button 
         onClick={() => setIsOpen(true)}
-        className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition"
+        className="h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white px-4 rounded-lg font-bold text-xs transition border border-slate-800 shadow-2xs cursor-pointer active:scale-95"
       >
-        + ইনভেন্টরি অ্যাড করুন
+        <Package className="w-3.5 h-3.5 text-amber-400" /> + ইনভেন্টরি এন্ট্রি
       </button>
 
-      {/* পপআপ মোডাল */}
+      {/* প্রিমিয়াম পপআপ মোডাল (Glassmorphism Effect) */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto text-black">
-            <h2 className="text-xl font-bold mb-4">পার্টি থেকে নতুন স্টক এন্ট্রি</h2>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 transform transition-all">
             
-            <form onSubmit={handleSubmit}>
+            {/* Modal Header */}
+            <div className="bg-slate-50 border-b border-slate-100 p-5 flex justify-between items-center sticky top-0 z-10">
+              <div className="flex items-center gap-2">
+                <div className="bg-emerald-100 p-1.5 rounded-lg">
+                  <ShoppingCart className="w-5 h-5 text-emerald-600" />
+                </div>
+                <h2 className="text-lg font-black text-slate-900 tracking-wide uppercase">নতুন পারচেজ ও স্টক এন্ট্রি</h2>
+              </div>
+              <button 
+                onClick={() => setIsOpen(false)}
+                className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="p-6">
               {/* পার্টির নাম ইনপুট */}
-              <div className="mb-4">
-                <label className="block font-medium mb-1">কোন পার্টি থেকে কিনেছেন?</label>
+              <div className="mb-6">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5" /> কোন পার্টি থেকে কিনেছেন?
+                </label>
                 <input 
                   type="text" 
                   value={partyName} 
                   onChange={(e) => setPartyName(e.target.value)} 
-                  placeholder="পার্টির নাম লিখুন (যেমন: সুজন ভাই)" 
-                  className="w-full border p-2 rounded"
+                  placeholder="পার্টির নাম লিখুন (যেমন: Elbas Garments)" 
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-bold rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-slate-900 p-3 outline-none transition-all placeholder:text-slate-400 placeholder:font-normal"
                   required 
                 />
               </div>
 
               {partyName && (
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-gray-700">আইটেমের বিবরণ:</h3>
-                  {purchaseItems.map((item, index) => (
-                    <div key={index} className="flex gap-2 items-center">
-                      {/* ড্রপডাউন: ড্যাশবোর্ডের আসল আইটেম লিস্ট */}
-                      <select 
-                        value={item.itemName}
-                        onChange={(e) => handleItemChange(index, 'itemName', e.target.value)}
-                        className="border p-2 rounded flex-1"
-                        required
-                      >
-                        <option value="">-- আইটেম সিলেক্ট করুন --</option>
-                        {existingItems.map((prod, i) => (
-                          <option key={i} value={prod}>{prod}</option>
-                        ))}
-                      </select>
+                <div className="space-y-4">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    আইটেমের বিবরণ ও দাম
+                  </label>
+                  
+                  {/* আইটেম লিস্ট */}
+                  <div className="space-y-3">
+                    {purchaseItems.map((item, index) => (
+                      <div key={index} className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-xl shadow-sm relative group transition-all hover:border-slate-300">
+                        
+                        {/* আইটেম ড্রপডাউন */}
+                        <div className="flex-1">
+                          <select 
+                            value={item.itemName}
+                            onChange={(e) => handleItemChange(index, 'itemName', e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold rounded-lg p-2.5 outline-none focus:border-slate-900 cursor-pointer"
+                            required
+                          >
+                            <option value="" className="text-slate-400 font-normal">-- আইটেম সিলেক্ট করুন --</option>
+                            {existingItems.map((prod, i) => (
+                              <option key={i} value={prod}>{prod}</option>
+                            ))}
+                          </select>
+                        </div>
 
-                      <input 
-                        type="number" 
-                        value={item.quantity}
-                        onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))}
-                        placeholder="পরিমাণ" 
-                        className="border p-2 rounded w-24"
-                        min="1"
-                        required 
-                      />
+                        {/* পরিমাণ */}
+                        <div className="w-24">
+                          <input 
+                            type="number" 
+                            value={item.quantity || ''}
+                            onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))}
+                            placeholder="পরিমাণ (Pcs)" 
+                            className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold rounded-lg p-2.5 outline-none focus:border-slate-900 text-center"
+                            min="1"
+                            required 
+                          />
+                        </div>
 
-                      <input 
-                        type="number" 
-                        value={item.buyingPrice}
-                        onChange={(e) => handleItemChange(index, 'buyingPrice', Number(e.target.value))}
-                        placeholder="কেনা দাম (প্রতি পিস)" 
-                        className="border p-2 rounded w-36"
-                        required 
-                      />
-                    </div>
-                  ))}
+                        {/* দাম */}
+                        <div className="w-32">
+                          <input 
+                            type="number" 
+                            value={item.buyingPrice || ''}
+                            onChange={(e) => handleItemChange(index, 'buyingPrice', Number(e.target.value))}
+                            placeholder="কেনা দাম (৳)" 
+                            className="w-full bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-black rounded-lg p-2.5 outline-none focus:border-emerald-500 text-center"
+                            required 
+                          />
+                        </div>
 
+                        {/* ডিলিট বাটন (একের অধিক আইটেম থাকলে দেখাবে) */}
+                        {purchaseItems.length > 1 && (
+                          <button 
+                            type="button" 
+                            onClick={() => removeItemRow(index)}
+                            className="absolute -right-2 -top-2 bg-rose-100 text-rose-600 border border-rose-200 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-200 cursor-pointer shadow-sm"
+                            title="আইটেমটি বাদ দিন"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* নতুন আইটেম যোগ করার বাটন */}
                   <button 
                     type="button" 
                     onClick={addItemRow}
-                    className="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 text-black"
+                    className="flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-2 rounded-lg transition cursor-pointer"
                   >
-                    + আরেকটি আইটেম যোগ করুন
+                    <Plus className="w-3.5 h-3.5 text-slate-700" /> আরেকটি আইটেম যোগ করুন
                   </button>
                 </div>
               )}
 
-              <div className="mt-6 flex justify-end gap-2">
+              {/* Modal Footer Actions */}
+              <div className="mt-8 pt-5 border-t border-slate-100 flex justify-end gap-3">
                 <button 
                   type="button" 
                   onClick={() => setIsOpen(false)}
-                  className="bg-gray-400 text-white px-4 py-2 rounded"
+                  className="px-5 py-2.5 rounded-lg text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
                 >
                   বাতিল
                 </button>
                 {partyName && (
                   <button 
                     type="submit" 
-                    className="bg-green-600 text-white px-4 py-2 rounded font-semibold"
+                    disabled={isSaving}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition cursor-pointer disabled:opacity-70 shadow-sm"
                   >
-                    পারচেজ সেভ করুন
+                    {isSaving ? (
+                      <span className="animate-pulse">সেভ হচ্ছে...</span>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" /> পারচেজ সেভ করুন
+                      </>
+                    )}
                   </button>
                 )}
               </div>
