@@ -14,7 +14,8 @@ export default function PurchaseManagement({ existingItems }: { existingItems: s
 
   const handleItemChange = (index: number, field: string, value: any) => {
     const updated = [...purchaseItems];
-    updated[index][field as keyof typeof updated[0]] = value;
+    // TypeScript Error ফিক্স করা হয়েছে
+    (updated[index] as any)[field] = value;
     setPurchaseItems(updated);
   };
 
@@ -27,13 +28,13 @@ export default function PurchaseManagement({ existingItems }: { existingItems: s
     });
 
     if (res.ok) {
-      alert('সফলভাবে স্টক ও পারচেজ যুক্ত হয়েছে!');
+      alert('সফলভাবে স্টক ও পারচেজ যুক্ত হয়েছে!');
       setIsOpen(false);
       setPartyName('');
       setPurchaseItems([{ itemName: '', quantity: 1, buyingPrice: 0 }]);
       window.location.reload(); // স্টক সাথে সাথে আপডেট দেখানোর জন্য
     } else {
-      alert('সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+      alert('সমস্যা হয়েছে, আবার চেষ্টা করুন।');
     }
   };
 
