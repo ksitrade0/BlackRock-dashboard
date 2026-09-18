@@ -23,6 +23,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, message: 'Purchase added and stock updated successfully!' });
   } catch (error) {
     console.error('Error saving purchase:', error);
-    return NextResponse.json({ success: false, error: 'Failed to save purchase' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error as Error).message || 'Failed to save purchase' }, { status: 500 });
   }
 }
