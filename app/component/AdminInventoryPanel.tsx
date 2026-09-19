@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Lock, Package, History, X, Save, ShoppingCart, User, Printer } from 'lucide-react';
 
 export default function AdminInventoryPanel({ existingItems }: { existingItems: string[] }) {
@@ -24,7 +24,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     e.preventDefault();
     setIsVerifying(true);
     try {
-      // আপনার মেইন লগইন API ব্যবহার করা হচ্ছে
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,7 +105,9 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   };
 
   return (
-    <div className="flex items-center gap-2">
+    // এই div-টাকে flex-col করা হয়েছে যাতে বাটনগুলো ওপর-নিচ থাকে এবং ওয়াইডথ ফিক্স করা হয়েছে
+    <div className="flex flex-col gap-2 w-[170px]">
+      
       {/* Print CSS (Only applies when printing) */}
       <style dangerouslySetInnerHTML={{__html: `
         @media print {
@@ -117,19 +118,19 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         }
       `}} />
 
-      {/* Header Buttons */}
+      {/* Header Buttons - ওপর-নিচ করে সাজানো */}
       <button 
         onClick={() => setAuthTarget('entry')}
-        className="flex items-center gap-1.5 bg-slate-800 hover:bg-black text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+        className="flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white px-3 py-1.5 rounded-md text-xs font-bold transition shadow-sm w-full border border-slate-900"
       >
         <Package className="w-3.5 h-3.5 text-amber-400" /> ইনভেন্টরি এন্ট্রি
       </button>
 
       <button 
         onClick={() => setAuthTarget('history')}
-        className="flex items-center gap-1.5 bg-slate-800 hover:bg-black text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+        className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 text-slate-800 px-3 py-1.5 rounded-md text-xs font-bold transition shadow-sm w-full border border-slate-300"
       >
-        <History className="w-3.5 h-3.5 text-emerald-400" /> পারচেজ হিস্ট্রি
+        <History className="w-3.5 h-3.5 text-indigo-600" /> পারচেজ হিস্ট্রি
       </button>
 
       {/* 🔐 Dynamic Auth Modal */}

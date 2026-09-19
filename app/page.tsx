@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { BANGLADESH_DISTRICTS } from '@/lib/geoData';
 import StockBar from '@/app/component/StockBar';
 import SupplierLedger from '@/app/component/SupplierLedger';
-import PurchaseManagement from '@/app/component/PurchaseModal';
+import AdminInventoryPanel from '@/app/component/AdminInventoryPanel';
 import {
   Search,
   RefreshCw,
@@ -727,7 +727,6 @@ export default function Dashboard() {
                 <Layers className="w-6 h-6 text-amber-400" />
               </div>
             )}
-
             <div>
               <h1 className="text-xl md:text-2xl lg:text-3xl font-black tracking-wider text-slate-950 uppercase flex items-center gap-2">
                 BLACK ROCK CORPORATION
@@ -754,15 +753,14 @@ export default function Dashboard() {
               >
                 <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${loading ? 'animate-spin' : ''}`} /> Refresh Orders
               </button>
-
               <button
                 onClick={handleLogout}
                 className="w-36 h-[36px] flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-xs transition border border-rose-200 cursor-pointer active:scale-95 shadow-2xs"
               >
-                <LogOut className="w-3.5 h-3.5" /> লগআউট
+                <Logout className="w-3.5 h-3.5" /> লগআউট
               </button>
             </div>
-
+            
             <div className="flex flex-col gap-1.5">
               <button
                 onClick={handleSendCourierReport}
@@ -770,9 +768,8 @@ export default function Dashboard() {
                 className="w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg font-bold text-xs transition cursor-pointer border border-slate-800 disabled:opacity-50 shadow-2xs"
               >
                 <BarChart2 className={`w-3.5 h-3.5 text-amber-400 ${reporting ? 'animate-spin' : ''}`} />
-                {reporting ? 'রিপোর্ট যাচ্ছে...' : '📊 কুরিয়ার অডিট রিপোর্ট'}
+                {reporting ? 'রিপোর্ট যাচ্ছে...' : 'কুরিয়ার অডিট রিপোর্ট'}
               </button>
-
               <button
                 onClick={handleAddNewBlankRow}
                 className="w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition cursor-pointer border border-slate-300 active:scale-95 shadow-2xs"
@@ -780,26 +777,16 @@ export default function Dashboard() {
                 <Plus className="w-3.5 h-3.5 text-emerald-600 font-black" /> + নতুন অর্ডার যোগ করুন
               </button>
             </div>
+
+            {/* 👇 নতুন ইনভেন্টরি ও পারচেজ প্যানেল একদম ডানপাশে বসানো হলো 👇 */}
+            <AdminInventoryPanel existingItems={PRODUCT_VARIATIONS} />
           </div>
         </div>
 
         {/* লাইভ ইনভেন্টরি স্টক বার (১৬টি ভ্যারিয়েশন ও লাল বাতি ওয়ার্নিং সহ) */}
-<StockBar />
-<PurchaseManagement existingItems={PRODUCT_VARIATIONS} />
+        <StockBar />
 
         {/* Alerts */}
-        {message && (
-          <div
-            className={`p-3.5 mb-4 rounded-xl flex items-center gap-2.5 shadow-sm font-bold text-xs ${
-              message.type === 'success'
-                ? 'bg-emerald-50 text-emerald-900 border border-emerald-300'
-                : 'bg-rose-50 text-rose-900 border border-rose-300'
-            }`}
-          >
-            {message.type === 'success' ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />}
-            <span>{message.text}</span>
-          </div>
-        )}
 
         {/* Filters */}
         <div className="flex flex-col lg:flex-row justify-between items-center gap-4 bg-white p-3.5 rounded-xl shadow-sm border border-slate-300 mb-6">
