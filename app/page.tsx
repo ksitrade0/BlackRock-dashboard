@@ -1,7 +1,7 @@
 //@ts-nocheck
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { BANGLADESH_DISTRICTS } from '@/lib/geoData';
 import StockBar from '@/app/component/StockBar';
@@ -95,6 +95,22 @@ export default function Dashboard() {
   const [reporting, setReporting] = useState<boolean>(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
+
+  // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+
+  const handleTopScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (tableScrollRef.current) {
+      tableScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+    }
+  };
+
+  const handleTableScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (topScrollRef.current) {
+      topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+    }
+  };
 
   const sendActivityLog = async (logText: string, targetType: 'activity' | 'courier' = 'activity') => {
     try {
@@ -718,7 +734,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Orders Table with Top Horizontal Scrollbar */}
+        {/* Orders Table with Synchronized Top Scrollbar & Sticky Header */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden mt-4">
           {loading ? (
             <div className="p-20 text-center text-slate-600 font-bold text-sm">অর্ডার লোড হচ্ছে...</div>
@@ -726,31 +742,44 @@ export default function Dashboard() {
             <div className="p-20 text-center text-slate-600 font-bold text-sm">কোনো অর্ডার পাওয়া যায়নি।</div>
           ) : (
             <>
-              {/* স্টাইল: চিকন হরিজন্টাল স্ক্রলবার টেবিলের উপরে রাখার জন্য */}
+              {/* কাস্টম স্ক্রলবার স্টাইল */}
               <style dangerouslySetInnerHTML={{
                 __html: `
-                .custom-top-scroll::-webkit-scrollbar {
-                  height: 8px;
+                .slim-scroll::-webkit-scrollbar {
+                  height: 6px;
+                  width: 6px;
                 }
-                .custom-top-scroll::-webkit-scrollbar-track {
+                .slim-scroll::-webkit-scrollbar-track {
                   background: #f1f5f9;
-                  border-radius: 4px;
                 }
-                .custom-top-scroll::-webkit-scrollbar-thumb {
-                  background-color: #cbd5e1;
-                  border-radius: 4px;
-                }
-                .custom-top-scroll::-webkit-scrollbar-thumb:hover {
+                .slim-scroll::-webkit-scrollbar-thumb {
                   background-color: #94a3b8;
+                  border-radius: 3px;
+                }
+                .slim-scroll::-webkit-scrollbar-thumb:hover {
+                  background-color: #64748b;
                 }
                 `
               }} />
 
-              {/* প্রধান টেবিল কন্টেইনার (যেখানে হেডার ফ্রিজ থাকবে এবং উপরে স্ক্রলবার থাকবে) */}
-              <div className="max-h-[calc(100vh-250px)] overflow-y-auto overflow-x-auto custom-top-scroll relative border-b border-slate-200">
+              {/* ১. টেবিলের ঠিক মাথার উপরে আলাদা চিকন হরিজন্টাল স্ক্রলবার বার (ডানে-বামে সরানোর জন্য) */}
+              <div 
+                ref={topScrollRef} 
+                onScroll={handleTopScroll} 
+                className="overflow-x-auto slim-scroll bg-slate-100 border-b border-slate-300 h-3.5"
+              >
+                <div className="min-w-[1900px] h-full"></div>
+              </div>
+
+              {/* ২. মূল টেবিল র‍্যাপার (হেডার ফ্রিজ থাকবে এবং মাউস দিয়ে ওপর-নিচ করা যাবে) */}
+              <div 
+                ref={tableScrollRef} 
+                onScroll={handleTableScroll} 
+                className="max-h-[calc(100vh-270px)] overflow-y-auto overflow-x-auto slim-scroll relative"
+              >
                 <table className="w-full text-left border-collapse min-w-[1900px]">
                   
-                  {/* টেবিল হেডার একদম টপে ফ্রিজ করা */}
+                  {/* টেবিল হেডার একদম টপে ফিক্সড (Sticky) */}
                   <thead className="sticky top-0 z-30 bg-slate-900 text-white shadow-md">
                     <tr className="text-[11px] uppercase font-bold tracking-wider">
                       <th className="p-3.5 w-36 border-r border-slate-800">Invoice / Store</th>

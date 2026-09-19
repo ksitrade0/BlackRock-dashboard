@@ -25,7 +25,7 @@ export async function POST(request: Request) {
         [partyName, item.itemName, item.quantity, item.buyingPrice]
       );
     }
-    return NextResponse.json({ success: { success: true, message: 'পারচেজ সফলভাবে সেভ হয়েছে' } });
+    return NextResponse.json({ success: true, message: 'পারচেজ সফলভাবে সেভ হয়েছে' });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
