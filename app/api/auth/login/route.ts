@@ -9,13 +9,13 @@ const AUTHORIZED_STAFF_MAP: Record<string, string> = {
 
 export async function POST(req: Request) {
   try {
-    const { email, password } = await req.json();
+    const { username, password } = await req.json();
 
-    if (!email || !password) {
+    if (!username || !password) {
       return NextResponse.json({ error: 'জিমেইল এবং পাসওয়ার্ড প্রদান করুন' }, { status: 400 });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail = username.trim().toLowerCase();
 
     // ১. অনুমোদিত জিমেইল যাচাই
     const matchedDisplayName = AUTHORIZED_STAFF_MAP[cleanEmail];
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     response.cookies.set('admin_session', 'authenticated_blackrock_token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: 60 * 60 * 24 * 1,
       path: '/',
     });
 
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     response.cookies.set('admin_user_name', encodeURIComponent(matchedDisplayName), {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: 60 * 60 * 24 * 1,
       path: '/',
     });
 
