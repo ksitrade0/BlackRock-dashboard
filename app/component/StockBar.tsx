@@ -34,16 +34,16 @@ export default function StockBar() {
     fetch('/api/stock/live')
       .then((res) => res.json())
       .then((data) => {
-        setStock(data);
+        setStock(data || {});
         setLoading(false);
       })
       .catch(() => setLoading(false));
   };
 
   useEffect(() => {
-    fetchLiveStock(); // প্রথমবার লোড হবে
-    const interval = setInterval(fetchLiveStock, 15000); // প্রতি ১৫ সেকেন্ডে লাইভ আপডেট
-    window.addEventListener('stockUpdated', fetchLiveStock); // পারচেজ অ্যাড/ডিলিট করলে সাথে সাথে আপডেট
+    fetchLiveStock(); // প্রথমবার লোড হবে[cite: 12]
+    const interval = setInterval(fetchLiveStock, 15000); // প্রতি ১৫ সেকেন্ডে লাইভ আপডেট[cite: 12]
+    window.addEventListener('stockUpdated', fetchLiveStock); // পারচেজ অ্যাড/ডিলিট করলে সাথে সাথে আপডেট[cite: 12]
 
     return () => {
       clearInterval(interval);
@@ -65,13 +65,11 @@ export default function StockBar() {
           {STOCK_LABELS.map((item) => {
             const currentStock = stock[item.key] ?? 0;
             const isLowStock = currentStock <= 20;
-
             const backgroundStyle = isLowStock
-              ? 'bg-rose-950/90 border-rose-600 shadow-rose-900/50 shadow-inner animate-pulse text-white'
+              ? 'bg-rose-950/90 border-rose-600 shadow-rose-900/50 shadow-inner animate-pulse'
               : item.type === 'white'
               ? 'bg-slate-800/90 border-slate-600 text-slate-100'
               : 'bg-slate-950 border-slate-850 text-slate-300';
-
             return (
               <div key={item.key} className={`flex flex-col rounded border p-1 text-center transition-all ${backgroundStyle}`}>
                 <div className="text-[10px] font-black truncate py-0.5 border-b border-slate-700/50" title={item.label}>

@@ -8,10 +8,13 @@ export async function GET() {
 
     let liveStock: Record<string, number> = {};
 
-    // কেনা প্রোডাক্ট যোগ (+)
+    // কেনা প্রোডাক্ট যোগ (+) - এখানে trim() যুক্ত করা হয়েছে
     purchases.forEach((p: any) => {
-       if (!liveStock[p.item_name]) liveStock[p.item_name] = 0;
-       liveStock[p.item_name] += Number(p.quantity);
+       const itemName = p.item_name ? p.item_name.trim() : '';
+       if (itemName) {
+         if (!liveStock[itemName]) liveStock[itemName] = 0;
+         liveStock[itemName] += Number(p.quantity || 0);
+       }
     });
 
     // বিক্রি হওয়া প্রোডাক্ট বিয়োগ (-)
