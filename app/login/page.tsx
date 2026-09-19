@@ -1,42 +1,46 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, User, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, Check, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [captchaInput, setCaptchaInput] = useState('');
-  const [captchaChallenge, setCaptchaChallenge] = useState({ num1: 3, num2: 4, answer: 7 });
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const generateCaptcha = () => {
-    const n1 = Math.floor(Math.random() * 9) + 1;
-    const n2 = Math.floor(Math.random() * 9) + 1;
-    setCaptchaChallenge({ num1: n1, num2: n2, answer: n1 + n2 });
-    setCaptchaInput('');
-  };
+  // Google Style Captcha States (ম্যাথ ক্যাপচার বদলে)
+  const [isHuman, setIsHuman] = useState(false);
+  const [verifyingCaptcha, setVerifyingCaptcha] = useState(false);
 
-  useEffect(() => {
-    generateCaptcha();
-  }, []);
+  const handleCaptchaClick = () => {
+    if (isHuman) return;
+    setVerifyingCaptcha(true);
+    setTimeout(() => {
+      setVerifyingCaptcha(false);
+      setIsHuman(true);
+      setError('');
+    }, 1000);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (parseInt(captchaInput.trim(), 10) !== captchaChallenge.answer) {
-      setError('ভুল ক্যাপচা উত্তর! আবার চেষ্টা করুন।');
-      generateCaptcha();
+    // নতুন ক্যাপচা চেক
+    if (!isHuman) {
+      setError('অনুগ্রহ করে নিশ্চিত করুন যে আপনি রোবট নন!');
       return;
     }
 
     setLoading(true);
 
     try {
+      // আপনার অরিজিনাল লগইন API কল
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -44,99 +48,134 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
+
       if (res.ok) {
         router.push('/');
       } else {
-        setError(data.error || 'ভুল ইউজারনেম বা পাসওয়ার্ড!');
-        generateCaptcha();
+        setError(data.error || 'ভুল ইউজারনেম বা পাসওয়ার্ড!');
+        setIsHuman(false); // ভুল হলে ক্যাপচা আবার রিসেট হবে
       }
     } catch {
-      setError('লগইন ব্যর্থ হয়েছে। নেটওয়ার্ক চেক করুন।');
-      generateCaptcha();
+      setError('লগইন ব্যর্থ হয়েছে। নেটওয়ার্ক চেক করুন।');
+      setIsHuman(false);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md border-2 border-slate-700">
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-black text-slate-950 uppercase tracking-widest">BLACK ROCK PORTAL</h2>
-          <p className="text-xs font-bold text-slate-500 mt-1">লগইন করে ড্যাশবোর্ডে প্রবেশ করুন</p>
+    <div className="min-h-screen bg-[#111827] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-black text-slate-950 uppercase tracking-widest">
+            BLACK ROCK PORTAL
+          </h2>
+          <p className="text-sm font-bold text-slate-500 mt-1">
+            লগইন করে ড্যাশবোর্ডে প্রবেশ করুন
+          </p>
         </div>
 
+        {/* Error Message */}
         {error && (
-          <div className="p-3 mb-4 rounded-xl bg-rose-100 text-rose-900 border-2 border-rose-400 text-xs font-bold text-center">
+          <div className="p-3 mb-5 rounded-xl bg-rose-100 text-rose-900 border-2 border-rose-400 text-xs font-bold text-center animate-in fade-in">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          
+          {/* Username Field */}
           <div>
-            <label className="text-xs font-black text-slate-800 block mb-1">ইউজারনেম</label>
+            <label className="text-xs font-black text-slate-800 block mb-1.5">
+              ইউজারনেম
+            </label>
             <div className="relative">
-              <User className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+              <User className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Username"
-                className="w-full pl-9 pr-3 py-2 border-2 border-slate-300 rounded-xl font-bold text-sm focus:border-slate-950 focus:outline-none"
+                placeholder="ksitrade0@gmail.com"
+                className="w-full pl-10 pr-3 py-2.5 bg-[#f0f4f8] border border-slate-300 rounded-xl font-bold text-sm text-slate-900 focus:bg-white focus:border-slate-900 focus:outline-none transition-colors"
               />
             </div>
           </div>
 
+          {/* Password Field */}
           <div>
-            <label className="text-xs font-black text-slate-800 block mb-1">পাসওয়ার্ড</label>
+            <label className="text-xs font-black text-slate-800 block mb-1.5">
+              পাসওয়ার্ড
+            </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+              <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-9 pr-3 py-2 border-2 border-slate-300 rounded-xl font-bold text-sm focus:border-slate-950 focus:outline-none"
+                placeholder="••••••••••••"
+                className="w-full pl-10 pr-10 py-2.5 bg-[#f0f4f8] border border-slate-300 rounded-xl font-bold text-sm text-slate-900 focus:bg-white focus:border-slate-900 focus:outline-none transition-colors tracking-wider"
               />
-            </div>
-          </div>
-
-          {/* ম্যাথ ক্যাপচা বক্স */}
-          <div className="bg-slate-100 p-3 rounded-xl border-2 border-slate-300">
-            <div className="flex justify-between items-center mb-1.5">
-              <span className="text-xs font-black text-slate-800 flex items-center gap-1">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" /> সিকিউরিটি ক্যাপচা:
-              </span>
+              {/* Eye Button */}
               <button
                 type="button"
-                onClick={generateCaptcha}
-                className="text-slate-500 hover:text-slate-900 transition"
-                title="নতুন ক্যাপচা"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-700 transition-colors"
               >
-                <RefreshCw className="w-3.5 h-3.5" />
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono font-black text-sm bg-white px-3 py-1.5 rounded-lg border border-slate-300">
-                {captchaChallenge.num1} + {captchaChallenge.num2} = ?
-              </span>
-              <input
-                type="number"
-                required
-                value={captchaInput}
-                onChange={(e) => setCaptchaInput(e.target.value)}
-                placeholder="উত্তর"
-                className="w-24 px-2.5 py-1.5 border-2 border-slate-300 rounded-lg text-center font-black text-sm focus:border-slate-950 focus:outline-none bg-white"
-              />
+            {/* Forgot Password Link */}
+            <div className="flex justify-end mt-2">
+              <button
+                type="button"
+                onClick={() => alert('পাসওয়ার্ড রিসেট অপশনটি এখনো যুক্ত করা হয়নি।')}
+                className="text-[11px] font-bold text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                পাসওয়ার্ড ভুলে গেছেন?
+              </button>
             </div>
           </div>
 
+          {/* Google Style Captcha */}
+          <div className="bg-[#f9f9f9] border border-[#d3d3d3] rounded-[3px] p-2 flex items-center justify-between shadow-sm mt-2">
+            <div className="flex items-center gap-3 pl-2">
+              <button
+                type="button"
+                onClick={handleCaptchaClick}
+                className={`w-7 h-7 bg-white border-2 rounded-sm flex items-center justify-center transition-all ${
+                  isHuman ? 'border-transparent' : 'border-[#c1c1c1] hover:border-[#a0a0a0]'
+                }`}
+              >
+                {verifyingCaptcha ? (
+                  <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                ) : isHuman ? (
+                  <Check className="w-6 h-6 text-emerald-600 font-black" />
+                ) : null}
+              </button>
+              <span className="text-sm font-medium text-[#222]">
+                I'm not a robot
+              </span>
+            </div>
+            
+            <div className="flex flex-col items-center pr-2 cursor-pointer">
+              <img 
+                src="https://www.gstatic.com/recaptcha/api2/logo_48.png" 
+                alt="reCAPTCHA" 
+                className="w-7 opacity-90"
+              />
+              <span className="text-[9px] text-[#555] mt-1 tracking-tight">reCAPTCHA</span>
+            </div>
+          </div>
+
+          {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-slate-950 hover:bg-slate-800 text-white py-3 rounded-xl font-black text-sm transition shadow-lg disabled:opacity-50 cursor-pointer"
+            disabled={loading || !isHuman}
+            className="w-full bg-[#0a0a0a] hover:bg-black text-white py-3.5 rounded-xl font-black text-sm transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed mt-4"
           >
             {loading ? 'যাচাই হচ্ছে...' : 'লগইন করুন'}
           </button>
