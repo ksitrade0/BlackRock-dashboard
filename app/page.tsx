@@ -706,6 +706,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-200/70 text-slate-900 p-4 md:p-6">
       <div className="max-w-[1950px] mx-auto">
+        
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-300">
           <div
@@ -786,7 +787,23 @@ export default function Dashboard() {
         {/* লাইভ ইনভেন্টরি স্টক বার (১৬টি ভ্যারিয়েশন ও লাল বাতি ওয়ার্নিং সহ) */}
         <StockBar />
 
-        {/* Alerts */}
+        {/* Alerts (আপনার আগের অ্যালার্ট সিস্টেম ঠিক রাখা হয়েছে) */}
+        {message && (
+          <div
+            className={`p-3.5 mb-4 rounded-xl flex items-center gap-2.5 shadow-sm font-bold text-xs ${
+              message.type === 'success'
+                ? 'bg-emerald-50 text-emerald-900 border border-emerald-300'
+                : 'bg-rose-50 text-rose-900 border border-rose-300'
+            }`}
+          >
+            {message.type === 'success' ? (
+              <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
+            ) : (
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            )}
+            <span>{message.text}</span>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="flex flex-col lg:flex-row justify-between items-center gap-4 bg-white p-3.5 rounded-xl shadow-sm border border-slate-300 mb-6">
@@ -794,11 +811,14 @@ export default function Dashboard() {
             <button
               onClick={() => setSelectedStore('all')}
               className={`px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${
-                selectedStore === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                selectedStore === 'all'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
               All Stores
             </button>
+            
             <button
               onClick={() => setSelectedStore('Ruhama Wear')}
               className={`px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${
