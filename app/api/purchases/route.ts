@@ -1,6 +1,18 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+// পারচেজ হিস্ট্রি ফেচ করার জন্য GET মেথড
+export async function GET() {
+  try {
+    const rows = await query('SELECT * FROM purchases ORDER BY created_at DESC');
+    return NextResponse.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Error fetching purchases:', error);
+    return NextResponse.json({ success: false, error: (error as Error).message || 'Failed to fetch purchases' }, { status: 500 });
+  }
+}
+
+// পারচেজ এন্ট্রি সেভ এবং স্টক আপডেট করার জন্য POST মেথড
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -21,7 +33,7 @@ export async function POST(request: Request) {
         [partyName, item.itemName, Number(item.quantity) || 0, Number(item.buyingPrice) || 0]
       );
 
-      // ২. মূল ইনভেন্টরি বা স্টক টেবিলে স্টক স্বয়ংক্রিয়ভাবে বাড়িয়ে দেওয়া (আপনার গুরত্বপূর্ণ লজিক অক্ষত রাখা হলো)
+      // ২. মূল ইনভেন্টরি বা স্টক টেবিলে স্টক স্বয়ংক্রিয়ভাবে বাড়িয়ে দেওয়া
       try {
         await query(
           'UPDATE inventory SET stock = stock + ? WHERE item_name = ?',
@@ -29,7 +41,6 @@ export async function POST(request: Request) {
         );
       } catch (invErr) {
         console.error('Inventory Stock Update Warning:', invErr);
-        // যদি inventory টেবিলে ওই নামে রো না থাকে, তবে প্রয়োজনে নতুন রো তৈরি করতে পারেন বা ইগ্নোর করতে পারেন
       }
     }
 
