@@ -96,7 +96,7 @@ export default function Dashboard() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
-  // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)[cite: 11]
+  // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)
   const topScrollRef = useRef<HTMLDivElement>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
 
@@ -829,7 +829,7 @@ export default function Dashboard() {
                 `
               }} />
 
-              {/* ১. টেবিলের ঠিক মাথার উপরে আলাদা চিকন হরিজন্টাল স্ক্রলবার বার (ডানে-বামে সরানোর জন্য)[cite: 11] */}
+              {/* ১. টেবিলের ঠিক মাথার উপরে আলাদা চিকন হরিজন্টাল স্ক্রলবার বার (ডানে-বামে সরানোর জন্য) */}
               <div 
                 ref={topScrollRef} 
                 onScroll={handleTopScroll} 
@@ -838,7 +838,7 @@ export default function Dashboard() {
                 <div className="min-w-[1900px] h-full"></div>
               </div>
 
-              {/* ২. মূল টেবিল র‍্যাপার (হেডার ফ্রিজ থাকবে এবং মাউস দিয়ে ওপর-নিচ করা যাবে)[cite: 11] */}
+              {/* ২. মূল টেবিল র‍্যাপার (হেডার ফ্রিজ থাকবে এবং মাউস দিয়ে ওপর-নিচ করা যাবে) */}
               <div 
                 ref={tableScrollRef} 
                 onScroll={handleTableScroll} 
@@ -846,7 +846,7 @@ export default function Dashboard() {
               >
                 <table className="w-full text-left border-collapse min-w-[1900px]">
                   
-                  {/* টেবিল হেডার একদম টপে ফিক্সড (Sticky)[cite: 11] */}
+                  {/* টেবিল হেডার একদম টপে ফিক্সড (Sticky) */}
                   <thead className="sticky top-0 z-30 bg-slate-900 text-white shadow-md">
                     <tr className="text-[11px] uppercase font-bold tracking-wider">
                       <th className="p-3.5 w-36 border-r border-slate-800">Invoice / Store</th>
