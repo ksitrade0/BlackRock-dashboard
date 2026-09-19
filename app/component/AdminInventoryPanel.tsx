@@ -56,9 +56,11 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     try {
       const res = await fetch('/api/purchases');
       const data = await res.json();
-      setHistoryData(data.data);
+      // ক্র্যাশ ফিক্স: ডেটা না পেলে খালি অ্যারে সেট করবে
+      setHistoryData(data.data || []);
     } catch (err) {
       console.error(err);
+      setHistoryData([]);
     } finally {
       setIsLoadingHistory(false);
     }
@@ -101,11 +103,9 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
   const handleDeletePurchase = async (id: number) => {
     if (!confirm('সতর্কবার্তা! আপনি কি নিশ্চিত যে এই পারচেজটি ডিলিট করতে চান? (এটি ডিলিট করলে লাইভ স্টক থেকেও আইটেম কমে যাবে)')) return;
-    
     try {
       const res = await fetch(`/api/purchases/${id}`, { method: 'DELETE' });
       const result = await res.json();
-      
       if (res.ok && result.success) {
         alert('✅ পারচেজ সফলভাবে ডিলিট হয়েছে!');
         fetchHistory(); // টেবিল আপডেট
@@ -122,10 +122,8 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   const handlePrint = () => {
     const printContent = document.getElementById('printable-invoice');
     if (!printContent) return;
-    
     const styles = document.head.innerHTML; // Tailwind CSS কপি
     const printWindow = window.open('', '_blank');
-    
     if (printWindow) {
       printWindow.document.write(`
         <html>
@@ -378,14 +376,15 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                         <th className="px-6 py-4 text-center">পরিমাণ</th>
                         <th className="px-6 py-4 text-right">কেনা দাম (পিস)</th>
                         <th className="px-6 py-4 text-right">মোট দাম</th>
-                        <th className="px-6 py-4 text-center">অ্যাকশন</th> 
+                        <th className="px-6 py-4 text-center">অ্যাকশন</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {historyData.map((row) => (
                         <tr key={row.id} className="hover:bg-slate-50 transition text-slate-900">
+                          {/* ক্র্যাশ ফিক্স: ডেট ফিল্ড চেক করা */}
                           <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-slate-600">
-                            {new Date(row.created_at).toLocaleDateString('en-GB')}
+                            {row.created_at ? new Date(row.created_at).toLocaleDateString('en-GB') : 'N/A'}
                           </td>
                           <td className="px-6 py-4 font-black text-xs text-slate-800">{row.party_name}</td>
                           <td className="px-6 py-4 text-xs font-bold text-slate-700">{row.item_name}</td>
@@ -399,9 +398,9 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                             ৳ {Number(row.quantity) * Number(row.buying_price)}
                           </td>
                           <td className="px-6 py-4 text-center">
-                             <button onClick={() => handleDeletePurchase(row.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-100 rounded-lg transition cursor-pointer" title="এই পারচেজটি ডিলিট করুন">
-                               <Trash2 className="w-4 h-4 mx-auto" />
-                             </button>
+                            <button onClick={() => handleDeletePurchase(row.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-100 rounded-lg transition cursor-pointer" title="এই পারচেজটি ডিলিট করুন">
+                              <Trash2 className="w-4 h-4 mx-auto" />
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -432,7 +431,10 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                 <tbody>
                   {historyData.map((row) => (
                     <tr key={row.id} className="border-b border-slate-300">
-                      <td className="border-r border-slate-300 px-3 py-2.5">{new Date(row.created_at).toLocaleDateString('en-GB')}</td>
+                      {/* ক্র্যাশ ফিক্স: ডেট ফিল্ড চেক করা */}
+                      <td className="border-r border-slate-300 px-3 py-2.5">
+                        {row.created_at ? new Date(row.created_at).toLocaleDateString('en-GB') : 'N/A'}
+                      </td>
                       <td className="border-r border-slate-300 px-3 py-2.5 font-bold">{row.party_name}</td>
                       <td className="border-r border-slate-300 px-3 py-2.5">{row.item_name}</td>
                       <td className="border-r border-slate-300 px-3 py-2.5 text-center font-bold">{row.quantity}</td>
