@@ -637,9 +637,7 @@ export default function Dashboard() {
         {/* Sticky/Fixed Header Area */}
         <div className="sticky top-0 z-40 bg-slate-200/95 backdrop-blur-md pb-2 pt-2">
           
-          {/* Main Dashboard Header */}
           <div className="flex flex-col lg:flex-row justify-between items-center mb-2 gap-2 bg-white p-2 md:px-4 rounded-2xl shadow-sm border border-slate-300">
-            
             <div className="flex items-center gap-3 w-full lg:w-auto justify-center lg:justify-start">
               {hasLogoImg ? (
                 <div onClick={() => (window.location.href = '/')} className="flex items-center gap-3.5 cursor-pointer select-none transition hover:opacity-90" title="Dashboard Reload">
@@ -720,6 +718,7 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Orders Table with Top Horizontal Scrollbar */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden mt-4">
           {loading ? (
             <div className="p-20 text-center text-slate-600 font-bold text-sm">অর্ডার লোড হচ্ছে...</div>
@@ -727,239 +726,236 @@ export default function Dashboard() {
             <div className="p-20 text-center text-slate-600 font-bold text-sm">কোনো অর্ডার পাওয়া যায়নি।</div>
           ) : (
             <>
-              {/* ম্যাজিক CSS: ভার্টিক্যাল স্ক্রলবার ইনভিজিবল করা হলো, কিন্তু মাউস হুইল কাজ করবে */}
+              {/* স্টাইল: চিকন হরিজন্টাল স্ক্রলবার টেবিলের উপরে রাখার জন্য */}
               <style dangerouslySetInnerHTML={{
                 __html: `
-                .modern-scrollbar::-webkit-scrollbar:horizontal { height: 10px; }
-                .modern-scrollbar::-webkit-scrollbar-track:horizontal { background: #f1f5f9; border-radius: 4px; }
-                .modern-scrollbar::-webkit-scrollbar-thumb:horizontal { background-color: #94a3b8; border-radius: 4px; }
-                .modern-scrollbar::-webkit-scrollbar-thumb:horizontal:hover { background-color: #64748b; }
-                
-                /* ভার্টিক্যাল স্ক্রলবার সম্পূর্ণ হাইড করা */
-                .hide-v-scroll { scrollbar-width: none; -ms-overflow-style: none; }
-                .hide-v-scroll::-webkit-scrollbar { display: none; width: 0px; }
-                
-                .scroll-wrapper-top { transform: rotateX(180deg); overflow-x: auto; overflow-y: hidden; }
-                .scroll-content-top { transform: rotateX(180deg); }
+                .custom-top-scroll::-webkit-scrollbar {
+                  height: 8px;
+                }
+                .custom-top-scroll::-webkit-scrollbar-track {
+                  background: #f1f5f9;
+                  border-radius: 4px;
+                }
+                .custom-top-scroll::-webkit-scrollbar-thumb {
+                  background-color: #cbd5e1;
+                  border-radius: 4px;
+                }
+                .custom-top-scroll::-webkit-scrollbar-thumb:hover {
+                  background-color: #94a3b8;
+                }
                 `
               }} />
 
-              {/* ডানে-বাম স্ক্রলবার উপরে রাখার র‍্যাপার */}
-              <div className="scroll-wrapper-top modern-scrollbar border-b border-slate-200">
-                <div className="scroll-content-top">
+              {/* প্রধান টেবিল কন্টেইনার (যেখানে হেডার ফ্রিজ থাকবে এবং উপরে স্ক্রলবার থাকবে) */}
+              <div className="max-h-[calc(100vh-250px)] overflow-y-auto overflow-x-auto custom-top-scroll relative border-b border-slate-200">
+                <table className="w-full text-left border-collapse min-w-[1900px]">
                   
-                  {/* মাউস দিয়ে উপর-নিচ করার র‍্যাপার (স্ক্রলবার অদৃশ্য) */}
-                  <div className="max-h-[calc(100vh-250px)] overflow-y-auto hide-v-scroll relative">
-                    <table className="w-full text-left border-collapse min-w-[1900px]">
-                      
-                      {/* টেবিলের হেডার একদম টপে ফ্রিজ করা */}
-                      <thead className="sticky top-0 z-50 bg-slate-900 text-white outline outline-1 outline-slate-800 shadow-md">
-                        <tr className="text-[11px] uppercase font-bold tracking-wider">
-                          <th className="p-3.5 w-36 border-r border-slate-800">Invoice / Store</th>
-                          <th className="p-3.5 w-60 border-r border-slate-800">Customer Name (নাম)</th>
-                          <th className="p-3.5 w-40 border-r border-slate-800">Date & Time</th>
-                          <th className="p-3.5 w-80 border-r border-slate-800">Phone, Call & Staff</th>
-                          <th className="p-3.5 w-[440px] border-r border-slate-800">Address & Thana/District</th>
-                          <th className="p-3.5 w-[440px] border-r border-slate-800">Items, COD & Size</th>
-                          <th className="p-3.5 w-80 text-center border-r border-slate-800">Status & Save</th>
-                          <th className="p-3.5 w-80 text-center">Steadfast Push & Live Status</th>
-                        </tr>
-                      </thead>
-                      
-                      <tbody className="text-xs">
-                        {filteredOrders.map((order, index) => {
-                          const cleanPhone = order.phone ? order.phone.replace(/[^0-9]/g, '') : '';
-                          const phoneInfo = phoneOrderData[cleanPhone];
-                          const isDuplicate = phoneInfo && phoneInfo.count > 1;
-                          const isRecent = phoneInfo && phoneInfo.recentOrders.length > 1;
-                          const selectedDistrictObj = BANGLADESH_DISTRICTS.find((d) => d.district === order.district);
-                          const availableThanas = selectedDistrictObj ? selectedDistrictObj.thanas : [];
-                          const isEven = index % 2 === 0;
-                          const rowBgClass = order.isNewRow ? 'bg-emerald-50 border-2 border-emerald-500' : isRecent ? 'bg-rose-50 hover:bg-rose-100/70' : isDuplicate ? 'bg-amber-50 hover:bg-amber-100/70' : isEven ? 'bg-white hover:bg-slate-50' : 'bg-slate-50/70 hover:bg-slate-100/70';
-                          const currentItemList = order.items ? order.items.split(',').map((s) => s.trim()).filter(Boolean) : [];
+                  {/* টেবিল হেডার একদম টপে ফ্রিজ করা */}
+                  <thead className="sticky top-0 z-30 bg-slate-900 text-white shadow-md">
+                    <tr className="text-[11px] uppercase font-bold tracking-wider">
+                      <th className="p-3.5 w-36 border-r border-slate-800">Invoice / Store</th>
+                      <th className="p-3.5 w-60 border-r border-slate-800">Customer Name (নাম)</th>
+                      <th className="p-3.5 w-40 border-r border-slate-800">Date & Time</th>
+                      <th className="p-3.5 w-80 border-r border-slate-800">Phone, Call & Staff</th>
+                      <th className="p-3.5 w-[440px] border-r border-slate-800">Address & Thana/District</th>
+                      <th className="p-3.5 w-[440px] border-r border-slate-800">Items, COD & Size</th>
+                      <th className="p-3.5 w-80 text-center border-r border-slate-800">Status & Save</th>
+                      <th className="p-3.5 w-80 text-center">Steadfast Push & Live Status</th>
+                    </tr>
+                  </thead>
+                  
+                  <tbody className="text-xs">
+                    {filteredOrders.map((order, index) => {
+                      const cleanPhone = order.phone ? order.phone.replace(/[^0-9]/g, '') : '';
+                      const phoneInfo = phoneOrderData[cleanPhone];
+                      const isDuplicate = phoneInfo && phoneInfo.count > 1;
+                      const isRecent = phoneInfo && phoneInfo.recentOrders.length > 1;
+                      const selectedDistrictObj = BANGLADESH_DISTRICTS.find((d) => d.district === order.district);
+                      const availableThanas = selectedDistrictObj ? selectedDistrictObj.thanas : [];
+                      const isEven = index % 2 === 0;
+                      const rowBgClass = order.isNewRow ? 'bg-emerald-50 border-2 border-emerald-500' : isRecent ? 'bg-rose-50 hover:bg-rose-100/70' : isDuplicate ? 'bg-amber-50 hover:bg-amber-100/70' : isEven ? 'bg-white hover:bg-slate-50' : 'bg-slate-50/70 hover:bg-slate-100/70';
+                      const currentItemList = order.items ? order.items.split(',').map((s) => s.trim()).filter(Boolean) : [];
 
-                          return (
-                            <tr key={`${order.storeId}-${order.id}`} className={`transition-colors border-b border-slate-200 ${rowBgClass}`}>
-                              <td className="p-3 align-top font-bold border-r border-slate-200 space-y-1.5">
-                                <div className="w-full h-[32px] flex items-center justify-center font-mono text-xs font-black text-slate-950 bg-slate-100 border border-slate-300 rounded shadow-2xs">
-                                  {order.isNewRow ? 'NEW' : `#${order.invoice}`}
-                                </div>
-                                {order.isNewRow ? (
-                                  <select value={order.storeId} onChange={(e) => handleFieldChange(order.id, order.storeId, 'storeId', e.target.value)} className="w-full h-[32px] text-[11px] text-slate-900 bg-white font-bold px-2 rounded cursor-pointer border border-slate-300 shadow-2xs">
-                                    <option value="store1">Ruhama Wear</option>
-                                    <option value="store2">Aastha Naturals BD</option>
-                                  </select>
-                                ) : (
-                                  <div className="w-full h-[32px] flex items-center justify-center text-[11px] text-slate-700 bg-white border border-slate-200 font-bold px-2 rounded shadow-2xs">
-                                    {order.storeName}
-                                  </div>
-                                )}
-                              </td>
+                      return (
+                        <tr key={`${order.storeId}-${order.id}`} className={`transition-colors border-b border-slate-200 ${rowBgClass}`}>
+                          <td className="p-3 align-top font-bold border-r border-slate-200 space-y-1.5">
+                            <div className="w-full h-[32px] flex items-center justify-center font-mono text-xs font-black text-slate-950 bg-slate-100 border border-slate-300 rounded shadow-2xs">
+                              {order.isNewRow ? 'NEW' : `#${order.invoice}`}
+                            </div>
+                            {order.isNewRow ? (
+                              <select value={order.storeId} onChange={(e) => handleFieldChange(order.id, order.storeId, 'storeId', e.target.value)} className="w-full h-[32px] text-[11px] text-slate-900 bg-white font-bold px-2 rounded cursor-pointer border border-slate-300 shadow-2xs">
+                                <option value="store1">Ruhama Wear</option>
+                                <option value="store2">Aastha Naturals BD</option>
+                              </select>
+                            ) : (
+                              <div className="w-full h-[32px] flex items-center justify-center text-[11px] text-slate-700 bg-white border border-slate-200 font-bold px-2 rounded shadow-2xs">
+                                {order.storeName}
+                              </div>
+                            )}
+                          </td>
 
-                              <td className="p-3 align-top border-r border-slate-200">
-                                <textarea rows={4} value={order.customerName} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customerName', e.target.value)} placeholder="কাস্টমারের নাম..." className="w-full font-black text-sm text-slate-950 bg-transparent focus:bg-white border border-transparent focus:border-slate-300 rounded p-1 transition resize-none outline-none leading-snug whitespace-normal break-words placeholder:text-slate-400 placeholder:text-xs" />
-                              </td>
+                          <td className="p-3 align-top border-r border-slate-200">
+                            <textarea rows={4} value={order.customerName} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customerName', e.target.value)} placeholder="কাস্টমারের নাম..." className="w-full font-black text-sm text-slate-950 bg-transparent focus:bg-white border border-transparent focus:border-slate-300 rounded p-1 transition resize-none outline-none leading-snug whitespace-normal break-words placeholder:text-slate-400 placeholder:text-xs" />
+                          </td>
 
-                              <td className="p-3 align-top text-slate-700 font-bold border-r border-slate-200 space-y-1.5">
-                                <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
-                                  <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                  <span className="font-bold text-slate-900">{formatOrderTime(order.dateCreated)}</span>
-                                </div>
-                                <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
-                                  <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                  <span className="font-bold text-slate-800">{formatOrderDate(order.dateCreated)}</span>
-                                </div>
-                              </td>
+                          <td className="p-3 align-top text-slate-700 font-bold border-r border-slate-200 space-y-1.5">
+                            <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
+                              <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                              <span className="font-bold text-slate-900">{formatOrderTime(order.dateCreated)}</span>
+                            </div>
+                            <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
+                              <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                              <span className="font-bold text-slate-800">{formatOrderDate(order.dateCreated)}</span>
+                            </div>
+                          </td>
 
-                              <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                                <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                                  <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                  <input type="text" value={order.phone} placeholder="01XXXXXXXXX" onChange={(e) => handleFieldChange(order.id, order.storeId, 'phone', e.target.value)} className={`w-full text-xs font-mono font-black bg-transparent outline-none tracking-wide ${isRecent ? 'text-red-700' : isDuplicate ? 'text-amber-900' : 'text-slate-950'}`} />
-                                </div>
-                                {isRecent ? (
-                                  <div className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold">
-                                    <AlertTriangle className="w-3 h-3 shrink-0 text-red-600" />
-                                    <span>রিসেন্ট ডুপ্লিকেট ({phoneInfo.recentOrders.length}টি)</span>
-                                  </div>
-                                ) : isDuplicate ? (
-                                  <div className="flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold">
-                                    <AlertTriangle className="w-3 h-3 shrink-0 text-amber-600" />
-                                    <span>মোট অর্ডার: {phoneInfo.count}টি</span>
-                                  </div>
-                                ) : null}
-                                <button onClick={() => { const newCallState = !order.callDone; handleFieldChange(order.id, order.storeId, 'callDone', newCallState); if (!order.staffName) { handleFieldChange(order.id, order.storeId, 'staffName', currentUser); } }} className={`w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold rounded transition border cursor-pointer shadow-2xs ${order.callDone ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'}`}>
-                                  <PhoneCall className="w-3.5 h-3.5" /> {order.callDone ? 'কল সম্পন্ন হয়েছে' : 'কল দিন'}
-                                </button>
-                                <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                                  <UserCheck className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                  <select value={order.staffName || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'staffName', e.target.value)} className="w-full text-xs font-bold bg-transparent text-slate-900 cursor-pointer outline-none">
-                                    <option value="">স্টাফ নির্বাচন করুন</option>
-                                    {STAFF_MEMBERS.map((staff) => (
-                                      <option key={staff} value={staff}>{staff}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                              </td>
+                          <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
+                            <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
+                              <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                              <input type="text" value={order.phone} placeholder="01XXXXXXXXX" onChange={(e) => handleFieldChange(order.id, order.storeId, 'phone', e.target.value)} className={`w-full text-xs font-mono font-black bg-transparent outline-none tracking-wide ${isRecent ? 'text-red-700' : isDuplicate ? 'text-amber-900' : 'text-slate-950'}`} />
+                            </div>
+                            {isRecent ? (
+                              <div className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold">
+                                <AlertTriangle className="w-3 h-3 shrink-0 text-red-600" />
+                                <span>রিসেন্ট ডুপ্লিকেট ({phoneInfo.recentOrders.length}টি)</span>
+                              </div>
+                            ) : isDuplicate ? (
+                              <div className="flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold">
+                                <AlertTriangle className="w-3 h-3 shrink-0 text-amber-600" />
+                                <span>মোট অর্ডার: {phoneInfo.count}টি</span>
+                              </div>
+                            ) : null}
+                            <button onClick={() => { const newCallState = !order.callDone; handleFieldChange(order.id, order.storeId, 'callDone', newCallState); if (!order.staffName) { handleFieldChange(order.id, order.storeId, 'staffName', currentUser); } }} className={`w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold rounded transition border cursor-pointer shadow-2xs ${order.callDone ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'}`}>
+                              <PhoneCall className="w-3.5 h-3.5" /> {order.callDone ? 'কল সম্পন্ন হয়েছে' : 'কল দিন'}
+                            </button>
+                            <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
+                              <UserCheck className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                              <select value={order.staffName || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'staffName', e.target.value)} className="w-full text-xs font-bold bg-transparent text-slate-900 cursor-pointer outline-none">
+                                <option value="">স্টাফ নির্বাচন করুন</option>
+                                {STAFF_MEMBERS.map((staff) => (
+                                  <option key={staff} value={staff}>{staff}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </td>
 
-                              <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                                <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs">
-                                  <MapPin className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
-                                  <textarea rows={3} value={order.streetAddress} onChange={(e) => handleFieldChange(order.id, order.storeId, 'streetAddress', e.target.value)} placeholder="বিস্তারিত ঠিকানা..." className="w-full text-xs font-bold text-slate-900 bg-transparent resize-y leading-snug outline-none min-h-[58px]" />
-                                </div>
-                                <div className="grid grid-cols-2 gap-1.5">
-                                  <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
-                                    <select value={order.thana || ''} disabled={!order.district} onChange={(e) => handleFieldChange(order.id, order.storeId, 'thana', e.target.value)} className="w-full text-[11px] bg-transparent text-slate-900 font-bold disabled:text-slate-400 cursor-pointer outline-none">
-                                      <option value="">থানা বাছুন</option>
-                                      {availableThanas.map((thana) => (
-                                        <option key={thana} value={thana}>{thana}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                  <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
-                                    <select value={order.district || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'district', e.target.value)} className="w-full text-[11px] bg-transparent text-slate-900 font-bold cursor-pointer outline-none">
-                                      <option value="">জেলা বাছুন</option>
-                                      {BANGLADESH_DISTRICTS.map((d) => (
-                                        <option key={d.district} value={d.district}>{d.district}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                </div>
-                              </td>
-
-                              <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                                <div className="bg-white border border-slate-300 rounded p-1.5 shadow-2xs space-y-1.5">
-                                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 px-1">
-                                    <span>সিলেক্টেড আইটেমসমূহ: </span>
-                                    <span className="text-emerald-700 font-mono">{currentItemList.length} পিস</span>
-                                  </div>
-                                  <div className="flex flex-wrap gap-1 min-h-[32px] p-1 bg-slate-50 border border-slate-200 rounded">
-                                    {currentItemList.length === 0 ? (
-                                      <span className="text-[11px] text-slate-400 italic px-1"> কোনো আইটেম সিলেক্ট করা হয়নি</span>
-                                    ) : (
-                                      currentItemList.map((item, idx) => (
-                                        <span key={idx} className="inline-flex items-center gap-1 bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-2xs">
-                                          {item}
-                                          <button type="button" onClick={() => handleRemoveItem(order.id, order.storeId, idx)} className="text-rose-400 hover:text-rose-300 font-black cursor-pointer" title="আইটেমটি বাদ দিন">X</button>
-                                        </span>
-                                      ))
-                                    )}
-                                  </div>
-                                  <select onChange={(e) => { if (e.target.value) { handleAddItem(order.id, order.storeId, e.target.value); e.target.value = ''; } }} className="w-full h-[32px] text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded px-2 cursor-pointer outline-none shadow-2xs">
-                                    <option value="">+ ড্রপডাউন থেকে আইটেম যোগ করুন...</option>
-                                    {PRODUCT_VARIATIONS.map((prod) => (
-                                      <option key={prod} value={prod}>{prod}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div className="grid grid-cols-2 gap-1.5">
-                                  <div className="h-[34px] flex items-center gap-1.5 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                                    <span className="text-xs font-black text-slate-700">COD: </span>
-                                    <input type="number" value={order.total} onFocus={(e) => e.target.select()} onChange={(e) => handleFieldChange(order.id, order.storeId, 'total', e.target.value)} placeholder="৳" className="w-full text-xs font-black text-emerald-800 bg-transparent outline-none" />
-                                  </div>
-                                  <div className="h-[34px] flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded px-2.5 shadow-2xs">
-                                    <Shirt className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                                    <span className="text-[11px] font-black text-slate-600">সাইজ: </span>
-                                    <input type="text" value={order.size || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'size', e.target.value.toUpperCase())} placeholder="XL" className="w-full text-xs font-black text-slate-950 uppercase text-center bg-white border border-slate-200 rounded py-0.5 outline-none" />
-                                  </div>
-                                </div>
-                              </td>
-
-                              <td className="p-3 align-top text-center space-y-1.5 border-r border-slate-200">
-                                <select value={order.status} disabled={updatingId === order.id} onChange={(e) => handleSaveOrder(order, e.target.value)} className={`w-full h-[34px] text-xs font-bold border rounded px-2.5 text-center cursor-pointer shadow-2xs ${getStatusColor(order.status)}`}>
-                                  {WOO_STATUSES.map((st) => (
-                                    <option key={st.value} value={st.value} className="bg-white text-slate-900">{st.label}</option>
+                          <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
+                            <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs">
+                              <MapPin className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
+                              <textarea rows={3} value={order.streetAddress} onChange={(e) => handleFieldChange(order.id, order.storeId, 'streetAddress', e.target.value)} placeholder="বিস্তারিত ঠিকানা..." className="w-full text-xs font-bold text-slate-900 bg-transparent resize-y leading-snug outline-none min-h-[58px]" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
+                                <select value={order.thana || ''} disabled={!order.district} onChange={(e) => handleFieldChange(order.id, order.storeId, 'thana', e.target.value)} className="w-full text-[11px] bg-transparent text-slate-900 font-bold disabled:text-slate-400 cursor-pointer outline-none">
+                                  <option value="">থানা বাছুন</option>
+                                  {availableThanas.map((thana) => (
+                                    <option key={thana} value={thana}>{thana}</option>
                                   ))}
                                 </select>
-                                <button onClick={() => handleSaveOrder(order)} disabled={updatingId === order.id} className="w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded transition cursor-pointer disabled:opacity-50 shadow-2xs">
-                                  <Save className={`w-3.5 h-3.5 ${updatingId === order.id ? 'animate-spin' : ''}`} />
-                                  {updatingId === order.id ? 'সেভ হচ্ছে...' : 'তথ্য সেভ করুন (Save)'}
-                                </button>
-                                <div className="grid grid-cols-3 gap-1.5">
-                                  <button onClick={() => handleSaveOrder(order, 'on-hold')} disabled={updatingId === order.id} title="রাখুন" className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-300 rounded cursor-pointer shadow-2xs">
-                                    <BookmarkCheck className="w-3 h-3" /> রাখুন
-                                  </button>
-                                  <button onClick={() => handleSaveOrder(order, 'cancelled')} disabled={updatingId === order.id} title="বাতিল" className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-300 rounded cursor-pointer shadow-2xs">
-                                    <XCircle className="w-3 h-3" /> বাতিল
-                                  </button>
-                                  <button onClick={() => handleDeleteOrder(order)} disabled={updatingId === order.id} title="ডিলিট" className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-slate-700 hover:text-red-700 bg-slate-50 hover:bg-red-50 border border-slate-200 rounded cursor-pointer shadow-2xs">
-                                    <Trash2 className="w-3 h-3" /> ডিলিট
-                                  </button>
-                                </div>
-                              </td>
+                              </div>
+                              <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
+                                <select value={order.district || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'district', e.target.value)} className="w-full text-[11px] bg-transparent text-slate-900 font-bold cursor-pointer outline-none">
+                                  <option value="">জেলা বাছুন</option>
+                                  {BANGLADESH_DISTRICTS.map((d) => (
+                                    <option key={d.district} value={d.district}>{d.district}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          </td>
 
-                              <td className="p-3 align-top space-y-1.5">
-                                <div className="w-full h-[34px] flex items-center bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                                  <input type="text" value={order.customNote || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customNote', e.target.value)} placeholder="কুরিয়ার স্পেশাল নোট..." className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 bg-transparent outline-none" />
-                                </div>
-                                <button onClick={() => handleSendToSteadfast(order)} disabled={sendingId === order.id} className={`w-full h-[34px] flex items-center justify-center gap-1.5 rounded text-xs font-bold transition cursor-pointer shadow-2xs ${order.trackingCode || order.consignmentId ? 'bg-slate-900 hover:bg-black text-white' : 'bg-slate-800 hover:bg-slate-900 text-white'}`}>
-                                  <Send className="w-3.5 h-3.5" />
-                                  {sendingId === order.id ? 'Sending...' : order.trackingCode || order.consignmentId ? 'Re-send Steadfast' : 'Send to Steadfast'}
-                                </button>
-                                {(order.trackingCode || order.consignmentId) && (
-                                  <div className="bg-slate-50 border border-slate-200 rounded p-2 space-y-1.5 text-left shadow-2xs">
-                                    <div className="flex justify-between items-center text-xs pb-1 border-b border-slate-200">
-                                      <span className="font-bold text-slate-600 flex items-center gap-1">
-                                        <Package className="w-3 h-3 text-slate-800" /> CID:
-                                      </span>
-                                      <span className="font-mono font-bold text-slate-900">{order.consignmentId || 'N/A'}</span>
-                                    </div>
-                                    <div className={`w-full py-1 px-1.5 rounded text-center text-[10px] font-bold uppercase tracking-wider border ${getCourierBadge(order.courierStatus || 'in_review')}`}>
-                                      {order.courierStatus ? order.courierStatus.replace(/_/g, ' ') : 'IN REVIEW'}
-                                    </div>
-                                    <button onClick={() => handleCheckCourierStatus(order)} disabled={trackingId === order.id} className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-800 bg-white hover:bg-slate-100 py-1 px-2 rounded w-full border border-slate-300 transition cursor-pointer shadow-2xs">
-                                      <RotateCw className={`w-3 h-3 ${trackingId === order.id ? 'animate-spin' : ''}`} />
-                                      {trackingId === order.id ? 'চেক হচ্ছে...' : 'লাইভ স্ট্যাটাস'}
-                                    </button>
-                                  </div>
+                          <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
+                            <div className="bg-white border border-slate-300 rounded p-1.5 shadow-2xs space-y-1.5">
+                              <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 px-1">
+                                <span>সিলেক্টেড আইটেমসমূহ: </span>
+                                <span className="text-emerald-700 font-mono">{currentItemList.length} পিস</span>
+                              </div>
+                              <div className="flex flex-wrap gap-1 min-h-[32px] p-1 bg-slate-50 border border-slate-200 rounded">
+                                {currentItemList.length === 0 ? (
+                                  <span className="text-[11px] text-slate-400 italic px-1"> কোনো আইটেম সিলেক্ট করা হয়নি</span>
+                                ) : (
+                                  currentItemList.map((item, idx) => (
+                                    <span key={idx} className="inline-flex items-center gap-1 bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-2xs">
+                                      {item}
+                                      <button type="button" onClick={() => handleRemoveItem(order.id, order.storeId, idx)} className="text-rose-400 hover:text-rose-300 font-black cursor-pointer" title="আইটেমটি বাদ দিন">X</button>
+                                    </span>
+                                  ))
                                 )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                              </div>
+                              <select onChange={(e) => { if (e.target.value) { handleAddItem(order.id, order.storeId, e.target.value); e.target.value = ''; } }} className="w-full h-[32px] text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded px-2 cursor-pointer outline-none shadow-2xs">
+                                <option value="">+ ড্রপডাউন থেকে আইটেম যোগ করুন...</option>
+                                {PRODUCT_VARIATIONS.map((prod) => (
+                                  <option key={prod} value={prod}>{prod}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              <div className="h-[34px] flex items-center gap-1.5 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
+                                <span className="text-xs font-black text-slate-700">COD: </span>
+                                <input type="number" value={order.total} onFocus={(e) => e.target.select()} onChange={(e) => handleFieldChange(order.id, order.storeId, 'total', e.target.value)} placeholder="৳" className="w-full text-xs font-black text-emerald-800 bg-transparent outline-none" />
+                              </div>
+                              <div className="h-[34px] flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded px-2.5 shadow-2xs">
+                                <Shirt className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                                <span className="text-[11px] font-black text-slate-600">সাইজ: </span>
+                                <input type="text" value={order.size || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'size', e.target.value.toUpperCase())} placeholder="XL" className="w-full text-xs font-black text-slate-950 uppercase text-center bg-white border border-slate-200 rounded py-0.5 outline-none" />
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="p-3 align-top text-center space-y-1.5 border-r border-slate-200">
+                            <select value={order.status} disabled={updatingId === order.id} onChange={(e) => handleSaveOrder(order, e.target.value)} className={`w-full h-[34px] text-xs font-bold border rounded px-2.5 text-center cursor-pointer shadow-2xs ${getStatusColor(order.status)}`}>
+                              {WOO_STATUSES.map((st) => (
+                                <option key={st.value} value={st.value} className="bg-white text-slate-900">{st.label}</option>
+                              ))}
+                            </select>
+                            <button onClick={() => handleSaveOrder(order)} disabled={updatingId === order.id} className="w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded transition cursor-pointer disabled:opacity-50 shadow-2xs">
+                              <Save className={`w-3.5 h-3.5 ${updatingId === order.id ? 'animate-spin' : ''}`} />
+                              {updatingId === order.id ? 'সেভ হচ্ছে...' : 'তথ্য সেভ করুন (Save)'}
+                            </button>
+                            <div className="grid grid-cols-3 gap-1.5">
+                              <button onClick={() => handleSaveOrder(order, 'on-hold')} disabled={updatingId === order.id} title="রাখুন" className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-300 rounded cursor-pointer shadow-2xs">
+                                <BookmarkCheck className="w-3 h-3" /> রাখুন
+                              </button>
+                              <button onClick={() => handleSaveOrder(order, 'cancelled')} disabled={updatingId === order.id} title="বাতিল" className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-300 rounded cursor-pointer shadow-2xs">
+                                <XCircle className="w-3 h-3" /> বাতিল
+                              </button>
+                              <button onClick={() => handleDeleteOrder(order)} disabled={updatingId === order.id} title="ডিলিট" className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-slate-700 hover:text-red-700 bg-slate-50 hover:bg-red-50 border border-slate-200 rounded cursor-pointer shadow-2xs">
+                                <Trash2 className="w-3 h-3" /> ডিলিট
+                              </button>
+                            </div>
+                          </td>
+
+                          <td className="p-3 align-top space-y-1.5">
+                            <div className="w-full h-[34px] flex items-center bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
+                              <input type="text" value={order.customNote || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customNote', e.target.value)} placeholder="কুরিয়ার স্পেশাল নোট..." className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 bg-transparent outline-none" />
+                            </div>
+                            <button onClick={() => handleSendToSteadfast(order)} disabled={sendingId === order.id} className={`w-full h-[34px] flex items-center justify-center gap-1.5 rounded text-xs font-bold transition cursor-pointer shadow-2xs ${order.trackingCode || order.consignmentId ? 'bg-slate-900 hover:bg-black text-white' : 'bg-slate-800 hover:bg-slate-900 text-white'}`}>
+                              <Send className="w-3.5 h-3.5" />
+                              {sendingId === order.id ? 'Sending...' : order.trackingCode || order.consignmentId ? 'Re-send Steadfast' : 'Send to Steadfast'}
+                            </button>
+                            {(order.trackingCode || order.consignmentId) && (
+                              <div className="bg-slate-50 border border-slate-200 rounded p-2 space-y-1.5 text-left shadow-2xs">
+                                <div className="flex justify-between items-center text-xs pb-1 border-b border-slate-200">
+                                  <span className="font-bold text-slate-600 flex items-center gap-1">
+                                    <Package className="w-3 h-3 text-slate-800" /> CID:
+                                  </span>
+                                  <span className="font-mono font-bold text-slate-900">{order.consignmentId || 'N/A'}</span>
+                                </div>
+                                <div className={`w-full py-1 px-1.5 rounded text-center text-[10px] font-bold uppercase tracking-wider border ${getCourierBadge(order.courierStatus || 'in_review')}`}>
+                                  {order.courierStatus ? order.courierStatus.replace(/_/g, ' ') : 'IN REVIEW'}
+                                </div>
+                                <button onClick={() => handleCheckCourierStatus(order)} disabled={trackingId === order.id} className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-800 bg-white hover:bg-slate-100 py-1 px-2 rounded w-full border border-slate-300 transition cursor-pointer shadow-2xs">
+                                  <RotateCw className={`w-3 h-3 ${trackingId === order.id ? 'animate-spin' : ''}`} />
+                                  {trackingId === order.id ? 'চেক হচ্ছে...' : 'লাইভ স্ট্যাটাস'}
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </>
           )}
