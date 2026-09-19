@@ -635,12 +635,11 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-200/70 text-slate-900 p-2 md:p-3 font-sans">
       <div className="max-w-[1950px] mx-auto">
         {/* Sticky/Fixed Header Area */}
-        <div className="sticky top-0 z-50 bg-slate-200/95 backdrop-blur-md pb-2 pt-2">
+        <div className="sticky top-0 z-40 bg-slate-200/95 backdrop-blur-md pb-2 pt-2">
           
           {/* Main Dashboard Header */}
           <div className="flex flex-col lg:flex-row justify-between items-center mb-2 gap-2 bg-white p-2 md:px-4 rounded-2xl shadow-sm border border-slate-300">
             
-            {/* লোগো ও টাইটেল গ্রুপ করে লেফট অ্যালাইন করা হলো */}
             <div className="flex items-center gap-3 w-full lg:w-auto justify-center lg:justify-start">
               {hasLogoImg ? (
                 <div onClick={() => (window.location.href = '/')} className="flex items-center gap-3.5 cursor-pointer select-none transition hover:opacity-90" title="Dashboard Reload">
@@ -713,9 +712,7 @@ export default function Dashboard() {
             </div>
           </div>
         </div> 
-        {/* End Sticky/Fixed Area */}
 
-        {/* Alerts */}
         {message && (
           <div className={`p-3.5 mb-4 rounded-xl flex items-center gap-2.5 shadow-sm font-bold text-xs mt-4 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-900 border border-emerald-300' : 'bg-rose-50 text-rose-900 border border-rose-300'}`}>
             {message.type === 'success' ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />}
@@ -723,7 +720,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Orders Table with Horizontal Scrollbar */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden mt-4">
           {loading ? (
             <div className="p-20 text-center text-slate-600 font-bold text-sm">অর্ডার লোড হচ্ছে...</div>
@@ -731,25 +727,33 @@ export default function Dashboard() {
             <div className="p-20 text-center text-slate-600 font-bold text-sm">কোনো অর্ডার পাওয়া যায়নি।</div>
           ) : (
             <>
-              {/* আধুনিক স্ক্রলবারের CSS */}
+              {/* ম্যাজিক CSS: ভার্টিক্যাল স্ক্রলবার ইনভিজিবল করা হলো, কিন্তু মাউস হুইল কাজ করবে */}
               <style dangerouslySetInnerHTML={{
                 __html: `
-                .modern-scrollbar::-webkit-scrollbar { height: 10px; width: 8px; }
-                .modern-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
-                .modern-scrollbar::-webkit-scrollbar-thumb { background-color: #94a3b8; border-radius: 4px; }
-                .modern-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #64748b; }
-                .scroll-wrapper-top { transform: rotateX(180deg); overflow-x: auto; }
+                .modern-scrollbar::-webkit-scrollbar:horizontal { height: 10px; }
+                .modern-scrollbar::-webkit-scrollbar-track:horizontal { background: #f1f5f9; border-radius: 4px; }
+                .modern-scrollbar::-webkit-scrollbar-thumb:horizontal { background-color: #94a3b8; border-radius: 4px; }
+                .modern-scrollbar::-webkit-scrollbar-thumb:horizontal:hover { background-color: #64748b; }
+                
+                /* ভার্টিক্যাল স্ক্রলবার সম্পূর্ণ হাইড করা */
+                .hide-v-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+                .hide-v-scroll::-webkit-scrollbar { display: none; width: 0px; }
+                
+                .scroll-wrapper-top { transform: rotateX(180deg); overflow-x: auto; overflow-y: hidden; }
                 .scroll-content-top { transform: rotateX(180deg); }
                 `
               }} />
 
+              {/* ডানে-বাম স্ক্রলবার উপরে রাখার র‍্যাপার */}
               <div className="scroll-wrapper-top modern-scrollbar border-b border-slate-200">
                 <div className="scroll-content-top">
-                  {/* ভার্টিক্যাল স্ক্রল র‍্যাপার (এটির কারণেই হেডার ও উপরের স্ক্রলবার ফ্রিজ থাকবে) */}
-                  <div className="max-h-[calc(100vh-230px)] overflow-y-auto relative modern-scrollbar">
+                  
+                  {/* মাউস দিয়ে উপর-নিচ করার র‍্যাপার (স্ক্রলবার অদৃশ্য) */}
+                  <div className="max-h-[calc(100vh-250px)] overflow-y-auto hide-v-scroll relative">
                     <table className="w-full text-left border-collapse min-w-[1900px]">
-                      {/* টেবিল হেডার ফ্রিজ (sticky top-0) */}
-                      <thead className="sticky top-0 z-20 bg-slate-900 text-white outline outline-1 outline-slate-800 shadow-md">
+                      
+                      {/* টেবিলের হেডার একদম টপে ফ্রিজ করা */}
+                      <thead className="sticky top-0 z-50 bg-slate-900 text-white outline outline-1 outline-slate-800 shadow-md">
                         <tr className="text-[11px] uppercase font-bold tracking-wider">
                           <th className="p-3.5 w-36 border-r border-slate-800">Invoice / Store</th>
                           <th className="p-3.5 w-60 border-r border-slate-800">Customer Name (নাম)</th>
@@ -761,6 +765,7 @@ export default function Dashboard() {
                           <th className="p-3.5 w-80 text-center">Steadfast Push & Live Status</th>
                         </tr>
                       </thead>
+                      
                       <tbody className="text-xs">
                         {filteredOrders.map((order, index) => {
                           const cleanPhone = order.phone ? order.phone.replace(/[^0-9]/g, '') : '';
@@ -775,7 +780,6 @@ export default function Dashboard() {
 
                           return (
                             <tr key={`${order.storeId}-${order.id}`} className={`transition-colors border-b border-slate-200 ${rowBgClass}`}>
-                              {/* 1. Invoice / Store */}
                               <td className="p-3 align-top font-bold border-r border-slate-200 space-y-1.5">
                                 <div className="w-full h-[32px] flex items-center justify-center font-mono text-xs font-black text-slate-950 bg-slate-100 border border-slate-300 rounded shadow-2xs">
                                   {order.isNewRow ? 'NEW' : `#${order.invoice}`}
@@ -792,12 +796,10 @@ export default function Dashboard() {
                                 )}
                               </td>
 
-                              {/* 2. Customer Name */}
                               <td className="p-3 align-top border-r border-slate-200">
                                 <textarea rows={4} value={order.customerName} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customerName', e.target.value)} placeholder="কাস্টমারের নাম..." className="w-full font-black text-sm text-slate-950 bg-transparent focus:bg-white border border-transparent focus:border-slate-300 rounded p-1 transition resize-none outline-none leading-snug whitespace-normal break-words placeholder:text-slate-400 placeholder:text-xs" />
                               </td>
 
-                              {/* 3. Date & Time */}
                               <td className="p-3 align-top text-slate-700 font-bold border-r border-slate-200 space-y-1.5">
                                 <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
                                   <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
@@ -809,7 +811,6 @@ export default function Dashboard() {
                                 </div>
                               </td>
 
-                              {/* 4. Phone, Call & Staff */}
                               <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
                                 <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
                                   <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
@@ -840,7 +841,6 @@ export default function Dashboard() {
                                 </div>
                               </td>
 
-                              {/* 5. Address & Thana/District */}
                               <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
                                 <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs">
                                   <MapPin className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
@@ -866,7 +866,6 @@ export default function Dashboard() {
                                 </div>
                               </td>
 
-                              {/* 6. Items, COD & Size */}
                               <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
                                 <div className="bg-white border border-slate-300 rounded p-1.5 shadow-2xs space-y-1.5">
                                   <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 px-1">
@@ -905,7 +904,6 @@ export default function Dashboard() {
                                 </div>
                               </td>
 
-                              {/* 7. Status & Save */}
                               <td className="p-3 align-top text-center space-y-1.5 border-r border-slate-200">
                                 <select value={order.status} disabled={updatingId === order.id} onChange={(e) => handleSaveOrder(order, e.target.value)} className={`w-full h-[34px] text-xs font-bold border rounded px-2.5 text-center cursor-pointer shadow-2xs ${getStatusColor(order.status)}`}>
                                   {WOO_STATUSES.map((st) => (
@@ -929,7 +927,6 @@ export default function Dashboard() {
                                 </div>
                               </td>
 
-                              {/* 8. Steadfast Courier */}
                               <td className="p-3 align-top space-y-1.5">
                                 <div className="w-full h-[34px] flex items-center bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
                                   <input type="text" value={order.customNote || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customNote', e.target.value)} placeholder="কুরিয়ার স্পেশাল নোট..." className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 bg-transparent outline-none" />
