@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
+    // লেটেস্ট Next.js এর নিয়ম অনুযায়ী params await করতে হবে
+    const params = await context.params;
     const id = params.id;
+
     const [result]: any = await query('DELETE FROM purchases WHERE id = ?', [id]);
     
     if (result.affectedRows > 0) {
