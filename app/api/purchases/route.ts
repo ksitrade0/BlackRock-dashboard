@@ -3,8 +3,8 @@ import { query } from '@/lib/db';
 
 export async function GET() {
   try {
-    const [rows]: any = await query('SELECT * FROM purchases ORDER BY id DESC');
-    return NextResponse.json({ success: true, data: rows || [] });
+    const rows = await query('SELECT * FROM purchases ORDER BY id DESC');
+    return NextResponse.json({ success: true, data: Array.isArray(rows) ? rows : [] });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
