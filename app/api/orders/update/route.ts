@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
+  const body = await req.json();
+  
   try {
-    const body = await req.json();
     const {
       storeId,
       orderId,
@@ -24,6 +25,7 @@ export async function POST(req: Request) {
     let secret = '';
 
     const sId = String(storeId || '').toLowerCase();
+
     if (sId.includes('aastha') || sId === 'store2' || sId === '2') {
       url = process.env.STORE2_URL || 'https://aasthanaturalsbd.com';
       key = process.env.STORE2_KEY || '';
@@ -44,6 +46,7 @@ export async function POST(req: Request) {
     // ডিলিট অ্যাকশন
     if (action === 'delete') {
       if (!orderId) return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
+      
       const deleteRes = await fetch(`${cleanUrl}/wp-json/wc/v3/orders/${orderId}?force=true`, {
         method: 'DELETE',
         headers: { Authorization: authHeader },
@@ -79,8 +82,8 @@ export async function POST(req: Request) {
       ...(thana ? [{ key: 'thana', value: thana }] : []),
     ];
 
-    // যদি এটি নতুন ব্ল্যাঙ্ক রো হয় (orderId < 0 বা টেম্পোরারি আইডি) -> WooCommerce এ POST (Create) হবে
-    if (!orderId || Number(orderId) <= 0) {
+    // নতুন অর্ডার তৈরির ক্ষেত্রে (POST)
+    if (!orderId || Number(orderId) <= 0 || String(orderId).length > 10) {
       const createPayload: any = {
         payment_method: 'cod',
         payment_method_title: 'Cash on delivery',
@@ -88,13 +91,6 @@ export async function POST(req: Request) {
         status: status || 'processing',
         billing: billingShipping,
         shipping: billingShipping,
-        line_items: [
-          {
-            name: items || 'Custom Item',
-            quantity: 1,
-            total: String(total || '0'),
-          },
-        ],
         meta_data: metaData,
       };
 
@@ -115,7 +111,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, order: createData, isNew: true });
     }
 
-    // অন্যথায় পুরনো অর্ডার আপডেট (PUT) হবে
+    // পুরনো অর্ডার আপডেট (PUT) - এখানে line_items পাঠানো হচ্ছে না, ফলে উকমার্সে অরিজিনাল প্রোডাক্ট ঠিক থাকবে
     const updatePayload: any = {
       status: status || 'processing',
       total: String(total || '0'),
@@ -139,6 +135,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true, order: data });
+
   } catch (error: any) {
     console.error('Order update/create error:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
