@@ -32,7 +32,6 @@ import {
   Layers,
   Shirt,
   User,
-  LogOut,
   Save,
   Plus,
   BarChart2,
