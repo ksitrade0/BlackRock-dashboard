@@ -26,8 +26,8 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.success) {
         setActivePanel(authTarget);
         setAuthTarget(null);
         setPassword('');
@@ -56,9 +56,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     try {
       const res = await fetch('/api/purchases');
       const data = await res.json();
-      if (data.success) {
-        setHistoryData(data.data);
-      }
+      setHistoryData(data.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -90,7 +88,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
       if (res.ok && result.success) {
         alert('✅ সফলভাবে স্টক যুক্ত হয়েছে!');
         closePanel();
-        window.location.reload();
+        window.dispatchEvent(new Event('stockUpdated')); // লাইভ স্টক আপডেট ট্রিগার
       } else {
         alert('❌ ডেটাবেজ সেভ হতে সমস্যা হয়েছে: ' + (result.error || 'অজানা ত্রুটি'));
       }
@@ -101,32 +99,73 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     }
   };
 
+  const handleDeletePurchase = async (id: number) => {
+    if (!confirm('সতর্কবার্তা! আপনি কি নিশ্চিত যে এই পারচেজটি ডিলিট করতে চান? (এটি ডিলিট করলে লাইভ স্টক থেকেও আইটেম কমে যাবে)')) return;
+    
+    try {
+      const res = await fetch(`/api/purchases/${id}`, { method: 'DELETE' });
+      const result = await res.json();
+      
+      if (res.ok && result.success) {
+        alert('✅ পারচেজ সফলভাবে ডিলিট হয়েছে!');
+        fetchHistory(); // টেবিল আপডেট
+        window.dispatchEvent(new Event('stockUpdated')); // লাইভ স্টক অটো-আপডেট
+      } else {
+        alert('❌ ডিলিট হতে সমস্যা হয়েছে: ' + (result.error || 'অজানা ত্রুটি'));
+      }
+    } catch (err) {
+      alert('❌ নেটওয়ার্ক বা সার্ভার এরর!');
+    }
+  };
+
+  // স্মার্ট প্রিন্ট ফাংশন (খালি পেজ সমস্যা সমাধান)
   const handlePrint = () => {
-    window.print();
+    const printContent = document.getElementById('printable-invoice');
+    if (!printContent) return;
+    
+    const styles = document.head.innerHTML; // Tailwind CSS কপি
+    const printWindow = window.open('', '_blank');
+    
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Purchase History Report</title>
+            ${styles}
+            <style>
+              body { background-color: white !important; margin: 0; padding: 20px; color: black; }
+              #printable-invoice { display: block !important; width: 100%; position: static !important; }
+              html, body { height: auto !important; overflow: visible !important; }
+              @page { size: A4 portrait; margin: 10mm; }
+            </style>
+          </head>
+          <body>
+            ${printContent.outerHTML}
+            <script>
+              setTimeout(() => {
+                window.focus();
+                window.print();
+                window.close();
+              }, 500);
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    } else {
+      alert('ব্রাউজারের পপ-আপ ব্লকার চালু আছে! দয়া করে উপরের ডানপাশ থেকে Allow করে আবার চেষ্টা করুন।');
+    }
   };
 
   return (
     <div className="flex flex-col gap-1.5 w-48">
-      {/* Print CSS - শুধুমাত্র প্রয়োজনীয় পৃষ্ঠা প্রিন্ট করার জন্য */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        @media print {
-          body { visibility: hidden; }
-          #printable-invoice, #printable-invoice * { visibility: visible; }
-          #printable-invoice { position: absolute; left: 0; top: 0; width: 100%; padding: 15px; background: white; }
-          .no-print { display: none !important; }
-          @page { size: A4 portrait; margin: 10mm; }
-        }
-      `}} />
-
-      {/* Main Dashboard Buttons (Updated to match header size: w-48 h-36px) */}
+      {/* Main Dashboard Buttons */}
       <button
         onClick={() => setAuthTarget('entry')}
         className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-bold transition shadow-2xs border border-slate-800 cursor-pointer"
       >
         <Package className="w-3.5 h-3.5 text-amber-400" /> ইনভেন্টরি এন্ট্রি
       </button>
-
       <button
         onClick={() => setAuthTarget('history')}
         className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg text-xs font-bold transition shadow-2xs border border-slate-300 cursor-pointer"
@@ -163,7 +202,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="........"
                   className="w-full bg-slate-50 border border-slate-300 p-3.5 rounded-xl font-bold text-sm tracking-widest focus:ring-2 focus:ring-slate-900 outline-none text-black"
                   required
                 />
@@ -192,7 +231,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                 </div>
                 <div>
                   <h2 className="text-xl font-black uppercase text-slate-900 tracking-wide">পারচেজ ও ইনভেন্টরি এন্ট্রি</h2>
-                  <p className="text-xs font-bold text-slate-500 mt-0.5">সাপ্লায়ারের তথ্য এবং নতুন কাঁচামাল/প্রোডাক্ট যুক্ত করুন</p>
+                  <p className="text-xs font-bold text-slate-500 mt-0.5"> সাপ্লায়ারের তথ্য এবং নতুন কাঁচামাল/প্রোডাক্ট যুক্ত করুন</p>
                 </div>
               </div>
               <button onClick={closePanel} className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer">
@@ -211,13 +250,13 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                   type="text"
                   value={partyName}
                   onChange={(e) => setPartyName(e.target.value)}
-                  placeholder="যেমন: রহিম ভাই (ফেব্রিক সাপ্লায়ার) / পাইকারি মার্কেট..."
+                  placeholder="যেমন: রহিম ভাই (ফেব্রিক সাপ্লায়ার) পাইকারি মার্কেট..."
                   className="w-full border border-slate-300 p-3.5 rounded-xl font-bold text-sm text-black focus:border-slate-900 outline-none bg-slate-50 transition"
                   required
                 />
               </div>
 
-              {/* Items Grid Layout (Ledger Style) */}
+              {/* Items Grid Layout */}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                 <div className="grid grid-cols-12 gap-3 p-4 border-b border-slate-200 bg-slate-100 text-[11px] font-black text-slate-600 uppercase tracking-wider text-center">
                   <div className="col-span-5 text-left pl-2">সাপ্লাইকৃত আইটেম / ম্যাটেরিয়াল</div>
@@ -225,7 +264,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                   <div className="col-span-3">কেনা দাম (প্রতি পিস ৳)</div>
                   <div className="col-span-1">বাদ</div>
                 </div>
-                
+
                 <div className="p-4 space-y-3 bg-white">
                   {purchaseItems.map((item, index) => (
                     <div key={index} className="grid grid-cols-12 gap-3 items-center bg-slate-50 p-2.5 rounded-xl border border-slate-200">
@@ -236,7 +275,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                           className="w-full border border-slate-300 p-3 rounded-lg text-black font-bold text-xs outline-none bg-white focus:border-slate-900 cursor-pointer"
                           required
                         >
-                          <option value="">-- ড্রপডাউন থেকে আইটেম সিলেক্ট করুন --</option>
+                          <option value="">-- ড্রপডাউন থেকে আইটেম সিলেক্ট করুন</option>
                           {existingItems.map((prod, i) => <option key={i} value={prod}>{prod}</option>)}
                         </select>
                       </div>
@@ -272,7 +311,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                       </div>
                     </div>
                   ))}
-                  
+
                   <button
                     type="button"
                     onClick={() => setPurchaseItems([...purchaseItems, { itemName: '', quantity: 1, buyingPrice: 0 }])}
@@ -312,6 +351,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                   <p className="text-xs font-bold text-slate-500 mt-0.5">সকল পারচেজ রেকর্ড এবং লেনদেন সমূহ</p>
                 </div>
               </div>
+
               <div className="flex gap-3">
                 <button onClick={handlePrint} className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-black hover:bg-black transition shadow-md cursor-pointer">
                   <Printer className="w-4 h-4" /> A4 প্রিন্ট / PDF
@@ -324,9 +364,9 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
             <div className="overflow-y-auto p-6 flex-1 bg-slate-100/50 no-print">
               {isLoadingHistory ? (
-                <div className="text-center py-20 font-bold text-slate-500 animate-pulse text-base">লোড হচ্ছে...</div>
+                <div className="text-center py-20 font-bold text-slate-500 animate-pulse text-base"> লোড হচ্ছে...</div>
               ) : historyData.length === 0 ? (
-                <div className="text-center py-20 font-bold text-slate-400 text-base">কোনো পারচেজ হিস্ট্রি পাওয়া যায়নি।</div>
+                <div className="text-center py-20 font-bold text-slate-400 text-base"> কোনো পারচেজ হিস্ট্রি পাওয়া যায়নি।</div>
               ) : (
                 <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                   <table className="w-full text-sm text-left border-collapse">
@@ -338,6 +378,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                         <th className="px-6 py-4 text-center">পরিমাণ</th>
                         <th className="px-6 py-4 text-right">কেনা দাম (পিস)</th>
                         <th className="px-6 py-4 text-right">মোট দাম</th>
+                        <th className="px-6 py-4 text-center">অ্যাকশন</th> 
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -353,9 +394,14 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                               {row.quantity} পিস
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-right font-mono text-xs font-bold text-slate-600">৳{row.buying_price}</td>
+                          <td className="px-6 py-4 text-right font-mono text-xs font-bold text-slate-600">৳ {row.buying_price}</td>
                           <td className="px-6 py-4 text-right font-black text-emerald-700 font-mono text-sm">
-                            ৳{Number(row.quantity) * Number(row.buying_price)}
+                            ৳ {Number(row.quantity) * Number(row.buying_price)}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                             <button onClick={() => handleDeletePurchase(row.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-100 rounded-lg transition cursor-pointer" title="এই পারচেজটি ডিলিট করুন">
+                               <Trash2 className="w-4 h-4 mx-auto" />
+                             </button>
                           </td>
                         </tr>
                       ))}
@@ -365,7 +411,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
               )}
             </div>
 
-            {/* A4 Printable Layout - আপনার প্রিন্ট ডিজাইনে কোনো পরিবর্তন করা হয়নি */}
+            {/* Printable Area */}
             <div id="printable-invoice" className="hidden text-black bg-white w-full">
               <div className="text-center mb-8 border-b-2 border-slate-800 pb-5">
                 <h1 className="text-3xl font-black uppercase tracking-wider">BLACK ROCK CORPORATION</h1>
@@ -397,7 +443,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                 </tbody>
               </table>
             </div>
-
           </div>
         </div>
       )}
