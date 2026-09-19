@@ -13,7 +13,7 @@ import {
   CheckCircle,
   AlertCircle,
   Calendar,
-  Logout,
+  LogOut,
   Clock,
   MapPin,
   Phone,
@@ -165,7 +165,7 @@ export default function Dashboard() {
     }
   }, [message]);
 
-  const handleLogout = async () => {
+  const handleLogOut = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
       router.push('/login');
