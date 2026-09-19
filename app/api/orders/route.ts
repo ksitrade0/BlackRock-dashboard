@@ -3,11 +3,11 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  try {
-    const store1Url = (process.env.STORE1_URL || 'https://ruhamawear.com').replace(/\/$/, '');
-    const store1Key = process.env.STORE1_KEY || '';
-    const store1Secret = process.env.STORE1_SECRET || '';
+  const store1Url = (process.env.STORE1_URL || 'https://ruhamawear.com').replace(/\/$/, '');
+  const store1Key = process.env.STORE1_KEY || '';
+  const store1Secret = process.env.STORE1_SECRET || '';
 
+  try {
     const store2Url = (process.env.STORE2_URL || 'https://aasthanaturalsbd.com').replace(/\/$/, '');
     const store2Key = process.env.STORE2_KEY || '';
     const store2Secret = process.env.STORE2_SECRET || '';
@@ -32,15 +32,25 @@ export async function GET() {
           let extractedThana = '';
           let customSize = '';
           let staffName = '';
+          let extractedAddress = o.billing?.address_1 || '';
 
+          // উকমার্সের কাস্টম মেটা ফিল্ড বা Billing extra fields থেকে ঠিকানা ও অন্যান্য তথ্য রিড করা
           if (Array.isArray(o.meta_data)) {
             o.meta_data.forEach((m: any) => {
               const k = String(m.key || '').toLowerCase();
-              if (k.includes('thana')) extractedThana = String(m.value || '');
-              if (k.includes('district')) extractedDistrict = String(m.value || '');
-              if (k.includes('size') || k.includes('সাইজ')) customSize = String(m.value || '');
-              if (k === '_processed_by_staff') staffName = String(m.value || '');
+              const val = String(m.value || '');
+              if (k.includes('thana')) extractedThana = val;
+              if (k.includes('district')) extractedDistrict = val;
+              if (k.includes('address') || k.includes('ঠিকানা') || k.includes('সম্পূর্ণ')) {
+                if (val.trim()) extractedAddress = val;
+              }
+              if (k.includes('size') || k.includes('সাইজ')) customSize = val;
+              if (k.includes('_processed_by_staff')) staffName = val;
             });
+          }
+
+          if (!extractedAddress && o.billing?.address_2) {
+            extractedAddress = o.billing.address_2;
           }
 
           const itemsSummary = (o.line_items || [])
@@ -54,7 +64,7 @@ export async function GET() {
             invoice: String(o.id),
             customerName: `${o.billing?.first_name || ''} ${o.billing?.last_name || ''}`.trim() || 'Customer',
             phone: o.billing?.phone || '',
-            address: o.billing?.address_1 || '',
+            address: extractedAddress,
             district: extractedDistrict,
             thana: extractedThana,
             size: customSize,

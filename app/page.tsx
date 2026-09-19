@@ -96,7 +96,7 @@ export default function Dashboard() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
-  // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)
+  // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)[cite: 11]
   const topScrollRef = useRef<HTMLDivElement>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
 
@@ -218,82 +218,147 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
-  const handleSendCourierReport = async () => {
+  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট (স্টেডফাস্ট লাইভ ট্র্যাকিং সহ)
+  const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
-    setMessage({ text: 'কুরিয়ার অডিট রিপোর্ট তৈরি ও পাঠানো হচ্ছে...', type: 'success' });
+    if (!isAutomatic) {
+      setMessage({ text: 'স্টেডফাস্ট থেকে রিয়েল-টাইম ডেটা এনে কুরিয়ার অডিট রিপোর্ট তৈরি করা হচ্ছে...', type: 'success' });
+    }
     try {
+      const updatedOrders = [...orders];
+      for (let o of updatedOrders) {
+        if (o.consignmentId || o.trackingCode) {
+          try {
+            const queryParam = o.consignmentId ? `consignment_id=${o.consignmentId}` : `tracking_code=${o.trackingCode}`;
+            const tRes = await fetch(`/api/courier/track?${queryParam}`);
+            const tResult = await tRes.json();
+            if (tResult.success && tResult.data) {
+              o.courierStatus = tResult.data.delivery_status || tResult.data.status || o.courierStatus;
+            }
+          } catch (e) {
+            console.error('Track fetch error for order:', o.invoice);
+          }
+        }
+      }
+      setOrders(updatedOrders);
+
       const now = new Date();
       const todayDate = now.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' });
       const currentTime = now.toLocaleTimeString('en-BD', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: true });
-      
+
       const isToday = (dateString: string) => {
         if (!dateString) return false;
         const d = new Date(dateString);
         return d.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' }) === todayDate;
       };
 
-      const sentToday = orders.filter((o) => (o.trackingCode || o.consignmentId) && isToday(o.dateCreated) && o.status !== 'completed' && o.status !== 'cancelled');
-      const deliveredToday = orders.filter((o) => (o.status === 'completed' || o.courierStatus === 'delivered' || o.courierStatus === 'Delivered') && isToday(o.dateCreated));
-      const pendingParcels = orders.filter((o) => (o.trackingCode || o.consignmentId) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus !== 'delivered' && o.courierStatus !== 'Delivered' && o.courierStatus !== 'cancelled');
+      const sentToday = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && isToday(o.dateCreated) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return');
+      
+      const deliveredToday = updatedOrders.filter((o) => (o.status === 'completed' || o.courierStatus?.toLowerCase() === 'delivered') && isToday(o.dateCreated));
+      
+      const pendingParcels = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return' && o.courierStatus?.toLowerCase() !== 'cancelled');
+      
+      const returnedToday = updatedOrders.filter((o) => (o.courierStatus?.toLowerCase() === 'cancelled' || o.courierStatus?.toLowerCase() === 'returned' || o.courierStatus?.toLowerCase() === 'return' || o.courierStatus?.toLowerCase() === 'cancelled_approval_pending') && isToday(o.dateCreated));
 
       let totalCollection = 0;
       deliveredToday.forEach((o) => {
         totalCollection += parseFloat(o.total || '0');
       });
 
-      let msg = `<b>ডেইলি কুরিয়ার রিপোর্ট</b>\n`;
-      msg += `তারিখ: ${todayDate}\n`;
-      msg += `সময়: ${currentTime}\n\n`;
+      let msg = `<b>📊 কুরিয়ার অডিট রিপোর্ট (রোহামা কুরিয়ার এলার্ট)</b>\n`;
+      msg += `তারিখ: ${todayDate} | সময়: ${currentTime}\n\n`;
 
+      // ১. আজকে পাঠানো পার্সেল (পাঠানোর তারিখ সহ)
       msg += `📦 <b>আজকে পাঠানো পার্সেল: ${sentToday.length} টি</b>\n`;
       sentToday.forEach((o, i) => {
-        const cid = o.consignmentId || o.trackingCode || 'N/A';
+        const cid = o.consignmentId || 'N/A';
+        const sentDate = o.dateCreated ? new Date(o.dateCreated).toLocaleDateString('en-GB') : 'N/A';
         const name = o.customerName || 'কাস্টমার';
         const city = o.district || o.thana || 'ঠিকানা নাই';
         const items = o.items || 'আইটেম নাই';
-        msg += `${i + 1}. #${o.invoice} / ${cid} | ${name} | ${city} | ${items} | ${o.total}\n`;
+        msg += `${i + 1}. #${o.invoice} / ${cid} [পাঠানোর তারিখ: ${sentDate}] | ${name} | ${city} | ${items} | ৳ ${o.total}\n`;
       });
       msg += `\n`;
 
+      // ২. আজকে ডেলিভারি হওয়া পার্সেল
       msg += `✅ <b>আজকে ডেলিভারি হওয়া পার্সেল: ${deliveredToday.length} টি</b>\n`;
       deliveredToday.forEach((o, i) => {
-        const cid = o.consignmentId || o.trackingCode || 'N/A';
-        const sentD = new Date(o.dateCreated).toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' });
+        const cid = o.consignmentId || 'N/A';
+        const sentDate = o.dateCreated ? new Date(o.dateCreated).toLocaleDateString('en-GB') : 'N/A';
+        const deliverDate = todayDate;
         const name = o.customerName || 'কাস্টমার';
-        msg += `${i + 1}. #${o.invoice} / ${cid} | ${sentD} / ${todayDate} - ${name} | ৳ ${o.total}\n`;
+        msg += `${i + 1}. #${o.invoice} / ${cid} | প্রেরণের তারিখ: ${sentDate} / ডেলিভারি তারিখ: ${deliverDate} - ${name} | ৳ ${o.total}\n`;
       });
       msg += `\n`;
 
+      // ৩. মোট পেন্ডিং পার্সেল
       msg += `⏳ <b>মোট পেন্ডিং পার্সেল: ${pendingParcels.length} টি</b>\n`;
       pendingParcels.forEach((o, i) => {
-        const cid = o.consignmentId || o.trackingCode || 'N/A';
-        const sentD = new Date(o.dateCreated).toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' });
+        const cid = o.consignmentId || 'N/A';
+        const sentDate = o.dateCreated ? new Date(o.dateCreated).toLocaleDateString('en-GB') : 'N/A';
         const name = o.customerName || 'কাস্টমার';
-        msg += `${i + 1}. ${cid} [${sentD}] - ${name}\n`;
+        const items = o.items || 'আইটেম নাই';
+        msg += `${i + 1}. #${o.invoice} / ${cid} [পাঠানোর তারিখ: ${sentDate}] - ${name} | ${items} | ৳ ${o.total}\n`;
       });
+      msg += `\n`;
 
-      msg += `\n💰 <b>আজকের ডেলিভারি মোট কালেকশন: ৳ ${totalCollection}</b>\n\n`;
-      msg += `<i>রিপোর্টটি চেয়েছেন: ${currentUser}</i>`;
+      // ৪. আজকে রিটার্ন হওয়া পার্সেল
+      msg += `❌ <b>আজকে রিটার্ন হওয়া পার্সেল: ${returnedToday.length} টি</b>\n`;
+      returnedToday.forEach((o, i) => {
+        const cid = o.consignmentId || 'N/A';
+        const sentDate = o.dateCreated ? new Date(o.dateCreated).toLocaleDateString('en-GB') : 'N/A';
+        const name = o.customerName || 'কাস্টমার';
+        msg += `${i + 1}. #${o.invoice} / ${cid} [পাঠানোর তারিখ: ${sentDate}] - ${name} | ৳ ${o.total}\n`;
+      });
+      msg += `\n`;
+
+      // ৫. মোট কালেকশন
+      msg += `💰 <b>আজকের ডেলিভারি মোট কালেকশন: ৳ ${totalCollection}</b>\n\n`;
+      
+      if (isAutomatic) {
+        msg += `<i>🤖 অটোমেটিক নাইট অডিট রিপোর্ট (রাত ১০:০০ টা)</i>`;
+      } else {
+        msg += `<i>রিপোর্টটি চেয়েছেন: ${currentUser}</i>`;
+      }
 
       const res = await fetch('/api/telegram', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: msg, type: 'courier' }),
       });
-      
+
       const data = await res.json();
-      if (res.ok) {
-        setMessage({ text: 'কুরিয়ার রিপোর্ট সফলভাবে টেলিগ্রামে পাঠানো হয়েছে!', type: 'success' });
-      } else {
-        setMessage({ text: data.error || 'রিপোর্ট পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
+      if (res.ok && !isAutomatic) {
+        setMessage({ text: 'স্টেডফাস্ট রিয়েল-টাইম ডেটাসহ কুরিয়ার রিপোর্ট সফলভাবে পাঠানো হয়েছে!', type: 'success' });
       }
     } catch (err: any) {
       console.error('Courier Report Error:', err);
-      setMessage({ text: err.message || 'রিপোর্ট তৈরি করতে এরর হয়েছে', type: 'error' });
+      if (!isAutomatic) {
+        setMessage({ text: err.message || 'রিপোর্ট তৈরি করতে এরর হয়েছে', type: 'error' });
+      }
     } finally {
       setReporting(false);
     }
   };
+
+  // প্রতিদিন রাত ১০:০০ টায় অটোমেটিক নাইট অডিট রিপোর্ট পাঠানোর হুক
+  useEffect(() => {
+    const checkTenPM = () => {
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      const todayKey = 'courier_report_sent_' + now.toLocaleDateString();
+      const alreadySent = localStorage.getItem(todayKey);
+
+      if (hours === 22 && minutes <= 2 && !alreadySent) {
+        localStorage.setItem(todayKey, 'true');
+        handleSendCourierReport(true);
+      }
+    };
+
+    const timerInterval = setInterval(checkTenPM, 60000);
+    return () => clearInterval(timerInterval);
+  }, [orders]);
 
   const phoneOrderData = useMemo(() => {
     const data: Record<string, { count: number; recentOrders: Order[] }> = {};
@@ -547,13 +612,15 @@ export default function Dashboard() {
         setMessage({ text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`, type: 'success' });
         
         const logMsg =
-          `🚚 <b>STEADFAST কুরিয়ারে ডিসপ্যাচ করা হয়েছে</b>\n` +
+          `🚚 <b>স্টেডফাস্ট কুরিয়ারে ডিসপ্যাচ করা হয়েছে</b>\n` +
           `-----------------------\n` +
           `🏬 <b>স্টোর:</b> ${order.storeName}\n` +
-          `🧾 <b>ইনভয়েস:</b> #${order.invoice}\n` +
-          `👤 <b>কাস্টমার:</b> ${order.customerName} (<code>${order.phone}</code>)\n` +
+          `🧾 <b>ইনভয়েস / CID:</b> #${order.invoice} / <code>${cid}</code>\n` +
+          `👤 <b>কাস্টমার:</b> ${order.customerName}\n` +
+          `📞 <b>মোবাইল:</b> <code>${order.phone}</code>\n` +
           `📍 <b>ঠিকানা:</b> ${fullAddress}\n` +
-          `💰 <b>COD:</b> ${order.total} ${order.size ? `(সাইজ: ${order.size})` : ''}\n` +
+          `📦 <b>আইটেম:</b> ${order.items || 'N/A'} ${order.size ? `[সাইজ: ${order.size}]` : ''}\n` +
+          `💰 <b>COD:</b> ৳ ${order.total}\n` +
           `📌 <b>CID:</b> <code>${cid}</code> | <b>Tracking:</b> <code>${tracking}</code>\n\n` +
           `✍️ <b>ডিসপ্যাচ করেছেন:</b> ${currentUser}`;
         sendActivityLog(logMsg, 'courier');
@@ -690,7 +757,7 @@ export default function Dashboard() {
                 </button>
               </div>
               <div className="flex flex-col gap-1.5">
-                <button onClick={handleSendCourierReport} disabled={reporting} className="w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg font-bold text-xs transition cursor-pointer border border-slate-800 disabled:opacity-50 shadow-2xs">
+                <button onClick={() => handleSendCourierReport(false)} disabled={reporting} className="w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg font-bold text-xs transition cursor-pointer border border-slate-800 disabled:opacity-50 shadow-2xs">
                   <BarChart2 className={`w-3.5 h-3.5 text-amber-400 ${reporting ? 'animate-spin' : ''}`} /> {reporting ? 'রিপোর্ট যাচ্ছে...' : 'কুরিয়ার অডিট রিপোর্ট'}
                 </button>
                 <button onClick={handleAddNewBlankRow} className="w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition cursor-pointer border border-slate-300 active:scale-95 shadow-2xs">
@@ -762,7 +829,7 @@ export default function Dashboard() {
                 `
               }} />
 
-              {/* ১. টেবিলের ঠিক মাথার উপরে আলাদা চিকন হরিজন্টাল স্ক্রলবার বার (ডানে-বামে সরানোর জন্য) */}
+              {/* ১. টেবিলের ঠিক মাথার উপরে আলাদা চিকন হরিজন্টাল স্ক্রলবার বার (ডানে-বামে সরানোর জন্য)[cite: 11] */}
               <div 
                 ref={topScrollRef} 
                 onScroll={handleTopScroll} 
@@ -771,7 +838,7 @@ export default function Dashboard() {
                 <div className="min-w-[1900px] h-full"></div>
               </div>
 
-              {/* ২. মূল টেবিল র‍্যাপার (হেডার ফ্রিজ থাকবে এবং মাউস দিয়ে ওপর-নিচ করা যাবে) */}
+              {/* ২. মূল টেবিল র‍্যাপার (হেডার ফ্রিজ থাকবে এবং মাউস দিয়ে ওপর-নিচ করা যাবে)[cite: 11] */}
               <div 
                 ref={tableScrollRef} 
                 onScroll={handleTableScroll} 
@@ -779,7 +846,7 @@ export default function Dashboard() {
               >
                 <table className="w-full text-left border-collapse min-w-[1900px]">
                   
-                  {/* টেবিল হেডার একদম টপে ফিক্সড (Sticky) */}
+                  {/* টেবিল হেডার একদম টপে ফিক্সড (Sticky)[cite: 11] */}
                   <thead className="sticky top-0 z-30 bg-slate-900 text-white shadow-md">
                     <tr className="text-[11px] uppercase font-bold tracking-wider">
                       <th className="p-3.5 w-36 border-r border-slate-800">Invoice / Store</th>
@@ -954,14 +1021,21 @@ export default function Dashboard() {
                             </div>
                           </td>
 
+                          {/* 8. Steadfast Courier */}
                           <td className="p-3 align-top space-y-1.5">
                             <div className="w-full h-[34px] flex items-center bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
                               <input type="text" value={order.customNote || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customNote', e.target.value)} placeholder="কুরিয়ার স্পেশাল নোট..." className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 bg-transparent outline-none" />
                             </div>
-                            <button onClick={() => handleSendToSteadfast(order)} disabled={sendingId === order.id} className={`w-full h-[34px] flex items-center justify-center gap-1.5 rounded text-xs font-bold transition cursor-pointer shadow-2xs ${order.trackingCode || order.consignmentId ? 'bg-slate-900 hover:bg-black text-white' : 'bg-slate-800 hover:bg-slate-900 text-white'}`}>
-                              <Send className="w-3.5 h-3.5" />
-                              {sendingId === order.id ? 'Sending...' : order.trackingCode || order.consignmentId ? 'Re-send Steadfast' : 'Send to Steadfast'}
-                            </button>
+
+                            {/* একবার পাঠানো হয়ে গেলে Send to Steadfast বাটনটি চিরতরে হাইড হয়ে যাবে */}
+                            {!order.trackingCode && !order.consignmentId && (
+                              <button onClick={() => handleSendToSteadfast(order)} disabled={sendingId === order.id} className="w-full h-[34px] flex items-center justify-center gap-1.5 rounded text-xs font-bold transition cursor-pointer shadow-2xs bg-slate-800 hover:bg-slate-900 text-white">
+                                <Send className="w-3.5 h-3.5" />
+                                {sendingId === order.id ? 'Sending to Steadfast...' : 'Send to Steadfast'}
+                              </button>
+                            )}
+
+                            {/* ট্র্যাকিং কোড বা কনসাইনমেন্ট আইডি থাকলে শুধু লাইভ স্ট্যাটাস বক্স দেখাবে */}
                             {(order.trackingCode || order.consignmentId) && (
                               <div className="bg-slate-50 border border-slate-200 rounded p-2 space-y-1.5 text-left shadow-2xs">
                                 <div className="flex justify-between items-center text-xs pb-1 border-b border-slate-200">
