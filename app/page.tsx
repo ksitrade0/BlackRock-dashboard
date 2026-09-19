@@ -14,6 +14,7 @@ import {
   CheckCircle,
   AlertCircle,
   Calendar,
+  LogOut,
   Clock,
   MapPin,
   Phone,
@@ -758,7 +759,7 @@ export default function Dashboard() {
                 onClick={handleLogout}
                 className="w-36 h-[36px] flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-xs transition border border-rose-200 cursor-pointer active:scale-95 shadow-2xs"
               >
-                <Logout className="w-3.5 h-3.5" /> লগআউট
+                <LogOut className="w-3.5 h-3.5" /> লগআউট
               </button>
             </div>
             
