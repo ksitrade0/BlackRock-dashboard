@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
-// পারচেজ হিস্ট্রি ফেচ করার জন্য GET মেথড
+// পারচেজ হিস্ট্রি ফেচ করার জন্য GET মেথড[cite: 9]
 export async function GET() {
   try {
     const rows = await query('SELECT * FROM purchases ORDER BY created_at DESC');
@@ -12,7 +12,7 @@ export async function GET() {
   }
 }
 
-// পারচেজ এন্ট্রি সেভ এবং স্টক আপডেট করার জন্য POST মেথড
+// পারচেজ এন্ট্রি সেভ এবং ইনভেন্টরি স্টক অ্যাড বা আপডেট করার জন্য POST মেথড[cite: 9]
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -24,27 +24,41 @@ export async function POST(request: Request) {
 
     for (const item of items) {
       if (!item.itemName || item.quantity === undefined || item.buyingPrice === undefined) {
-        continue; // অসম্পূর্ণ আইটেম স্কিপ করবে
+        continue; // অসম্পূর্ণ আইটেম স্কিপ করবে[cite: 9]
       }
 
-      // ১. পারচেজ রেকর্ড ডেটাবেজে সেভ করা
+      const qty = Number(item.quantity) || 0;
+      const price = Number(item.buyingPrice) || 0;
+
+      // ১. পারচেজ রেকর্ড ডেটাবেজে সেভ করা[cite: 9]
       await query(
         'INSERT INTO purchases (party_name, item_name, quantity, buying_price, created_at) VALUES (?, ?, ?, ?, NOW())',
-        [partyName, item.itemName, Number(item.quantity) || 0, Number(item.buyingPrice) || 0]
+        [partyName, item.itemName, qty, price]
       );
 
-      // ২. মূল ইনভেন্টরি বা স্টক টেবিলে স্টক স্বয়ংক্রিয়ভাবে বাড়িয়ে দেওয়া
+      // ২. ইনভেন্টরি টেবিলে আইটেম আছে কিনা চেক করে নতুন অ্যাড বা স্টক আপডেট করা
       try {
-        await query(
-          'UPDATE inventory SET stock = stock + ? WHERE item_name = ?',
-          [Number(item.quantity) || 0, item.itemName]
-        );
+        const existing: any = await query('SELECT * FROM inventory WHERE item_name = ?', [item.itemName]);
+        
+        if (existing && existing.length > 0) {
+          // যদি আগে থেকেই থাকে, তবে স্টক যোগ হবে[cite: 9]
+          await query(
+            'UPDATE inventory SET stock = stock + ? WHERE item_name = ?',
+            [qty, item.itemName]
+          );
+        } else {
+          // যদি না থাকে, তবে ইনভেন্টরিতে নতুন আইটেম হিসেবে অ্যাড হবে
+          await query(
+            'INSERT INTO inventory (item_name, stock) VALUES (?, ?)',
+            [item.itemName, qty]
+          );
+        }
       } catch (invErr) {
-        console.error('Inventory Stock Update Warning:', invErr);
+        console.error('Inventory Update Warning:', invErr);
       }
     }
 
-    return NextResponse.json({ success: true, message: 'Purchase added and stock updated successfully!' });
+    return NextResponse.json({ success: true, message: 'Purchase added and inventory updated successfully!' });
   } catch (error) {
     console.error('Error saving purchase:', error);
     return NextResponse.json({ success: false, error: (error as Error).message || 'Failed to save purchase' }, { status: 500 });

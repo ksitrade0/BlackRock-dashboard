@@ -1,6 +1,7 @@
 'use client';
+
 import { useState } from 'react';
-import { Lock, Package, History, X, Save, ShoppingCart, Printer } from 'lucide-react';
+import { Lock, Package, History, X, Save, ShoppingCart, Printer, Plus, Trash2, UserCircle } from 'lucide-react';
 
 export default function AdminInventoryPanel({ existingItems }: { existingItems: string[] }) {
   const [authTarget, setAuthTarget] = useState<'entry' | 'history' | null>(null);
@@ -8,7 +9,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   const [password, setPassword] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [activePanel, setActivePanel] = useState<'entry' | 'history' | null>(null);
-  
+
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
@@ -25,11 +26,11 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-      
+
       if (res.ok) {
         setActivePanel(authTarget);
         setAuthTarget(null);
-        setPassword(''); 
+        setPassword('');
         if (authTarget === 'history') {
           fetchHistory();
         }
@@ -71,6 +72,11 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     setPurchaseItems(updated);
   };
 
+  const handleRemoveItemRow = (index: number) => {
+    const updated = purchaseItems.filter((_, i) => i !== index);
+    setPurchaseItems(updated.length > 0 ? updated : [{ itemName: '', quantity: 1, buyingPrice: 0 }]);
+  };
+
   const handleSavePurchase = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -82,9 +88,9 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
       });
       const result = await res.json();
       if (res.ok && result.success) {
-        alert('🎉 সফলভাবে স্টক যুক্ত হয়েছে!');
+        alert('✅ সফলভাবে স্টক যুক্ত হয়েছে!');
         closePanel();
-        window.location.reload(); 
+        window.location.reload();
       } else {
         alert('❌ ডেটাবেজ সেভ হতে সমস্যা হয়েছে: ' + (result.error || 'অজানা ত্রুটি'));
       }
@@ -100,12 +106,12 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   };
 
   return (
-    <div className="flex flex-col gap-2 w-[170px]">
-      
-      {/* Print CSS - শুধুমাত্র প্রয়োজনীয় পৃষ্ঠা প্রিন트 করার জন্য */}
-      <style dangerouslySetInnerHTML={{__html: `
+    <div className="flex flex-col gap-1.5 w-48">
+      {/* Print CSS - শুধুমাত্র প্রয়োজনীয় পৃষ্ঠা প্রিন্ট করার জন্য */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @media print {
-          body * { visibility: hidden; }
+          body { visibility: hidden; }
           #printable-invoice, #printable-invoice * { visibility: visible; }
           #printable-invoice { position: absolute; left: 0; top: 0; width: 100%; padding: 15px; background: white; }
           .no-print { display: none !important; }
@@ -113,16 +119,17 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         }
       `}} />
 
-      <button 
+      {/* Main Dashboard Buttons (Updated to match header size: w-48 h-36px) */}
+      <button
         onClick={() => setAuthTarget('entry')}
-        className="flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white px-3 py-1.5 rounded-md text-xs font-bold transition shadow-sm w-full border border-slate-900"
+        className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-bold transition shadow-2xs border border-slate-800 cursor-pointer"
       >
         <Package className="w-3.5 h-3.5 text-amber-400" /> ইনভেন্টরি এন্ট্রি
       </button>
 
-      <button 
+      <button
         onClick={() => setAuthTarget('history')}
-        className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 text-slate-800 px-3 py-1.5 rounded-md text-xs font-bold transition shadow-sm w-full border border-slate-300"
+        className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg text-xs font-bold transition shadow-2xs border border-slate-300 cursor-pointer"
       >
         <History className="w-3.5 h-3.5 text-indigo-600" /> পারচেজ হিস্ট্রি
       </button>
@@ -136,9 +143,8 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                 <Lock className="w-7 h-7 text-rose-600" />
               </div>
               <h3 className="text-xl font-black text-slate-900">অ্যাডমিন ভেরিফিকেশন</h3>
-              <p className="text-xs font-bold text-slate-500 mt-1 text-center">আপনার ড্যাশবোর্ড জিমেইল ও পাসওয়ার্ড প্রদান করুন</p>
+              <p className="text-xs font-bold text-slate-500 mt-1 text-center">ড্যাশবোর্ড অ্যাক্সেস করতে জিমেইল ও পাসওয়ার্ড দিন</p>
             </div>
-            
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-bold text-slate-600 block mb-1">জিমেইল আইডি</label>
@@ -151,25 +157,23 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                   required
                 />
               </div>
-
               <div>
                 <label className="text-xs font-bold text-slate-600 block mb-1">পাসওয়ার্ড</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  placeholder="••••••••"
                   className="w-full bg-slate-50 border border-slate-300 p-3.5 rounded-xl font-bold text-sm tracking-widest focus:ring-2 focus:ring-slate-900 outline-none text-black"
                   required
                 />
               </div>
             </div>
-            
             <div className="flex gap-3 mt-6">
-              <button type="button" onClick={() => setAuthTarget(null)} className="w-full py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition">
+              <button type="button" onClick={() => setAuthTarget(null)} className="w-full py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition cursor-pointer">
                 বাতিল
               </button>
-              <button type="submit" disabled={isVerifying} className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition flex items-center justify-center shadow-lg">
+              <button type="submit" disabled={isVerifying} className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition flex items-center justify-center shadow-lg cursor-pointer">
                 {isVerifying ? 'যাচাই হচ্ছে...' : 'আনলক করুন'}
               </button>
             </div>
@@ -177,84 +181,116 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         </div>
       )}
 
-      {/* Purchase Entry Modal - বড় ও প্রিমিয়াম ডিজাইন */}
+      {/* Premium Purchase Entry Modal */}
       {activePanel === 'entry' && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center z-[90] p-4 text-left">
-          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100">
-            <div className="bg-slate-50 border-b border-slate-200 p-5 flex justify-between items-center sticky top-0 z-10">
-              <div className="flex items-center gap-3">
-                <div className="bg-emerald-100 p-2.5 rounded-xl">
-                  <ShoppingCart className="w-6 h-6 text-emerald-700" />
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center z-[100] p-4 text-left">
+          <div className="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 flex flex-col no-print">
+            <div className="bg-slate-50 border-b border-slate-200 p-6 flex justify-between items-center sticky top-0 z-10">
+              <div className="flex items-center gap-4">
+                <div className="bg-slate-900 p-3 rounded-xl shadow-sm">
+                  <ShoppingCart className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black uppercase text-slate-900">নতুন পারচেজ এন্ট্রি</h2>
-                  <p className="text-xs font-bold text-slate-500">স্টক এবং সাপ্লায়ার তথ্য আপডেট করুন</p>
+                  <h2 className="text-xl font-black uppercase text-slate-900 tracking-wide">পারচেজ ও ইনভেন্টরি এন্ট্রি</h2>
+                  <p className="text-xs font-bold text-slate-500 mt-0.5">সাপ্লায়ারের তথ্য এবং নতুন কাঁচামাল/প্রোডাক্ট যুক্ত করুন</p>
                 </div>
               </div>
-              <button onClick={closePanel} className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition"><X className="w-6 h-6" /></button>
+              <button onClick={closePanel} className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer">
+                <X className="w-6 h-6" />
+              </button>
             </div>
-            
+
             <form onSubmit={handleSavePurchase} className="p-6 md:p-8 space-y-6">
-              <div>
-                <label className="block text-xs font-black text-slate-700 uppercase mb-2">পার্টির নাম / সাপ্লায়ার</label>
-                <input 
-                  type="text" 
-                  value={partyName} 
-                  onChange={(e) => setPartyName(e.target.value)} 
-                  placeholder="সাপ্লায়ার বা পার্টির নাম লিখুন..." 
-                  className="w-full border-2 border-slate-300 p-3.5 rounded-2xl font-bold text-sm text-black focus:border-slate-900 outline-none bg-slate-50" 
-                  required 
+              {/* Party Name Layout */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <UserCircle className="w-5 h-5 text-indigo-600" />
+                  <label className="block text-sm font-black text-slate-800">সাপ্লায়ার বা পার্টির নাম</label>
+                </div>
+                <input
+                  type="text"
+                  value={partyName}
+                  onChange={(e) => setPartyName(e.target.value)}
+                  placeholder="যেমন: রহিম ভাই (ফেব্রিক সাপ্লায়ার) / পাইকারি মার্কেট..."
+                  className="w-full border border-slate-300 p-3.5 rounded-xl font-bold text-sm text-black focus:border-slate-900 outline-none bg-slate-50 transition"
+                  required
                 />
               </div>
 
-              <div className="space-y-3 bg-slate-50/80 p-4 md:p-6 rounded-2xl border border-slate-200">
-                <label className="block text-xs font-black text-slate-700 uppercase">পণ্য ও পরিমাণ নির্বাচন</label>
-                {purchaseItems.map((item, index) => (
-                  <div key={index} className="flex gap-3 items-center bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
-                    <select 
-                      value={item.itemName} 
-                      onChange={(e) => handleItemChange(index, 'itemName', e.target.value)} 
-                      className="w-full border border-slate-300 p-3 rounded-xl text-black font-bold flex-1 text-xs outline-none bg-slate-50 focus:border-slate-900" 
-                      required
-                    >
-                      <option value="">-- আইটেম সিলেক্ট করুন --</option>
-                      {existingItems.map((prod, i) => <option key={i} value={prod}>{prod}</option>)}
-                    </select>
-                    <input 
-                      type="number" 
-                      value={item.quantity || ''} 
-                      onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))} 
-                      placeholder="পরিমাণ" 
-                      className="border border-slate-300 p-3 rounded-xl w-28 text-center text-black font-bold text-xs bg-slate-50 outline-none focus:border-slate-900" 
-                      required 
-                    />
-                    <input 
-                      type="number" 
-                      value={item.buyingPrice || ''} 
-                      onChange={(e) => handleItemChange(index, 'buyingPrice', Number(e.target.value))} 
-                      placeholder="কেনা দাম ৳" 
-                      className="border border-slate-300 p-3 rounded-xl w-32 text-center text-black font-bold text-xs bg-emerald-50/60 outline-none focus:border-emerald-600" 
-                      required 
-                    />
-                  </div>
-                ))}
-                <button 
-                  type="button" 
-                  onClick={() => setPurchaseItems([...purchaseItems, { itemName: '', quantity: 1, buyingPrice: 0 }])} 
-                  className="text-xs font-bold bg-slate-900 text-white px-4 py-2.5 rounded-xl hover:bg-black transition shadow-sm mt-2"
-                >
-                  + আরেকটি আইটেম যোগ করুন
-                </button>
+              {/* Items Grid Layout (Ledger Style) */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                <div className="grid grid-cols-12 gap-3 p-4 border-b border-slate-200 bg-slate-100 text-[11px] font-black text-slate-600 uppercase tracking-wider text-center">
+                  <div className="col-span-5 text-left pl-2">সাপ্লাইকৃত আইটেম / ম্যাটেরিয়াল</div>
+                  <div className="col-span-3">পরিমাণ (পিস)</div>
+                  <div className="col-span-3">কেনা দাম (প্রতি পিস ৳)</div>
+                  <div className="col-span-1">বাদ</div>
+                </div>
+                
+                <div className="p-4 space-y-3 bg-white">
+                  {purchaseItems.map((item, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-3 items-center bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                      <div className="col-span-5">
+                        <select
+                          value={item.itemName}
+                          onChange={(e) => handleItemChange(index, 'itemName', e.target.value)}
+                          className="w-full border border-slate-300 p-3 rounded-lg text-black font-bold text-xs outline-none bg-white focus:border-slate-900 cursor-pointer"
+                          required
+                        >
+                          <option value="">-- ড্রপডাউন থেকে আইটেম সিলেক্ট করুন --</option>
+                          {existingItems.map((prod, i) => <option key={i} value={prod}>{prod}</option>)}
+                        </select>
+                      </div>
+                      <div className="col-span-3">
+                        <input
+                          type="number"
+                          value={item.quantity || ''}
+                          onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))}
+                          placeholder="পরিমাণ লিখুন"
+                          className="w-full border border-slate-300 p-3 rounded-lg text-center text-xs text-black font-black bg-white outline-none focus:border-slate-900"
+                          required
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <input
+                          type="number"
+                          value={item.buyingPrice || ''}
+                          onChange={(e) => handleItemChange(index, 'buyingPrice', Number(e.target.value))}
+                          placeholder="৳ মূল্য"
+                          className="w-full border border-slate-300 p-3 rounded-lg text-center text-xs text-emerald-800 font-black bg-white outline-none focus:border-emerald-500"
+                          required
+                        />
+                      </div>
+                      <div className="col-span-1 flex justify-center">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItemRow(index)}
+                          className="p-2.5 text-rose-500 hover:text-rose-700 hover:bg-rose-100 rounded-lg transition cursor-pointer"
+                          title="আইটেমটি বাদ দিন"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <button
+                    type="button"
+                    onClick={() => setPurchaseItems([...purchaseItems, { itemName: '', quantity: 1, buyingPrice: 0 }])}
+                    className="mt-2 flex items-center justify-center gap-1.5 w-full border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-3 rounded-xl transition cursor-pointer text-xs"
+                  >
+                    <Plus className="w-4 h-4" /> নতুন আরেকটি আইটেম যোগ করুন
+                  </button>
+                </div>
               </div>
 
-              <div className="flex justify-end pt-4 border-t border-slate-200">
-                <button 
-                  type="submit" 
-                  disabled={isSaving} 
-                  className="bg-emerald-600 text-white px-8 py-3.5 rounded-2xl font-black text-sm hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20 flex items-center gap-2"
+              <div className="flex justify-end pt-4">
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="bg-slate-900 text-white px-10 py-4 rounded-xl font-black text-sm hover:bg-black transition shadow-lg flex items-center gap-2 cursor-pointer disabled:opacity-70"
                 >
                   <Save className="w-4 h-4" />
-                  {isSaving ? 'সেভ হচ্ছে...' : 'পারচেজ সফলভাবে সেভ করুন'}
+                  {isSaving ? 'সেভ হচ্ছে...' : 'তথ্য সেভ করুন (Save Data)'}
                 </button>
               </div>
             </form>
@@ -262,97 +298,107 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         </div>
       )}
 
-      {/* Purchase History Modal - বড় ও প্রিমিয়াম ডিজাইন */}
+      {/* Premium Purchase History Modal */}
       {activePanel === 'history' && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center z-[90] p-4 text-left">
-          
-          <div className="bg-white rounded-3xl w-full max-w-6xl max-h-[92vh] overflow-hidden shadow-2xl flex flex-col no-print border border-slate-100">
-            <div className="bg-slate-50 border-b border-slate-200 p-5 flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="bg-indigo-100 p-2.5 rounded-xl">
-                  <History className="w-6 h-6 text-indigo-700" />
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center z-[100] p-4 text-left">
+          <div className="bg-white rounded-3xl w-full max-w-6xl max-h-[92vh] overflow-hidden shadow-2xl flex flex-col border border-slate-100">
+            <div className="bg-slate-50 border-b border-slate-200 p-6 flex justify-between items-center no-print">
+              <div className="flex items-center gap-4">
+                <div className="bg-slate-900 p-3 rounded-xl shadow-sm">
+                  <History className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black uppercase text-slate-900">পারচেজ হিস্ট্রি ও রিপোর্ট</h2>
-                  <p className="text-xs font-bold text-slate-500">সকল পারচেজ রেকর্ড এবং প্রিন্ট প্রিভিউ</p>
+                  <h2 className="text-xl font-black uppercase text-slate-900 tracking-wide">পারচেজ হিস্ট্রি ও রিপোর্ট</h2>
+                  <p className="text-xs font-bold text-slate-500 mt-0.5">সকল পারচেজ রেকর্ড এবং লেনদেন সমূহ</p>
                 </div>
               </div>
               <div className="flex gap-3">
-                <button onClick={handlePrint} className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-black hover:bg-black transition shadow-md">
+                <button onClick={handlePrint} className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-black hover:bg-black transition shadow-md cursor-pointer">
                   <Printer className="w-4 h-4" /> A4 প্রিন্ট / PDF
                 </button>
-                <button onClick={closePanel} className="p-2.5 text-rose-600 hover:bg-rose-50 border border-rose-100 rounded-xl transition"><X className="w-5 h-5" /></button>
+                <button onClick={closePanel} className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-xl transition cursor-pointer">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
             </div>
-            
-            <div className="overflow-y-auto p-6 flex-1 bg-slate-100/50">
+
+            <div className="overflow-y-auto p-6 flex-1 bg-slate-100/50 no-print">
               {isLoadingHistory ? (
                 <div className="text-center py-20 font-bold text-slate-500 animate-pulse text-base">লোড হচ্ছে...</div>
               ) : historyData.length === 0 ? (
                 <div className="text-center py-20 font-bold text-slate-400 text-base">কোনো পারচেজ হিস্ট্রি পাওয়া যায়নি।</div>
               ) : (
-                <table className="w-full text-sm text-left border-collapse bg-white shadow-sm rounded-2xl overflow-hidden border border-slate-200">
-                  <thead className="bg-slate-900 text-white uppercase text-xs font-bold tracking-wider">
-                    <tr>
-                      <th className="px-5 py-4">তারিখ</th>
-                      <th className="px-5 py-4">পার্টির নাম</th>
-                      <th className="px-5 py-4">আইটেম</th>
-                      <th className="px-5 py-4 text-center">পরিমাণ</th>
-                      <th className="px-5 py-4 text-right">কেনা দাম</th>
-                      <th className="px-5 py-4 text-right">মোট দাম</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium">
-                    {historyData.map((row) => (
-                      <tr key={row.id} className="hover:bg-slate-50 text-slate-900">
-                        <td className="px-5 py-4 whitespace-nowrap text-xs font-bold">{new Date(row.created_at).toLocaleDateString('en-GB')}</td>
-                        <td className="px-5 py-4 font-black">{row.party_name}</td>
-                        <td className="px-5 py-4">{row.item_name}</td>
-                        <td className="px-5 py-4 text-center"><span className="bg-amber-100 text-amber-900 px-2.5 py-1 rounded-lg font-black text-xs">{row.quantity}</span></td>
-                        <td className="px-5 py-4 text-right font-mono">৳{row.buying_price}</td>
-                        <td className="px-5 py-4 text-right font-black text-emerald-700 font-mono">৳{Number(row.quantity) * Number(row.buying_price)}</td>
+                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                  <table className="w-full text-sm text-left border-collapse">
+                    <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-black tracking-wider border-b border-slate-200">
+                      <tr>
+                        <th className="px-6 py-4">তারিখ</th>
+                        <th className="px-6 py-4">পার্টির নাম (সাপ্লায়ার)</th>
+                        <th className="px-6 py-4">আইটেম / প্রোডাক্ট</th>
+                        <th className="px-6 py-4 text-center">পরিমাণ</th>
+                        <th className="px-6 py-4 text-right">কেনা দাম (পিস)</th>
+                        <th className="px-6 py-4 text-right">মোট দাম</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {historyData.map((row) => (
+                        <tr key={row.id} className="hover:bg-slate-50 transition text-slate-900">
+                          <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-slate-600">
+                            {new Date(row.created_at).toLocaleDateString('en-GB')}
+                          </td>
+                          <td className="px-6 py-4 font-black text-xs text-slate-800">{row.party_name}</td>
+                          <td className="px-6 py-4 text-xs font-bold text-slate-700">{row.item_name}</td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="bg-slate-100 text-slate-800 px-3 py-1.5 rounded-lg font-black text-xs border border-slate-200 shadow-sm">
+                              {row.quantity} পিস
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right font-mono text-xs font-bold text-slate-600">৳{row.buying_price}</td>
+                          <td className="px-6 py-4 text-right font-black text-emerald-700 font-mono text-sm">
+                            ৳{Number(row.quantity) * Number(row.buying_price)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
-          </div>
 
-          {/* A4 Printable Layout - সঠিক পৃষ্ঠা বিন্যাস সহ */}
-          <div id="printable-invoice" className="hidden text-black bg-white w-full">
-            <div className="text-center mb-8 border-b-2 border-slate-800 pb-5">
-              <h1 className="text-3xl font-black uppercase tracking-wider">BLACK ROCK CORPORATION</h1>
-              <p className="text-sm font-bold text-slate-600 mt-1">Ruhama Wear | Comprehensive Purchase History Report</p>
-              <p className="text-xs font-bold text-slate-500 mt-1">রিপোর্ট প্রিন্টের তারিখ: {new Date().toLocaleDateString('en-GB')}</p>
-            </div>
-            
-            <table className="w-full text-xs text-left border-collapse border border-slate-400">
-              <thead className="bg-slate-100 uppercase font-black border-b border-slate-400">
-                <tr>
-                  <th className="border-r border-slate-400 px-3 py-2.5">তারিখ</th>
-                  <th className="border-r border-slate-400 px-3 py-2.5">পার্টির নাম</th>
-                  <th className="border-r border-slate-400 px-3 py-2.5">আইটেম</th>
-                  <th className="border-r border-slate-400 px-3 py-2.5 text-center">পরিমাণ</th>
-                  <th className="border-r border-slate-400 px-3 py-2.5 text-right">কেনা দাম</th>
-                  <th className="px-3 py-2.5 text-right">মোট দাম</th>
-                </tr>
-              </thead>
-              <tbody>
-                {historyData.map((row) => (
-                  <tr key={row.id} className="border-b border-slate-300">
-                    <td className="border-r border-slate-300 px-3 py-2.5">{new Date(row.created_at).toLocaleDateString('en-GB')}</td>
-                    <td className="border-r border-slate-300 px-3 py-2.5 font-bold">{row.party_name}</td>
-                    <td className="border-r border-slate-300 px-3 py-2.5">{row.item_name}</td>
-                    <td className="border-r border-slate-300 px-3 py-2.5 text-center font-bold">{row.quantity}</td>
-                    <td className="border-r border-slate-300 px-3 py-2.5 text-right">৳{row.buying_price}</td>
-                    <td className="px-3 py-2.5 text-right font-black">৳{Number(row.quantity) * Number(row.buying_price)}</td>
+            {/* A4 Printable Layout - আপনার প্রিন্ট ডিজাইনে কোনো পরিবর্তন করা হয়নি */}
+            <div id="printable-invoice" className="hidden text-black bg-white w-full">
+              <div className="text-center mb-8 border-b-2 border-slate-800 pb-5">
+                <h1 className="text-3xl font-black uppercase tracking-wider">BLACK ROCK CORPORATION</h1>
+                <p className="text-sm font-bold text-slate-600 mt-1">Ruhama Wear | Comprehensive Purchase History Report</p>
+                <p className="text-xs font-bold text-slate-500 mt-1">রিপোর্ট প্রিন্টের তারিখ: {new Date().toLocaleDateString('en-GB')}</p>
+              </div>
+              <table className="w-full text-xs text-left border-collapse border border-slate-400">
+                <thead className="bg-slate-100 uppercase font-black border-b border-slate-400">
+                  <tr>
+                    <th className="border-r border-slate-400 px-3 py-2.5">তারিখ</th>
+                    <th className="border-r border-slate-400 px-3 py-2.5">পার্টির নাম</th>
+                    <th className="border-r border-slate-400 px-3 py-2.5">আইটেম</th>
+                    <th className="border-r border-slate-400 px-3 py-2.5 text-center">পরিমাণ</th>
+                    <th className="border-r border-slate-400 px-3 py-2.5 text-right">কেনা দাম</th>
+                    <th className="px-3 py-2.5 text-right">মোট দাম</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {historyData.map((row) => (
+                    <tr key={row.id} className="border-b border-slate-300">
+                      <td className="border-r border-slate-300 px-3 py-2.5">{new Date(row.created_at).toLocaleDateString('en-GB')}</td>
+                      <td className="border-r border-slate-300 px-3 py-2.5 font-bold">{row.party_name}</td>
+                      <td className="border-r border-slate-300 px-3 py-2.5">{row.item_name}</td>
+                      <td className="border-r border-slate-300 px-3 py-2.5 text-center font-bold">{row.quantity}</td>
+                      <td className="border-r border-slate-300 px-3 py-2.5 text-right">{row.buying_price}</td>
+                      <td className="px-3 py-2.5 text-right font-black">৳ {Number(row.quantity) * Number(row.buying_price)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
           </div>
-          
         </div>
       )}
     </div>

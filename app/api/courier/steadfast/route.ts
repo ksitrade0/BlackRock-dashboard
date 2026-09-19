@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
+import { query } from '@/lib/db';
 
-// আপনার দেওয়া আসল নির্ভুল কি
 const STEADFAST_API_KEY = 'n5wjg5pat2seuxiiz1mmw7evsl1ehzuw';
-const STEADFAST_SECRET_KEY = 'jv5elbxxof0qxlshgnf2mpwv';
+const STEADFAST_SECRET_KEY = 'jv5elbxxof qxlshgnf2mpwv';
 const STEADFAST_BASE_URL = 'https://portal.packzy.com/api/v1';
 
 export async function POST(req: Request) {
@@ -25,6 +25,7 @@ export async function POST(req: Request) {
       note: body.note ? String(body.note) : '',
     };
 
+    // ১. SteadFast এপিআই-এ অর্ডার পাঠানো
     const res = await axios.post(`${STEADFAST_BASE_URL}/create_order`, payload, {
       headers: {
         'Api-Key': STEADFAST_API_KEY,
@@ -34,9 +35,22 @@ export async function POST(req: Request) {
       timeout: 15000,
     });
 
+    // ২. অর্ডার সফলভাবে সাবমিট হওয়ার পর ইনভেন্টরি থেকে স্টক মাইনাস (Reduce) করা
+    // ধরে নিচ্ছি বডিতে item_name এবং quantity পাঠানো হচ্ছে
+    if (body.item_name && body.quantity) {
+      try {
+        await query(
+          'UPDATE inventory SET stock = stock - ? WHERE item_name = ?',
+          [Number(body.quantity) || 1, body.item_name]
+        );
+      } catch (stockErr) {
+        console.error('Inventory Stock Reduce Warning:', stockErr);
+      }
+    }
+
     return NextResponse.json({ success: true, data: res.data });
   } catch (error: any) {
-    console.error('Steadfast Error Detail:', error.response?.data || error.message);
+    console.error('Fastest/Steadfast Error Detail:', error.response?.data || error.message);
     const msg =
       error.response?.data?.message ||
       (error.response?.data?.errors ? JSON.stringify(error.response.data.errors) : '') ||
