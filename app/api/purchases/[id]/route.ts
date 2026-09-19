@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db'; // আপনার ডাটাবেজ কানেকশন
+import { query } from '@/lib/db';
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
-    // ডাটাবেজ থেকে পারচেজ মুছবে
-    const [result]: any = await pool.query('DELETE FROM purchases WHERE id = ?', [id]);
+    const [result]: any = await query('DELETE FROM purchases WHERE id = ?', [id]);
     
     if (result.affectedRows > 0) {
       return NextResponse.json({ success: true, message: 'পারচেজ সফলভাবে ডিলিট হয়েছে' });
