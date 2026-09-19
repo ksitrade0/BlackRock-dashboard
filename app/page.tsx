@@ -105,7 +105,14 @@ export default function Dashboard() {
       console.error('Telegram Log Error:', err);
     }
   };
-
+const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/login');
+    } catch {
+      router.push('/login');
+    }
+  };
   useEffect(() => {
     fetch('/api/auth/check')
       .then((res) => {
