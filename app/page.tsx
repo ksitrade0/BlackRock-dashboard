@@ -96,7 +96,7 @@ export default function Dashboard() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
-  // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)[cite: 9]
+  // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)
   const topScrollRef = useRef<HTMLDivElement>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
 
@@ -219,7 +219,7 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
-  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট (স্টেডফাস্ট লাইভ ট্র্যাকিং সহ)[cite: 9]
+  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট (স্টেডফাস্ট লাইভ ট্র্যাকিং সহ)
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
     if (!isAutomatic) {
@@ -337,7 +337,7 @@ export default function Dashboard() {
     }
   };
 
-  // প্রতিদিন রাত ১০:০০ টায় অটোমেটিক নাইট অডিট রিপোর্ট পাঠানোর হুক[cite: 9]
+  // প্রতিদিন রাত ১০:০০ টায় অটোমেটিক নাইট অডিট রিপোর্ট পাঠানোর হুক
   useEffect(() => {
     const checkTenPM = () => {
       const now = new Date();
@@ -438,7 +438,10 @@ export default function Dashboard() {
         prev.total !== order.total ||
         prev.items !== order.items ||
         prev.status !== newStatus ||
-        prev.staffName !== assignedStaff;
+        prev.staffName !== assignedStaff ||
+        prev.trackingCode !== order.trackingCode ||
+        prev.consignmentId !== order.consignmentId;
+
       if (!isChanged && !overrideStatus) {
         setMessage({ text: `Order #${order.invoice} -এ কোনো পরিবর্তন করা হয়নি।`, type: 'success' });
         return;
@@ -454,8 +457,6 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId: order.storeId,
-          // 🛠️ নিখুঁত ফিক্স: নতুন রো হলে undefined যাবে (নতুন অর্ডার তৈরি হবে), 
-          // আর পুরোনো অর্ডার হলে অবশ্যই আসল order.id যাবে (ফলে উকমার্সে আপডেট PUT হবে)!
           orderId: order.isNewRow ? undefined : order.id,
           status: newStatus,
           staffName: assignedStaff,
@@ -467,6 +468,9 @@ export default function Dashboard() {
           size: order.size,
           items: order.items,
           total: order.total || '0',
+          trackingCode: order.trackingCode,
+          consignmentId: order.consignmentId,
+          courierStatus: order.courierStatus,
         }),
       });
 
@@ -604,7 +608,15 @@ export default function Dashboard() {
               : o
           )
         );
-        handleSaveOrder(order);
+
+        // ডাটাবেসে নতুন ট্র্যাকিং ডেটাসহ আপডেট করা হচ্ছে
+        handleSaveOrder({
+           ...order,
+           trackingCode: tracking,
+           consignmentId: cid,
+           courierStatus: initialStatus
+        });
+
         setMessage({ text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`, type: 'success' });
 
         const logMsg =
