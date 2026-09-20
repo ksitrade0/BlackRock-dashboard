@@ -96,7 +96,7 @@ export default function Dashboard() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
-  // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)
+  // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)[cite: 9]
   const topScrollRef = useRef<HTMLDivElement>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
 
@@ -218,14 +218,14 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
-  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট (স্টেডফাস্ট লাইভ ট্র্যাকিং সহ)
+  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট (স্টেডফাস্ট লাইভ ট্র্যাকিং সহ)[cite: 9]
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
     if (!isAutomatic) {
-      setMessage({ text: 'স্টেডফাস্ট থেকে রিয়েল-টাইম ডেটা এনে কুরিয়ার অডিট রিপোর্ট তৈরি করা হচ্ছে...', type: 'success' });
+      setMessage({ text: 'স্টেডফাস্ট থেকে রিয়েল-টাইম ডেটা এনে কুরিয়ার অডিট রিপোর্ট তৈরি করা হচ্ছে...', type: 'success' });
     }
+    const updatedOrders = [...orders];
     try {
-      const updatedOrders = [...orders];
       for (let o of updatedOrders) {
         if (o.consignmentId || o.trackingCode) {
           try {
@@ -245,7 +245,6 @@ export default function Dashboard() {
       const now = new Date();
       const todayDate = now.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' });
       const currentTime = now.toLocaleTimeString('en-BD', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: true });
-
       const isToday = (dateString: string) => {
         if (!dateString) return false;
         const d = new Date(dateString);
@@ -253,11 +252,8 @@ export default function Dashboard() {
       };
 
       const sentToday = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && isToday(o.dateCreated) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return');
-      
       const deliveredToday = updatedOrders.filter((o) => (o.status === 'completed' || o.courierStatus?.toLowerCase() === 'delivered') && isToday(o.dateCreated));
-      
       const pendingParcels = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return' && o.courierStatus?.toLowerCase() !== 'cancelled');
-      
       const returnedToday = updatedOrders.filter((o) => (o.courierStatus?.toLowerCase() === 'cancelled' || o.courierStatus?.toLowerCase() === 'returned' || o.courierStatus?.toLowerCase() === 'return' || o.courierStatus?.toLowerCase() === 'cancelled_approval_pending') && isToday(o.dateCreated));
 
       let totalCollection = 0;
@@ -314,7 +310,6 @@ export default function Dashboard() {
 
       // ৫. মোট কালেকশন
       msg += `💰 <b>আজকের ডেলিভারি মোট কালেকশন: ৳ ${totalCollection}</b>\n\n`;
-      
       if (isAutomatic) {
         msg += `<i>🤖 অটোমেটিক নাইট অডিট রিপোর্ট (রাত ১০:০০ টা)</i>`;
       } else {
@@ -329,7 +324,7 @@ export default function Dashboard() {
 
       const data = await res.json();
       if (res.ok && !isAutomatic) {
-        setMessage({ text: 'স্টেডফাস্ট রিয়েল-টাইম ডেটাসহ কুরিয়ার রিপোর্ট সফলভাবে পাঠানো হয়েছে!', type: 'success' });
+        setMessage({ text: 'স্টেডফাস্ট রিয়েল-টাইম ডেটাসহ কুরিয়ার রিপোর্ট সফলভাবে পাঠানো হয়েছে!', type: 'success' });
       }
     } catch (err: any) {
       console.error('Courier Report Error:', err);
@@ -341,7 +336,7 @@ export default function Dashboard() {
     }
   };
 
-  // প্রতিদিন রাত ১০:০০ টায় অটোমেটিক নাইট অডিট রিপোর্ট পাঠানোর হুক
+  // প্রতিদিন রাত ১০:০০ টায় অটোমেটিক নাইট অডিট রিপোর্ট পাঠানোর হুক[cite: 9]
   useEffect(() => {
     const checkTenPM = () => {
       const now = new Date();
@@ -349,7 +344,6 @@ export default function Dashboard() {
       const minutes = now.getMinutes();
       const todayKey = 'courier_report_sent_' + now.toLocaleDateString();
       const alreadySent = localStorage.getItem(todayKey);
-
       if (hours === 22 && minutes <= 2 && !alreadySent) {
         localStorage.setItem(todayKey, 'true');
         handleSendCourierReport(true);
@@ -459,7 +453,9 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId: order.storeId,
-          orderId: order.isNewRow ? order.id : undefined,
+          // 🛠️ নিখুঁত ফিক্স: নতুন রো হলে undefined যাবে (নতুন অর্ডার তৈরি হবে), 
+          // আর পুরোনো অর্ডার হলে অবশ্যই আসল order.id যাবে (ফলে উকমার্সে আপডেট PUT হবে)!
+          orderId: order.isNewRow ? undefined : order.id,
           status: newStatus,
           staffName: assignedStaff,
           customerName: order.customerName,
@@ -521,7 +517,7 @@ export default function Dashboard() {
       return;
     }
     if (!confirm(`সতর্কবার্তা! আপনি কি Order #${order.invoice} স্থায়ীভাবে মুছে ফেলতে চান?`)) return;
-    
+
     setUpdatingId(order.id);
     setMessage(null);
     try {
@@ -538,7 +534,6 @@ export default function Dashboard() {
       if (res.ok) {
         setOrders((prev) => prev.filter((o) => !(o.id === order.id && o.storeId === order.storeId)));
         setMessage({ text: `Order #${order.invoice} মুছে ফেলা হয়েছে!`, type: 'success' });
-        
         const logMsg =
           `🗑️ <b>অর্ডার ডিলিট করা হয়েছে</b>\n` +
           `-----------------------\n` +
@@ -563,7 +558,7 @@ export default function Dashboard() {
       return;
     }
     if (!confirm(`আপনি কি অর্ডার #${order.invoice} স্টেডফাস্ট কুরিয়ারে পাঠাতে চান?`)) return;
-    
+
     setSendingId(order.id);
     setMessage(null);
     const assignedStaff = order.staffName || currentUser;
@@ -594,7 +589,7 @@ export default function Dashboard() {
         const tracking = consignment.tracking_code || 'Sent';
         const cid = consignment.consignment_id || '';
         const initialStatus = consignment.status || 'in_review';
-        
+
         setOrders((prev) =>
           prev.map((o) =>
             o.id === order.id && o.storeId === order.storeId
@@ -610,7 +605,7 @@ export default function Dashboard() {
         );
         handleSaveOrder(order);
         setMessage({ text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`, type: 'success' });
-        
+
         const logMsg =
           `🚚 <b>স্টেডফাস্ট কুরিয়ারে ডিসপ্যাচ করা হয়েছে</b>\n` +
           `-----------------------\n` +
@@ -719,7 +714,6 @@ export default function Dashboard() {
       <div className="max-w-[1950px] mx-auto">
         {/* Sticky/Fixed Header Area */}
         <div className="sticky top-0 z-40 bg-slate-200/95 backdrop-blur-md pb-2 pt-2">
-          
           <div className="flex flex-col lg:flex-row justify-between items-center mb-2 gap-2 bg-white p-2 md:px-4 rounded-2xl shadow-sm border border-slate-300">
             <div className="flex items-center gap-3 w-full lg:w-auto justify-center lg:justify-start">
               {hasLogoImg ? (
@@ -733,7 +727,6 @@ export default function Dashboard() {
                   <Layers className="w-6 h-6 text-amber-400" />
                 </div>
               )}
-              
               <div>
                 <h1 className="text-xl md:text-2xl lg:text-3xl font-black tracking-wider text-slate-950 uppercase flex items-center gap-2">BLACK ROCK CORPORATION</h1>
                 <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 mt-0.5">
@@ -792,7 +785,7 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-        </div> 
+        </div>
 
         {message && (
           <div className={`p-3.5 mb-4 rounded-xl flex items-center gap-2.5 shadow-sm font-bold text-xs mt-4 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-900 border border-emerald-300' : 'bg-rose-50 text-rose-900 border border-rose-300'}`}>
@@ -830,20 +823,12 @@ export default function Dashboard() {
               }} />
 
               {/* ১. টেবিলের ঠিক মাথার উপরে আলাদা চিকন হরিজন্টাল স্ক্রলবার বার (ডানে-বামে সরানোর জন্য) */}
-              <div 
-                ref={topScrollRef} 
-                onScroll={handleTopScroll} 
-                className="overflow-x-auto slim-scroll bg-slate-100 border-b border-slate-300 h-3.5"
-              >
+              <div ref={topScrollRef} onScroll={handleTopScroll} className="overflow-x-auto slim-scroll bg-slate-100 border-b border-slate-300 h-3.5">
                 <div className="min-w-[1900px] h-full"></div>
               </div>
 
               {/* ২. মূল টেবিল র‍্যাপার (হেডার ফ্রিজ থাকবে এবং মাউস দিয়ে ওপর-নিচ করা যাবে) */}
-              <div 
-                ref={tableScrollRef} 
-                onScroll={handleTableScroll} 
-                className="max-h-[calc(100vh-270px)] overflow-y-auto overflow-x-auto slim-scroll relative"
-              >
+              <div ref={tableScrollRef} onScroll={handleTableScroll} className="max-h-[calc(100vh-270px)] overflow-y-auto overflow-x-auto slim-scroll relative">
                 <table className="w-full text-left border-collapse min-w-[1900px]">
                   
                   {/* টেবিল হেডার একদম টপে ফিক্সড (Sticky) */}
@@ -1027,7 +1012,6 @@ export default function Dashboard() {
                               <input type="text" value={order.customNote || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customNote', e.target.value)} placeholder="কুরিয়ার স্পেশাল নোট..." className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 bg-transparent outline-none" />
                             </div>
 
-                            {/* একবার পাঠানো হয়ে গেলে Send to Steadfast বাটনটি চিরতরে হাইড হয়ে যাবে */}
                             {!order.trackingCode && !order.consignmentId && (
                               <button onClick={() => handleSendToSteadfast(order)} disabled={sendingId === order.id} className="w-full h-[34px] flex items-center justify-center gap-1.5 rounded text-xs font-bold transition cursor-pointer shadow-2xs bg-slate-800 hover:bg-slate-900 text-white">
                                 <Send className="w-3.5 h-3.5" />
@@ -1035,7 +1019,6 @@ export default function Dashboard() {
                               </button>
                             )}
 
-                            {/* ট্র্যাকিং কোড বা কনসাইনমেন্ট আইডি থাকলে শুধু লাইভ স্ট্যাটাস বক্স দেখাবে */}
                             {(order.trackingCode || order.consignmentId) && (
                               <div className="bg-slate-50 border border-slate-200 rounded p-2 space-y-1.5 text-left shadow-2xs">
                                 <div className="flex justify-between items-center text-xs pb-1 border-b border-slate-200">

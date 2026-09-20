@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   const body = await req.json();
-  
+
   try {
     const {
       storeId,
@@ -25,7 +25,6 @@ export async function POST(req: Request) {
     let secret = '';
 
     const sId = String(storeId || '').toLowerCase();
-
     if (sId.includes('aastha') || sId === 'store2' || sId === '2') {
       url = process.env.STORE2_URL || 'https://aasthanaturalsbd.com';
       key = process.env.STORE2_KEY || '';
@@ -46,7 +45,7 @@ export async function POST(req: Request) {
     // ডিলিট অ্যাকশন
     if (action === 'delete') {
       if (!orderId) return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
-      
+
       const deleteRes = await fetch(`${cleanUrl}/wp-json/wc/v3/orders/${orderId}?force=true`, {
         method: 'DELETE',
         headers: { Authorization: authHeader },
@@ -82,7 +81,7 @@ export async function POST(req: Request) {
       ...(thana ? [{ key: 'thana', value: thana }] : []),
     ];
 
-    // নতুন অর্ডার তৈরির ক্ষেত্রে (POST)
+    // নতুন অর্ডার তৈরির ক্ষেত্রে (POST) - যদি orderId না থাকে বা নতুন রো হয়
     if (!orderId || Number(orderId) <= 0 || String(orderId).length > 10) {
       const createPayload: any = {
         payment_method: 'cod',
@@ -111,7 +110,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, order: createData, isNew: true });
     }
 
-    // পুরনো অর্ডার আপডেট (PUT) - এখানে line_items পাঠানো হচ্ছে না, ফলে উকমার্সে অরিজিনাল প্রোডাক্ট ঠিক থাকবে
+    // পুরনো অর্ডার আপডেট (PUT) - এখানে orderId আছে, তাই এটি সবসময় বর্তমান অর্ডারটিই আপডেট করবে, নতুন কোনো অর্ডার তৈরি করবে না!
     const updatePayload: any = {
       status: status || 'processing',
       total: String(total || '0'),
