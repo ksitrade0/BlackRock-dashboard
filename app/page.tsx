@@ -143,7 +143,7 @@ export default function Dashboard() {
       .catch(() => router.push('/login'));
   }, [router]);
 
-  // ফেচ অর্ডার ফাংশন (অটো-রিফ্রেশ বন্ধ রাখা হয়েছে)
+  // ফেচ অর্ডার ফাংশন
   const fetchOrders = async (isSilent = false) => {
     if (!isSilent) {
       setLoading(true);
@@ -221,7 +221,7 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
-  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট (সঠিক পাঠানো ও পেন্ডিং লজিক সহ)
+  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
     if (!isAutomatic) {
@@ -254,12 +254,12 @@ export default function Dashboard() {
         return d.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' }) === todayDate;
       };
 
-      // আজকে পাঠানো পার্সেল (dateSent অথবা dateCreated দিয়ে চেক করা হবে)
+      // আজকে পাঠানো পার্সেল
       const sentToday = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && isToday(o.dateSent || o.dateCreated) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return');
       const deliveredToday = updatedOrders.filter((o) => (o.status === 'completed' || o.courierStatus?.toLowerCase() === 'delivered') && isToday(o.dateCreated));
       
-      // মোট পেন্ডিং পার্সেল (যেগুলো কুরিয়ার রিসিভ করেছে বা পেন্ডিং আছে, ইন-রিভিউ বাদ)
-      const pendingParcels = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return' && o.courierStatus?.toLowerCase() !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'in_review');
+      // মোট পেন্ডিং পার্সেল (আজকে পাঠানো পার্সেলগুলো বাদ দিয়ে, এবং in_review বাদ দিয়ে)
+      const pendingParcels = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return' && o.courierStatus?.toLowerCase() !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'in_review' && !isToday(o.dateSent || o.dateCreated));
       
       const returnedToday = updatedOrders.filter((o) => (o.courierStatus?.toLowerCase() === 'cancelled' || o.courierStatus?.toLowerCase() === 'returned' || o.courierStatus?.toLowerCase() === 'return' || o.courierStatus?.toLowerCase() === 'cancelled_approval_pending') && isToday(o.dateCreated));
 
@@ -268,7 +268,8 @@ export default function Dashboard() {
         totalCollection += parseFloat(o.total || '0');
       });
 
-      let msg = `<b>📊 কুরিয়ার অডিট রিপোর্ট (রোহামা কুরিয়ার এলার্ট)</b>\n`;
+      // রিপোর্টের শিরোনাম থেকে নাম বা বন্ধনী বাদ দেওয়া হয়েছে
+      let msg = `<b>📊 কুরিয়ার অডিট রিপোর্ট</b>\n`;
       msg += `তারিখ: ${todayDate} | সময়: ${currentTime}\n\n`;
 
       // ১. আজকে পাঠানো পার্সেল
@@ -423,7 +424,6 @@ export default function Dashboard() {
     );
   };
 
-  // 🛠️ এখানে isCourierPush প্যারামিটার যোগ করা হয়েছে যাতে কুরিয়ারে পাঠানোর সময় ড্যাশবোর্ড গ্রুপে ফালতু লগ না যায়
   const handleSaveOrder = async (order: Order, overrideStatus?: string, isCourierPush?: boolean) => {
     if (!order.customerName.trim() || !order.phone.trim()) {
       setMessage({ text: 'অনুগ্রহ করে কাস্টমারের নাম এবং ফোন নম্বর লিখুন।', type: 'error' });
@@ -504,7 +504,6 @@ export default function Dashboard() {
         }));
         setMessage({ text: `Order #${finalInvoice} সফলভাবে WooCommerce-এ সেভ করা হয়েছে!`, type: 'success' });
 
-        // শুধুমাত্র তখনই ড্যাশবোর্ড গ্রুপে মেসেজ যাবে যখন কুরিয়ার পুশ না হয়ে নরমাল এডিট বা সেভ করা হবে
         if (!isCourierPush) {
           const logMsg =
             `<b>${order.isNewRow ? 'নতুন অর্ডার তৈরি ও কনফার্ম' : 'অর্ডার আপডেট ও সেভ'}</b>\n` +
@@ -624,7 +623,6 @@ export default function Dashboard() {
           )
         );
 
-        // 🛠️ এখানে true পাস করা হয়েছে যাতে ড্যাশবোর্ড গ্রুপে ডাবল মেসেজ না যায়
         handleSaveOrder({
            ...order,
            trackingCode: tracking,
@@ -682,7 +680,7 @@ export default function Dashboard() {
     }
   };
 
-  // স্ট্যাটাস অনুযায়ী ডাইনামিক কালার ম্যাপিং (মাল্টি-কালার সাপোর্ট)
+  // স্ট্যাটাস অনুযায়ী ডাইনামিক কালার ম্যাপিং
   const getCourierBoxStyle = (status: string) => {
     const s = (status || '').toLowerCase();
     if (s === 'delivered') {
