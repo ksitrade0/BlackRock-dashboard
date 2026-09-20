@@ -18,6 +18,10 @@ export async function POST(req: Request) {
       items,
       total,
       action,
+      // 🛠️ Steadfast Tracking Data Added Here
+      trackingCode,
+      consignmentId,
+      courierStatus,
     } = body;
 
     let url = '';
@@ -74,11 +78,15 @@ export async function POST(req: Request) {
       country: 'BD',
     };
 
+    // 🛠️ Meta Data updated to save tracking info to WooCommerce Database
     const metaData: any[] = [
       { key: '_processed_by_staff', value: staffName || 'Admin' },
       ...(size ? [{ key: 'size', value: size }, { key: 'সাইজ', value: size }] : []),
       ...(district ? [{ key: 'district', value: district }] : []),
       ...(thana ? [{ key: 'thana', value: thana }] : []),
+      ...(trackingCode ? [{ key: 'trackingCode', value: String(trackingCode) }] : []),
+      ...(consignmentId ? [{ key: 'consignmentId', value: String(consignmentId) }] : []),
+      ...(courierStatus ? [{ key: 'courierStatus', value: String(courierStatus) }] : []),
     ];
 
     // নতুন অর্ডার তৈরির ক্ষেত্রে (POST) - যদি orderId না থাকে বা নতুন রো হয়
