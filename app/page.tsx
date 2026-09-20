@@ -96,7 +96,7 @@ export default function Dashboard() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
-  // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)
+  // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)[cite: 9]
   const topScrollRef = useRef<HTMLDivElement>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
 
@@ -142,9 +142,10 @@ export default function Dashboard() {
       .catch(() => router.push('/login'));
   }, [router]);
 
-  const fetchOrders = async () => {
-    setLoading(true);
-    setMessage(null);
+  // সাইলেন্ট সাপোর্টসহ ফেচ অর্ডার ফাংশন[cite: 9, 11]
+  const fetchOrders = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
+    if (!isSilent) setMessage(null);
     try {
       const res = await fetch('/api/orders');
       if (!res.ok) throw new Error(`সার্ভার এরর (Status: ${res.status})`);
@@ -168,26 +169,24 @@ export default function Dashboard() {
         });
         setInitialOrders(snapshot);
       } else {
-        setOrders([]);
+        if (!isSilent) setOrders([]);
       }
     } catch (err: any) {
       console.error('Failed to load orders', err);
-      setMessage({ text: err.message || 'অর্ডার লোড করতে সমস্যা হয়েছে', type: 'error' });
-      setOrders([]);
+      if (!isSilent) {
+        setMessage({ text: err.message || 'অর্ডার লোড করতে সমস্যা হয়েছে', type: 'error' });
+        setOrders([]);
+      }
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
+  // প্রথমবার লোড এবং প্রতি ৩০ সেকেন্ড পরপর সাইলেন্ট ব্যাকগ্রাউন্ড রিফ্রেশ[cite: 9, 11]
   useEffect(() => {
-    fetchOrders();
-  }, []);
-
-  // পেজ লোড হলে একবার ডেটা আনবে এবং এরপর প্রতি ৩০ সেকেন্ড পরপর অটোমেটিক ডেটা আপডেট করবে
-  useEffect(() => {
-    fetchOrders(); // প্রথমবার লোড
+    fetchOrders(false); // প্রথমবার নরমাল লোড
     const interval = setInterval(() => {
-      fetchOrders(); // প্রতি ৩০ সেকেন্ড পর পর সাইলেন্ট রিলোড
+      fetchOrders(true); // ৩০ সেকেন্ড পর পর সাইলেন্ট ব্যাকগ্রাউন্ড সিঙ্ক (টাইপিংয়ে কোনো বাধা হবে না)
     }, 30000); 
     
     return () => clearInterval(interval);
@@ -219,7 +218,7 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
-  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট (স্টেডফাস্ট লাইভ ট্র্যাকিং সহ)
+  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট (স্টেডফাস্ট লাইভ ট্র্যাকিং সহ)[cite: 9]
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
     if (!isAutomatic) {
@@ -337,7 +336,7 @@ export default function Dashboard() {
     }
   };
 
-  // প্রতিদিন রাত ১০:০০ টায় অটোমেটিক নাইট অডিট রিপোর্ট পাঠানোর হুক
+  // প্রতিদিন রাত ১০:০০ টায় অটোমেটিক নাইট অডিট রিপোর্ট পাঠানোর হুক[cite: 9]
   useEffect(() => {
     const checkTenPM = () => {
       const now = new Date();
@@ -609,7 +608,6 @@ export default function Dashboard() {
           )
         );
 
-        // ডাটাবেসে নতুন ট্র্যাকিং ডেটাসহ আপডেট করা হচ্ছে
         handleSaveOrder({
            ...order,
            trackingCode: tracking,
@@ -755,7 +753,7 @@ export default function Dashboard() {
                 <div className="text-xs font-black text-slate-900 leading-tight text-center">{currentUser}</div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <button onClick={fetchOrders} className="w-36 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition border border-slate-300 cursor-pointer active:scale-95 shadow-2xs">
+                <button onClick={() => fetchOrders(false)} className="w-36 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition border border-slate-300 cursor-pointer active:scale-95 shadow-2xs">
                   <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${loading ? 'animate-spin' : ''}`} /> Refresh Orders
                 </button>
                 <button onClick={handleLogout} className="w-36 h-[36px] flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-xs transition border border-rose-200 cursor-pointer active:scale-95 shadow-2xs">
