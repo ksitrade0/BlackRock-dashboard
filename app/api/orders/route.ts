@@ -33,12 +33,18 @@ export async function GET() {
           let customSize = '';
           let staffName = '';
           let extractedAddress = o.billing?.address_1 || '';
+          
+          // 🛠️ Steadfast Tracking variables
+          let trackingCode = '';
+          let consignmentId = '';
+          let courierStatus = '';
 
           // উকমার্সের কাস্টম মেটা ফিল্ড বা Billing extra fields থেকে ঠিকানা ও অন্যান্য তথ্য রিড করা
           if (Array.isArray(o.meta_data)) {
             o.meta_data.forEach((m: any) => {
               const k = String(m.key || '').toLowerCase();
               const val = String(m.value || '');
+              
               if (k.includes('thana')) extractedThana = val;
               if (k.includes('district')) extractedDistrict = val;
               if (k.includes('address') || k.includes('ঠিকানা') || k.includes('সম্পূর্ণ')) {
@@ -46,6 +52,11 @@ export async function GET() {
               }
               if (k.includes('size') || k.includes('সাইজ')) customSize = val;
               if (k.includes('_processed_by_staff')) staffName = val;
+              
+              // 🛠️ Fetching tracking info from database
+              if (k === 'trackingcode') trackingCode = val;
+              if (k === 'consignmentid') consignmentId = val;
+              if (k === 'courierstatus') courierStatus = val;
             });
           }
 
@@ -73,6 +84,11 @@ export async function GET() {
             dateCreated: o.date_created || new Date().toISOString(),
             items: itemsSummary || 'Custom Order Item',
             staffName: staffName,
+            
+            // 🛠️ Sending tracking info to frontend
+            trackingCode: trackingCode,
+            consignmentId: consignmentId,
+            courierStatus: courierStatus,
           };
         });
       } catch (err) {
