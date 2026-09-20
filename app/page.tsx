@@ -48,6 +48,7 @@ interface Order {
   total: string;
   status: string;
   dateCreated: string;
+  dateSent?: string;
   items: string;
   staffName?: string;
   callDone?: boolean;
@@ -142,7 +143,7 @@ export default function Dashboard() {
       .catch(() => router.push('/login'));
   }, [router]);
 
-  // ফেচ অর্ডার ফাংশন (অটো-রিফ্রেশ বাদ দিয়ে শুধু ম্যানুয়াল লোড রাখা হয়েছে)
+  // ফেচ অর্ডার ফাংশন (অটো-রিফ্রেশ বন্ধ রাখা হয়েছে)
   const fetchOrders = async (isSilent = false) => {
     if (!isSilent) {
       setLoading(true);
@@ -162,6 +163,7 @@ export default function Dashboard() {
           customNote: o.customNote || '',
           staffName: o.staffName || '',
           courierStatus: o.courierStatus || '',
+          dateSent: o.dateSent || '',
           isNewRow: false,
         }));
 
@@ -219,7 +221,7 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
-  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট (স্টেডফাস্ট লাইভ ট্র্যাকিং সহ)
+  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট (সঠিক পাঠানো ও পেন্ডিং লজিক সহ)
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
     if (!isAutomatic) {
@@ -252,9 +254,13 @@ export default function Dashboard() {
         return d.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' }) === todayDate;
       };
 
-      const sentToday = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && isToday(o.dateCreated) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return');
+      // আজকে পাঠানো পার্সেল (dateSent অথবা dateCreated দিয়ে চেক করা হবে)
+      const sentToday = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && isToday(o.dateSent || o.dateCreated) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return');
       const deliveredToday = updatedOrders.filter((o) => (o.status === 'completed' || o.courierStatus?.toLowerCase() === 'delivered') && isToday(o.dateCreated));
-      const pendingParcels = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return' && o.courierStatus?.toLowerCase() !== 'cancelled');
+      
+      // মোট পেন্ডিং পার্সেল (যেগুলো কুরিয়ার রিসিভ করেছে বা পেন্ডিং আছে, ইন-রিভিউ বাদ)
+      const pendingParcels = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return' && o.courierStatus?.toLowerCase() !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'in_review');
+      
       const returnedToday = updatedOrders.filter((o) => (o.courierStatus?.toLowerCase() === 'cancelled' || o.courierStatus?.toLowerCase() === 'returned' || o.courierStatus?.toLowerCase() === 'return' || o.courierStatus?.toLowerCase() === 'cancelled_approval_pending') && isToday(o.dateCreated));
 
       let totalCollection = 0;
@@ -265,11 +271,11 @@ export default function Dashboard() {
       let msg = `<b>📊 কুরিয়ার অডিট রিপোর্ট (রোহামা কুরিয়ার এলার্ট)</b>\n`;
       msg += `তারিখ: ${todayDate} | সময়: ${currentTime}\n\n`;
 
-      // ১. আজকে পাঠানো পার্সেল (পাঠানোর তারিখ সহ)
+      // ১. আজকে পাঠানো পার্সেল
       msg += `📦 <b>আজকে পাঠানো পার্সেল: ${sentToday.length} টি</b>\n`;
       sentToday.forEach((o, i) => {
         const cid = o.consignmentId || 'N/A';
-        const sentDate = o.dateCreated ? new Date(o.dateCreated).toLocaleDateString('en-GB') : 'N/A';
+        const sentDate = o.dateSent ? new Date(o.dateSent).toLocaleDateString('en-GB') : (o.dateCreated ? new Date(o.dateCreated).toLocaleDateString('en-GB') : 'N/A');
         const name = o.customerName || 'কাস্টমার';
         const city = o.district || o.thana || 'ঠিকানা নাই';
         const items = o.items || 'আইটেম নাই';
@@ -417,7 +423,8 @@ export default function Dashboard() {
     );
   };
 
-  const handleSaveOrder = async (order: Order, overrideStatus?: string) => {
+  // 🛠️ এখানে isCourierPush প্যারামিটার যোগ করা হয়েছে যাতে কুরিয়ারে পাঠানোর সময় ড্যাশবোর্ড গ্রুপে ফালতু লগ না যায়
+  const handleSaveOrder = async (order: Order, overrideStatus?: string, isCourierPush?: boolean) => {
     if (!order.customerName.trim() || !order.phone.trim()) {
       setMessage({ text: 'অনুগ্রহ করে কাস্টমারের নাম এবং ফোন নম্বর লিখুন।', type: 'error' });
       return;
@@ -443,7 +450,7 @@ export default function Dashboard() {
         prev.consignmentId !== order.consignmentId ||
         prev.customNote !== order.customNote;
 
-      if (!isChanged && !overrideStatus) {
+      if (!isChanged && !overrideStatus && !isCourierPush) {
         setMessage({ text: `Order #${order.invoice} -এ কোনো পরিবর্তন করা হয়নি।`, type: 'success' });
         return;
       }
@@ -473,6 +480,7 @@ export default function Dashboard() {
           consignmentId: order.consignmentId,
           courierStatus: order.courierStatus,
           customNote: order.customNote,
+          dateSent: order.dateSent,
         }),
       });
 
@@ -496,18 +504,21 @@ export default function Dashboard() {
         }));
         setMessage({ text: `Order #${finalInvoice} সফলভাবে WooCommerce-এ সেভ করা হয়েছে!`, type: 'success' });
 
-        const logMsg =
-          `<b>${order.isNewRow ? 'নতুন অর্ডার তৈরি ও কনফার্ম' : 'অর্ডার আপডেট ও সেভ'}</b>\n` +
-          `-----------------------\n` +
-          `🏬 <b>স্টোর:</b> ${order.storeName}\n` +
-          `🧾 <b>ইনভয়েস:</b> #${finalInvoice}\n` +
-          `👤 <b>কাস্টমার:</b> ${order.customerName} (<code>${order.phone}</code>)\n` +
-          `📍 <b>ঠিকানা:</b> ${order.streetAddress || ''}, ${order.thana ? order.thana + ', ' : ''}${order.district || ''}\n` +
-          `📦 <b>আইটেম/সাইজ:</b> ${order.items || 'N/A'} ${order.size ? `[সাইজ: ${order.size}]` : ''}\n` +
-          `💰 <b>টাকা:</b> ${order.total || '0'}\n` +
-          `📌 <b>স্ট্যাটাস:</b> <code>${newStatus.toUpperCase()}</code>\n\n` +
-          `✍️ <b>কনফার্ম করেছেন:</b> ${currentUser}`;
-        sendActivityLog(logMsg, 'activity');
+        // শুধুমাত্র তখনই ড্যাশবোর্ড গ্রুপে মেসেজ যাবে যখন কুরিয়ার পুশ না হয়ে নরমাল এডিট বা সেভ করা হবে
+        if (!isCourierPush) {
+          const logMsg =
+            `<b>${order.isNewRow ? 'নতুন অর্ডার তৈরি ও কনফার্ম' : 'অর্ডার আপডেট ও সেভ'}</b>\n` +
+            `-----------------------\n` +
+            `🏬 <b>স্টোর:</b> ${order.storeName}\n` +
+            `🧾 <b>ইনভয়েস:</b> #${finalInvoice}\n` +
+            `👤 <b>কাস্টমার:</b> ${order.customerName} (<code>${order.phone}</code>)\n` +
+            `📍 <b>ঠিকানা:</b> ${order.streetAddress || ''}, ${order.thana ? order.thana + ', ' : ''}${order.district || ''}\n` +
+            `📦 <b>আইটেম/সাইজ:</b> ${order.items || 'N/A'} ${order.size ? `[সাইজ: ${order.size}]` : ''}\n` +
+            `💰 <b>টাকা:</b> ${order.total || '0'}\n` +
+            `📌 <b>স্ট্যাটাস:</b> <code>${newStatus.toUpperCase()}</code>\n\n` +
+            `✍️ <b>কনফার্ম করেছেন:</b> ${currentUser}`;
+          sendActivityLog(logMsg, 'activity');
+        }
       } else {
         setMessage({ text: result.error || 'সেভ করতে সমস্যা হয়েছে', type: 'error' });
       }
@@ -596,6 +607,7 @@ export default function Dashboard() {
         const tracking = consignment.tracking_code || 'Sent';
         const cid = consignment.consignment_id || '';
         const initialStatus = consignment.status || 'in_review';
+        const currentTimestamp = new Date().toISOString();
 
         setOrders((prev) =>
           prev.map((o) =>
@@ -606,17 +618,20 @@ export default function Dashboard() {
                   consignmentId: cid,
                   courierStatus: initialStatus,
                   staffName: assignedStaff,
+                  dateSent: currentTimestamp,
                 }
               : o
           )
         );
 
+        // 🛠️ এখানে true পাস করা হয়েছে যাতে ড্যাশবোর্ড গ্রুপে ডাবল মেসেজ না যায়
         handleSaveOrder({
            ...order,
            trackingCode: tracking,
            consignmentId: cid,
-           courierStatus: initialStatus
-        });
+           courierStatus: initialStatus,
+           dateSent: currentTimestamp,
+        }, undefined, true);
 
         setMessage({ text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`, type: 'success' });
 
