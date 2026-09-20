@@ -96,7 +96,7 @@ export default function Dashboard() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
-  // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)[cite: 8]
+  // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)[cite: 6]
   const topScrollRef = useRef<HTMLDivElement>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
 
@@ -142,7 +142,7 @@ export default function Dashboard() {
       .catch(() => router.push('/login'));
   }, [router]);
 
-  // সাইলেন্ট সাপোর্ট এবং স্মার্ট মার্জ লজিকসহ ফেচ অর্ডার ফাংশন[cite: 8]
+  // জিরো-ফ্লিকার ও জিরো-রিলোড লজিকসহ ফেচ অর্ডার ফাংশন[cite: 6]
   const fetchOrders = async (isSilent = false) => {
     if (!isSilent) {
       setLoading(true);
@@ -168,26 +168,35 @@ export default function Dashboard() {
         setOrders((prevOrders) => {
           const unsavedNewRows = prevOrders.filter((o) => o.isNewRow);
           
-          if (isSilent) {
-            return [
-              ...unsavedNewRows,
-              ...mappedOrders.map((newOrder) => {
-                const existing = prevOrders.find((p) => p.id === newOrder.id && p.storeId === newOrder.storeId);
-                return existing && (existing.customerName !== newOrder.customerName || existing.phone !== newOrder.phone || existing.streetAddress !== newOrder.streetAddress)
-                  ? existing
-                  : newOrder;
-              }),
-            ];
+          // যদি সাইলেন্ট ব্যাকগ্রাউন্ড কল হয় এবং ডেটায় কোনো পরিবর্তন না থাকে, তবে স্টেট আপডেট করব না (কোনো রিলোড হবে না!)[cite: 6]
+          if (isSilent && prevOrders.length === mappedOrders.length + unsavedNewRows.length) {
+            const isSame = mappedOrders.every((newItem) => {
+              const oldItem = prevOrders.find(p => p.id === newItem.id && p.storeId === newItem.storeId);
+              return oldItem && oldItem.status === newItem.status && oldItem.courierStatus === newItem.courierStatus && oldItem.total === newItem.total;
+            });
+            if (isSame) {
+              return prevOrders; 
+            }
           }
 
-          return [...unsavedNewRows, ...mappedOrders];
+          return [
+            ...unsavedNewRows,
+            ...mappedOrders.map((newOrder) => {
+              const existing = prevOrders.find((p) => p.id === newOrder.id && p.storeId === newOrder.storeId);
+              return existing && (existing.customerName !== newOrder.customerName || existing.phone !== newOrder.phone || existing.streetAddress !== newOrder.streetAddress)
+                ? existing
+                : newOrder;
+            }),
+          ];
         });
 
-        const snapshot: Record<string, Order> = {};
-        mappedOrders.forEach((item) => {
-          snapshot[`${item.storeId}-${item.id}`] = JSON.parse(JSON.stringify(item));
-        });
-        setInitialOrders(snapshot);
+        if (!isSilent || Object.keys(initialOrders).length === 0) {
+          const snapshot: Record<string, Order> = {};
+          mappedOrders.forEach((item) => {
+            snapshot[`${item.storeId}-${item.id}`] = JSON.parse(JSON.stringify(item));
+          });
+          setInitialOrders(snapshot);
+        }
       } else {
         if (!isSilent) setOrders([]);
       }
@@ -202,11 +211,11 @@ export default function Dashboard() {
     }
   };
 
-  // প্রথমবার লোড এবং প্রতি ৩০ সেকেন্ড পরপর সাইলেন্ট ব্যাকগ্রাউন্ড রিফ্রেশ[cite: 8]
+  // প্রথমবার লোড এবং প্রতি ৩০ সেকেন্ড পরপর সাইলেন্ট ব্যাকগ্রাউন্ড সিঙ্ক[cite: 6]
   useEffect(() => {
     fetchOrders(false); // প্রথমবার নরমাল লোড
     const interval = setInterval(() => {
-      fetchOrders(true); // ৩০ সেকেন্ড পর পর সাইলেন্ট ব্যাকগ্রাউন্ড সিঙ্ক (টাইপিং বা ব্ল্যাঙ্ক হওয়া ছাড়াই)[cite: 8]
+      fetchOrders(true); // ৩০ সেকেন্ড পর পর সাইলেন্ট ব্যাকগ্রাউন্ড চেক (কোনো ফ্লিকার বা রিলোড ছাড়াই)[cite: 6]
     }, 30000); 
     
     return () => clearInterval(interval);
@@ -238,7 +247,7 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
-  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট (স্টেডফাস্ট লাইভ ট্র্যাকিং সহ)[cite: 8]
+  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট (স্টেডফাস্ট লাইভ ট্র্যাকিং সহ)[cite: 6]
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
     if (!isAutomatic) {
@@ -331,7 +340,7 @@ export default function Dashboard() {
       // ৫. মোট কালেকশন
       msg += `💰 <b>আজকের ডেলিভারি মোট কালেকশন: ৳ ${totalCollection}</b>\n\n`;
       if (isAutomatic) {
-        msg += `<i>🤖 অটোমেটিক নাইট অডিট রিপোর্ট (রাত ১০:০০ টা)</i>`;
+        msg += `<i>🤖 অটোমেটিক নাইট অডিট রিপোর্ট (রাত ১০:০০ টা স্টক)</i>`;
       } else {
         msg += `<i>রিপোর্টটি চেয়েছেন: ${currentUser}</i>`;
       }
@@ -356,7 +365,7 @@ export default function Dashboard() {
     }
   };
 
-  // প্রতিদিন রাত ১০:০০ টায় অটোমেটিক নাইট অডিট রিপোর্ট পাঠানোর হুক[cite: 8]
+  // প্রতিদিন রাত ১০:০০ টায় অটোমেটিক নাইট অডিট রিপোর্ট পাঠানোর হুক[cite: 6]
   useEffect(() => {
     const checkTenPM = () => {
       const now = new Date();
