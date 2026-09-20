@@ -96,7 +96,7 @@ export default function Dashboard() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
-  // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)[cite: 6]
+  // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)
   const topScrollRef = useRef<HTMLDivElement>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
 
@@ -142,7 +142,7 @@ export default function Dashboard() {
       .catch(() => router.push('/login'));
   }, [router]);
 
-  // জিরো-ফ্লিকার ও জিরো-রিলোড লজিকসহ ফেচ অর্ডার ফাংশন[cite: 6]
+  // ফেচ অর্ডার ফাংশন (অটো-রিফ্রেশ বাদ দিয়ে শুধু ম্যানুয়াল লোড রাখা হয়েছে)
   const fetchOrders = async (isSilent = false) => {
     if (!isSilent) {
       setLoading(true);
@@ -159,7 +159,7 @@ export default function Dashboard() {
           district: o.district || '',
           thana: o.thana || '',
           size: o.size || '',
-          customNote: '',
+          customNote: o.customNote || '',
           staffName: o.staffName || '',
           courierStatus: o.courierStatus || '',
           isNewRow: false,
@@ -167,36 +167,14 @@ export default function Dashboard() {
 
         setOrders((prevOrders) => {
           const unsavedNewRows = prevOrders.filter((o) => o.isNewRow);
-          
-          // যদি সাইলেন্ট ব্যাকগ্রাউন্ড কল হয় এবং ডেটায় কোনো পরিবর্তন না থাকে, তবে স্টেট আপডেট করব না (কোনো রিলোড হবে না!)[cite: 6]
-          if (isSilent && prevOrders.length === mappedOrders.length + unsavedNewRows.length) {
-            const isSame = mappedOrders.every((newItem) => {
-              const oldItem = prevOrders.find(p => p.id === newItem.id && p.storeId === newItem.storeId);
-              return oldItem && oldItem.status === newItem.status && oldItem.courierStatus === newItem.courierStatus && oldItem.total === newItem.total;
-            });
-            if (isSame) {
-              return prevOrders; 
-            }
-          }
-
-          return [
-            ...unsavedNewRows,
-            ...mappedOrders.map((newOrder) => {
-              const existing = prevOrders.find((p) => p.id === newOrder.id && p.storeId === newOrder.storeId);
-              return existing && (existing.customerName !== newOrder.customerName || existing.phone !== newOrder.phone || existing.streetAddress !== newOrder.streetAddress)
-                ? existing
-                : newOrder;
-            }),
-          ];
+          return [...unsavedNewRows, ...mappedOrders];
         });
 
-        if (!isSilent || Object.keys(initialOrders).length === 0) {
-          const snapshot: Record<string, Order> = {};
-          mappedOrders.forEach((item) => {
-            snapshot[`${item.storeId}-${item.id}`] = JSON.parse(JSON.stringify(item));
-          });
-          setInitialOrders(snapshot);
-        }
+        const snapshot: Record<string, Order> = {};
+        mappedOrders.forEach((item) => {
+          snapshot[`${item.storeId}-${item.id}`] = JSON.parse(JSON.stringify(item));
+        });
+        setInitialOrders(snapshot);
       } else {
         if (!isSilent) setOrders([]);
       }
@@ -211,14 +189,8 @@ export default function Dashboard() {
     }
   };
 
-  // প্রথমবার লোড এবং প্রতি ৩০ সেকেন্ড পরপর সাইলেন্ট ব্যাকগ্রাউন্ড সিঙ্ক[cite: 6]
   useEffect(() => {
-    fetchOrders(false); // প্রথমবার নরমাল লোড
-    const interval = setInterval(() => {
-      fetchOrders(true); // ৩০ সেকেন্ড পর পর সাইলেন্ট ব্যাকগ্রাউন্ড চেক (কোনো ফ্লিকার বা রিলোড ছাড়াই)[cite: 6]
-    }, 30000); 
-    
-    return () => clearInterval(interval);
+    fetchOrders(false);
   }, []);
 
   const handleAddNewBlankRow = () => {
@@ -247,7 +219,7 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
-  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট (স্টেডফাস্ট লাইভ ট্র্যাকিং সহ)[cite: 6]
+  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট (স্টেডফাস্ট লাইভ ট্র্যাকিং সহ)
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
     if (!isAutomatic) {
@@ -340,7 +312,7 @@ export default function Dashboard() {
       // ৫. মোট কালেকশন
       msg += `💰 <b>আজকের ডেলিভারি মোট কালেকশন: ৳ ${totalCollection}</b>\n\n`;
       if (isAutomatic) {
-        msg += `<i>🤖 অটোমেটিক নাইট অডিট রিপোর্ট (রাত ১০:০০ টা স্টক)</i>`;
+        msg += `<i>🤖 অটোমেটিক নাইট অডিট রিপোর্ট (রাত ১০টো স্টক)</i>`;
       } else {
         msg += `<i>রিপোর্টটি চেয়েছেন: ${currentUser}</i>`;
       }
@@ -365,7 +337,7 @@ export default function Dashboard() {
     }
   };
 
-  // প্রতিদিন রাত ১০:০০ টায় অটোমেটিক নাইট অডিট রিপোর্ট পাঠানোর হুক[cite: 6]
+  // প্রতিদিন রাত ১০:০০ টায় অটোমেটিক নাইট অডিট রিপোর্ট পাঠানোর হুক
   useEffect(() => {
     const checkTenPM = () => {
       const now = new Date();
@@ -468,7 +440,8 @@ export default function Dashboard() {
         prev.status !== newStatus ||
         prev.staffName !== assignedStaff ||
         prev.trackingCode !== order.trackingCode ||
-        prev.consignmentId !== order.consignmentId;
+        prev.consignmentId !== order.consignmentId ||
+        prev.customNote !== order.customNote;
 
       if (!isChanged && !overrideStatus) {
         setMessage({ text: `Order #${order.invoice} -এ কোনো পরিবর্তন করা হয়নি।`, type: 'success' });
@@ -499,6 +472,7 @@ export default function Dashboard() {
           trackingCode: order.trackingCode,
           consignmentId: order.consignmentId,
           courierStatus: order.courierStatus,
+          customNote: order.customNote,
         }),
       });
 
@@ -693,14 +667,37 @@ export default function Dashboard() {
     }
   };
 
-  const getCourierBadge = (status: string) => {
-    const s = status.toLowerCase();
-    if (s === 'delivered') return 'bg-emerald-600 text-white border-emerald-800 shadow-sm';
-    if (s === 'partial_delivered') return 'bg-teal-600 text-white border-teal-800';
-    if (s === 'cancelled' || s === 'cancelled_approval_pending') return 'bg-rose-600 text-white border-rose-800';
-    if (s === 'in_review' || s === 'pending') return 'bg-amber-400 text-slate-950 font-black border-amber-600';
-    if (s.includes('transit') || s.includes('hold')) return 'bg-blue-600 text-white border-blue-800';
-    return 'bg-slate-800 text-white border-slate-900';
+  // স্ট্যাটাস অনুযায়ী ডাইনামিক কালার ম্যাপিং (মাল্টি-কালার সাপোর্ট)
+  const getCourierBoxStyle = (status: string) => {
+    const s = (status || '').toLowerCase();
+    if (s === 'delivered') {
+      return {
+        box: 'bg-emerald-50 border-emerald-400 text-emerald-950',
+        badge: 'bg-emerald-600',
+      };
+    }
+    if (s === 'partial_delivered') {
+      return {
+        box: 'bg-teal-50 border-teal-400 text-teal-950',
+        badge: 'bg-teal-600',
+      };
+    }
+    if (s === 'cancelled' || s === 'cancelled_approval_pending' || s === 'returned' || s === 'return') {
+      return {
+        box: 'bg-rose-50 border-rose-400 text-rose-950',
+        badge: 'bg-rose-600',
+      };
+    }
+    if (s.includes('transit') || s.includes('hold')) {
+      return {
+        box: 'bg-blue-50 border-blue-400 text-blue-950',
+        badge: 'bg-blue-600',
+      };
+    }
+    return {
+      box: 'bg-amber-50 border-amber-400 text-amber-950',
+      badge: 'bg-amber-500',
+    };
   };
 
   const filteredOrders = orders.filter((order) => {
@@ -1052,7 +1049,7 @@ export default function Dashboard() {
                             {!order.trackingCode && !order.consignmentId && (
                               <>
                                 <div className="w-full h-[34px] flex items-center bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                                  <input type="text" value={order.customNote || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customNote', e.target.value)} placeholder="কুরিয়ার স্পেশাল নোট..." className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 bg-transparent outline-none" />
+                                  <input type="text" value={order.customNote || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customNote', e.target.value)} placeholder="কুরিয়ার স্পেশাল নোট / কল রিমার্ক..." className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 bg-transparent outline-none" />
                                 </div>
 
                                 <button onClick={() => handleSendToSteadfast(order)} disabled={sendingId === order.id} className="w-full h-[34px] flex items-center justify-center gap-1.5 rounded text-xs font-bold transition cursor-pointer shadow-2xs bg-slate-800 hover:bg-slate-900 text-white">
@@ -1062,38 +1059,49 @@ export default function Dashboard() {
                               </>
                             )}
 
-                            {/* একবার কুরিয়ারে পাঠানো হয়ে গেলে নোট বক্স ও সেন্ড বাটন গায়েব হয়ে এই সুন্দর ইনফো বক্সটি আসবে */}
+                            {/* একবার কুরিয়ারে পাঠানো হয়ে গেলে নোট বক্স ও সেন্ড বাটন গায়েব হয়ে মাল্টি-কালার ইনফো বক্সটি আসবে */}
                             {(order.trackingCode || order.consignmentId) && (
-                              <div className={`border rounded-lg p-2.5 space-y-1.5 text-left shadow-2xs transition-all ${order.courierStatus?.toLowerCase() === 'delivered' ? 'bg-emerald-50 border-emerald-400 text-emerald-950' : 'bg-amber-50 border-amber-400 text-amber-950'}`}>
-                                <div className="text-[11px] font-bold space-y-1">
-                                  <div className="flex justify-between items-center border-b pb-1 border-slate-200">
-                                    <span className="text-slate-600">ইনভয়েস:</span>
-                                    <span className="font-mono text-slate-950 font-black">#{order.invoice}</span>
-                                  </div>
-                                  <div className="flex justify-between items-center border-b pb-1 border-slate-200">
-                                    <span className="text-slate-600">সিআইডি (CID):</span>
-                                    <span className="font-mono text-slate-950 font-black">{order.consignmentId || order.trackingCode}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-600">নাম:</span> <span className="font-black text-slate-950">{order.customerName || 'N/A'}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-600">মোবাইল:</span> <code className="font-mono font-black text-slate-950">{order.phone || 'N/A'}</code>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-600">আইটেম:</span> <span className="text-slate-950">{order.items || 'N/A'} {order.size ? `[সাইজ: ${order.size}]` : ''}</span>
-                                  </div>
-                                </div>
+                              (() => {
+                                const style = getCourierBoxStyle(order.courierStatus);
+                                return (
+                                  <div className={`border rounded-lg p-2.5 space-y-1.5 text-left shadow-2xs transition-all ${style.box}`}>
+                                    <div className="text-[11px] font-bold space-y-1">
+                                      <div className="flex justify-between items-center border-b pb-1 border-slate-200">
+                                        <span className="text-slate-600">ইনভয়েস:</span>
+                                        <span className="font-mono text-slate-950 font-black">#{order.invoice}</span>
+                                      </div>
+                                      <div className="flex justify-between items-center border-b pb-1 border-slate-200">
+                                        <span className="text-slate-600">সিআইডি (CID):</span>
+                                        <span className="font-mono text-slate-950 font-black">{order.consignmentId || order.trackingCode}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-600">নাম:</span> <span className="font-black text-slate-950">{order.customerName || 'N/A'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-600">মোবাইল:</span> <code className="font-mono font-black text-slate-950">{order.phone || 'N/A'}</code>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-600">আইটেম:</span> <span className="text-slate-950">{order.items || 'N/A'} {order.size ? `[সাইজ: ${order.size}]` : ''}</span>
+                                      </div>
+                                      {/* কাস্টমার নোট বা কল রিমার্ক প্রদর্শন */}
+                                      {order.customNote && (
+                                        <div className="bg-white/90 border border-slate-300 rounded p-1 text-[11px] font-bold text-slate-900 mt-1">
+                                          <span className="text-rose-700">নোট/রিমার্ক:</span> {order.customNote}
+                                        </div>
+                                      )}
+                                    </div>
 
-                                <div className={`w-full py-1 px-1.5 rounded text-center text-[10px] font-black uppercase tracking-wider text-white shadow-xs ${order.courierStatus?.toLowerCase() === 'delivered' ? 'bg-emerald-600' : 'bg-amber-500'}`}>
-                                  {order.courierStatus ? order.courierStatus.replace(/_/g, ' ') : 'IN REVIEW'}
-                                </div>
+                                    <div className={`w-full py-1 px-1.5 rounded text-center text-[10px] font-black uppercase tracking-wider text-white shadow-xs ${style.badge}`}>
+                                      {order.courierStatus ? order.courierStatus.replace(/_/g, ' ') : 'IN REVIEW'}
+                                    </div>
 
-                                <button onClick={() => handleCheckCourierStatus(order)} disabled={trackingId === order.id} className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-800 bg-white hover:bg-slate-100 py-1.5 px-2 rounded w-full border border-slate-300 transition cursor-pointer shadow-2xs">
-                                  <RotateCw className={`w-3 h-3 ${trackingId === order.id ? 'animate-spin' : ''}`} />
-                                  {trackingId === order.id ? 'চেক হচ্ছে...' : 'লাইভ স্ট্যাটাস চেক'}
-                                </button>
-                              </div>
+                                    <button onClick={() => handleCheckCourierStatus(order)} disabled={trackingId === order.id} className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-800 bg-white hover:bg-slate-100 py-1.5 px-2 rounded w-full border border-slate-300 transition cursor-pointer shadow-2xs">
+                                      <RotateCw className={`w-3 h-3 ${trackingId === order.id ? 'animate-spin' : ''}`} />
+                                      {trackingId === order.id ? 'চেক হচ্ছে...' : 'লাইভ স্ট্যাটাস চেক'}
+                                    </button>
+                                  </div>
+                                );
+                              })()
                             )}
                           </td>
                         </tr>
