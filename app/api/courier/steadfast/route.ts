@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import axios from 'axios';
 import { query } from '@/lib/db';
 
-const STEADFAST_API_KEY = 'n5wjg5pat2seuxiiz1mmw7evsl1ehzuw';
-const STEADFAST_SECRET_KEY = 'jv5elbxxof qxlshgnf2mpwv';
+const STEADFAST_API_KEY = process.env.STEADFAST_API_KEY || '';
+const STEADFAST_SECRET_KEY = process.env.STEADFAST_SECRET_KEY || '';
 const STEADFAST_BASE_URL = 'https://portal.packzy.com/api/v1';
 
 export async function POST(req: Request) {
