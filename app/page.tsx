@@ -183,14 +183,15 @@ export default function Dashboard() {
     fetchOrders();
   }, []);
 
+  // পেজ লোড হলে একবার ডেটা আনবে এবং এরপর প্রতি ৩০ সেকেন্ড পরপর অটোমেটিক ডেটা আপডেট করবে
   useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => {
-        setMessage(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [message]);
+    fetchOrders(); // প্রথমবার লোড
+    const interval = setInterval(() => {
+      fetchOrders(); // প্রতি ৩০ সেকেন্ড পর পর সাইলেন্ট রিলোড
+    }, 30000); 
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const handleAddNewBlankRow = () => {
     const tempId = Date.now();
