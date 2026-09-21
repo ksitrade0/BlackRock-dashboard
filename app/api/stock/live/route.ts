@@ -39,19 +39,22 @@ export async function GET() {
     await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking_code VARCHAR(255)");
     await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS consignment_id VARCHAR(255)");
 
-    const purchases: any = await query("SELECT item_name, quantity FROM purchases");
-    const orders: any = await query(`
+    const rawPurchases: any = await query("SELECT item_name, quantity FROM purchases");
+    const rawOrders: any = await query(`
       SELECT items FROM orders 
       WHERE ((tracking_code IS NOT NULL AND tracking_code != '') OR (consignment_id IS NOT NULL AND consignment_id != '')) 
       AND status != 'cancelled' 
       AND status != 'failed'
     `);
 
+    const purchases = Array.isArray(rawPurchases) && Array.isArray(rawPurchases[0]) ? rawPurchases[0] : rawPurchases;
+    const orders = Array.isArray(rawOrders) && Array.isArray(rawOrders[0]) ? rawOrders[0] : rawOrders;
+
     let liveStock: Record<string, number> = {};
 
     const cleanStr = (str: string) => {
       if (!str) return '';
-      return str.toString().trim().replace(/\s+/g, ' ').replace(/[–—]/g, '-');
+      return str.toString().trim().replace(/\s+/g, ' ');
     };
 
     if (Array.isArray(purchases)) {
@@ -82,7 +85,6 @@ export async function GET() {
       });
     }
 
-    // ফ্রন্টএন্ড যাতে সরাসরি ডিকশনারি অবজেক্ট পায়
     return NextResponse.json(liveStock);
   } catch (error: any) {
     console.error('Live Stock API Error:', error);

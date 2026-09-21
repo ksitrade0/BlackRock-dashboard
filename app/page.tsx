@@ -73,10 +73,10 @@ const WOO_STATUSES = [
 ];
 
 const PRODUCT_VARIATIONS = [
-  'N সাদা-৩৮', 'N সাদা-৪০', 'N সাদা-৪২', 'N সাদা-৪৪',
-  'N কালো-৩৮', 'N কালো-৪০', 'N কালো-৪২', 'N কালো-৪৪',
-  'D সাদা-৩৮', 'D সাদা-৪০', 'D সাদা-৪২', 'D সাদা-৪৪',
-  'D কালো-৩৮', 'D কালো-৪০', 'D কালো-৪২', 'D কালো-৪৪',
+  'N-White-38', 'N-White-40', 'N-White-42', 'N-White-44',
+  'N-Black-38', 'N-Black-40', 'N-Black-42', 'N-Black-44',
+  'D-White-38', 'D-White-40', 'D-White-42', 'D-White-44',
+  'D-Black-38', 'D-Black-40', 'D-Black-42', 'D-Black-44',
 ];
 
 export default function Dashboard() {
@@ -143,7 +143,7 @@ export default function Dashboard() {
       .catch(() => router.push('/login'));
   }, [router]);
 
-  // ফেচ অর্ডার ফাংশন[cite: 6]
+  // ফেচ অর্ডার ফাংশন[cite: 5, 6]
   const fetchOrders = async (isSilent = false) => {
     if (!isSilent) {
       setLoading(true);
@@ -221,7 +221,7 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
-  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট[cite: 6]
+  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট[cite: 5, 6]
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
     if (!isAutomatic) {
@@ -384,7 +384,6 @@ export default function Dashboard() {
     );
   };
 
-  // 🛠️ ফিক্সড: একই আইটেম বা মাল্টিপল আইটেম বারবার ড্রপডাউন থেকে যোগ করার ব্যবস্থা (ডুপ্লিকেট চেক বাদ দেওয়া হয়েছে)
   const handleAddItem = (orderId: number, storeId: string, itemToAdd: string) => {
     if (!itemToAdd) return;
     setOrders((prev) =>

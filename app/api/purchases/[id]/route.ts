@@ -13,11 +13,12 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'আইডি পাওয়া যায়নি' }, { status: 400 });
     }
 
-    // ডাইরেক্ট ডিলিট কুয়েরি
+    // সরাসরি ডিলিট কুয়েরি রান করা (কোনো অতিরিক্ত অবজেক্ট স্ট্রাকচার চেক ছাড়া)
     await query('DELETE FROM purchases WHERE id = ?', [id]);
     
     return NextResponse.json({ success: true, message: 'পারচেজ সফলভাবে ডিলিট হয়েছে' });
   } catch (error: any) {
+    console.error('Delete Purchase Error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
