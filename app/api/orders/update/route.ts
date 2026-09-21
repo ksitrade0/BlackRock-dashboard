@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { query } from '@/lib/db';
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -18,7 +19,6 @@ export async function POST(req: Request) {
       items,
       total,
       action,
-      // 🛠️ Steadfast Tracking Data Added Here
       trackingCode,
       consignmentId,
       courierStatus,
@@ -59,10 +59,15 @@ export async function POST(req: Request) {
         const err = await deleteRes.json();
         return NextResponse.json({ error: err.message || 'Failed to delete' }, { status: deleteRes.status });
       }
+
+      // লোকাল ডাটাবেজ থেকেও ডিলিট বা স্ট্যাটাস আপডেট করা যেতে পারে
+      try {
+        await query("DELETE FROM orders WHERE id = ?", [orderId]);
+      } catch (e) {}
+
       return NextResponse.json({ success: true });
     }
 
-    // নাম বিভাজন
     const nameParts = (customerName || '').trim().split(' ');
     const firstName = nameParts[0] || 'Customer';
     const lastName = nameParts.slice(1).join(' ') || '';
@@ -78,7 +83,6 @@ export async function POST(req: Request) {
       country: 'BD',
     };
 
-    // 🛠️ Meta Data updated to save tracking info to WooCommerce Database
     const metaData: any[] = [
       { key: '_processed_by_staff', value: staffName || 'Admin' },
       ...(size ? [{ key: 'size', value: size }, { key: 'সাইজ', value: size }] : []),
@@ -89,7 +93,9 @@ export async function POST(req: Request) {
       ...(courierStatus ? [{ key: 'courierStatus', value: String(courierStatus) }] : []),
     ];
 
-    // নতুন অর্ডার তৈরির ক্ষেত্রে (POST) - যদি orderId না থাকে বা নতুন রো হয়
+    let finalOrderId = orderId;
+
+    // নতুন অর্ডার তৈরির ক্ষেত্রে (POST)
     if (!orderId || Number(orderId) <= 0 || String(orderId).length > 10) {
       const createPayload: any = {
         payment_method: 'cod',
@@ -100,7 +106,7 @@ export async function POST(req: Request) {
         shipping: billingShipping,
         meta_data: [
           ...metaData,
-          { key: '_is_manual_dashboard_order', value: 'yes' } // 🛠️ শুধুমাত্র ড্যাশবোর্ড থেকে তৈরি অর্ডারে এই ট্যাগটি যোগ হবে
+          { key: '_is_manual_dashboard_order', value: 'yes' }
         ],
       };
 
@@ -118,10 +124,24 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: createData.message || 'Failed to create order' }, { status: createRes.status });
       }
 
+      finalOrderId = createData.id;
+
+      // লোকাল ডাটাবেজে অর্ডার সংরক্ষণ
+      try {
+        await query(
+          `INSERT INTO orders (id, store_id, invoice, customer_name, phone, address, district, thana, size, total, status, items, tracking_code, consignment_id) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE tracking_code = VALUES(tracking_code), consignment_id = VALUES(consignment_id), status = VALUES(status), items = VALUES(items)`,
+          [finalOrderId, storeId, String(finalOrderId), customerName, phone, streetAddress, district, thana, size, total || '0', status || 'processing', items || '', trackingCode || null, consignmentId || null]
+        );
+      } catch (dbErr) {
+        console.error('Local orders insert error:', dbErr);
+      }
+
       return NextResponse.json({ success: true, order: createData, isNew: true });
     }
 
-    // পুরনো অর্ডার আপডেট (PUT) - এখানে orderId আছে
+    // পুরনো অর্ডার আপডেট (PUT)
     const updatePayload: any = {
       status: status || 'processing',
       total: String(total || '0'),
@@ -142,6 +162,18 @@ export async function POST(req: Request) {
     const data = await res.json();
     if (!res.ok) {
       return NextResponse.json({ error: data.message || 'Update failed in WooCommerce' }, { status: res.status });
+    }
+
+    // লোকাল ডাটাবেজে ট্র্যাকিং ও আইটেম আপডেট
+    try {
+      await query(
+        `INSERT INTO orders (id, store_id, invoice, customer_name, phone, address, district, thana, size, total, status, items, tracking_code, consignment_id) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE tracking_code = VALUES(tracking_code), consignment_id = VALUES(consignment_id), status = VALUES(status), items = VALUES(items)`,
+        [orderId, storeId, String(orderId), customerName, phone, streetAddress, district, thana, size, total || '0', status || 'processing', items || '', trackingCode || null, consignmentId || null]
+      );
+    } catch (dbErr) {
+      console.error('Local orders update error:', dbErr);
     }
 
     return NextResponse.json({ success: true, order: data });
