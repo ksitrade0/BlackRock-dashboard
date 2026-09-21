@@ -3,7 +3,7 @@ import { query } from '@/lib/db';
 
 export async function GET() {
   try {
-    // ১. পারচেজ টেবিল না থাকলে স্বয়ংক্রিয়ভাবে তৈরি হবে
+    // ১. পারচেজ টেবিল না থাকলে স্বয়ংক্রিয়ভাবে তৈরি হবে[cite: 7]
     await query(`
       CREATE TABLE IF NOT EXISTS purchases (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -15,7 +15,7 @@ export async function GET() {
       )
     `);
 
-    // ২. অর্ডার টেবিল না থাকলে স্বয়ংক্রিয়ভাবে তৈরি হবে
+    // ২. অর্ডার টেবিল না থাকলে স্বয়ংক্রিয়ভাবে তৈরি হবে[cite: 7]
     await query(`
       CREATE TABLE IF NOT EXISTS orders (
         id VARCHAR(255) PRIMARY KEY,
@@ -39,17 +39,17 @@ export async function GET() {
     await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking_code VARCHAR(255)");
     await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS consignment_id VARCHAR(255)");
 
-    const purchases: any = await query("SELECT item_name, quantity FROM purchases");
+    const purchases: any = await query("SELECT item_name, quantity FROM purchases");[cite: 7]
     const orders: any = await query(`
       SELECT items FROM orders 
       WHERE ((tracking_code IS NOT NULL AND tracking_code != '') OR (consignment_id IS NOT NULL AND consignment_id != '')) 
       AND status != 'cancelled' 
       AND status != 'failed'
-    `);
+    `);[cite: 7]
 
     let liveStock: Record<string, number> = {};
 
-    // কেনা প্রোডাক্ট যোগ (+)
+    // কেনা প্রোডাক্ট যোগ (+)[cite: 7]
     if (Array.isArray(purchases)) {
       purchases.forEach((p: any) => {
         const itemName = p.item_name ? p.item_name.toString().trim() : '';
@@ -60,7 +60,7 @@ export async function GET() {
       });
     }
 
-    // কুরিয়ারে পাঠানো প্রোডাক্ট বিয়োগ (-)
+    // কুরিয়ারে পাঠানো প্রোডাক্ট বিয়োগ (-)[cite: 7]
     if (Array.isArray(orders)) {
       orders.forEach((o: any) => {
         if (o.items) {
