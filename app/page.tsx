@@ -143,7 +143,7 @@ export default function Dashboard() {
       .catch(() => router.push('/login'));
   }, [router]);
 
-  // ফেচ অর্ডার ফাংশন
+  // ফেচ অর্ডার ফাংশন[cite: 6]
   const fetchOrders = async (isSilent = false) => {
     if (!isSilent) {
       setLoading(true);
@@ -221,7 +221,7 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
-  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট
+  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট[cite: 6]
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
     if (!isAutomatic) {
@@ -254,13 +254,9 @@ export default function Dashboard() {
         return d.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' }) === todayDate;
       };
 
-      // আজকে পাঠানো পার্সেল
       const sentToday = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && isToday(o.dateSent || o.dateCreated) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return');
       const deliveredToday = updatedOrders.filter((o) => (o.status === 'completed' || o.courierStatus?.toLowerCase() === 'delivered') && isToday(o.dateCreated));
-      
-      // মোট পেন্ডিং পার্সেল (আজকে পাঠানো পার্সেলগুলো বাদ দিয়ে, এবং in_review বাদ দিয়ে)
       const pendingParcels = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return' && o.courierStatus?.toLowerCase() !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'in_review' && !isToday(o.dateSent || o.dateCreated));
-      
       const returnedToday = updatedOrders.filter((o) => (o.courierStatus?.toLowerCase() === 'cancelled' || o.courierStatus?.toLowerCase() === 'returned' || o.courierStatus?.toLowerCase() === 'return' || o.courierStatus?.toLowerCase() === 'cancelled_approval_pending') && isToday(o.dateCreated));
 
       let totalCollection = 0;
@@ -268,11 +264,9 @@ export default function Dashboard() {
         totalCollection += parseFloat(o.total || '0');
       });
 
-      // রিপোর্টের শিরোনাম থেকে নাম বা বন্ধনী বাদ দেওয়া হয়েছে
       let msg = `<b>📊 কুরিয়ার অডিট রিপোর্ট</b>\n`;
       msg += `তারিখ: ${todayDate} | সময়: ${currentTime}\n\n`;
 
-      // ১. আজকে পাঠানো পার্সেল
       msg += `📦 <b>আজকে পাঠানো পার্সেল: ${sentToday.length} টি</b>\n`;
       sentToday.forEach((o, i) => {
         const cid = o.consignmentId || 'N/A';
@@ -284,7 +278,6 @@ export default function Dashboard() {
       });
       msg += `\n`;
 
-      // ২. আজকে ডেলিভারি হওয়া পার্সেল
       msg += `✅ <b>আজকে ডেলিভারি হওয়া পার্সেল: ${deliveredToday.length} টি</b>\n`;
       deliveredToday.forEach((o, i) => {
         const cid = o.consignmentId || 'N/A';
@@ -295,7 +288,6 @@ export default function Dashboard() {
       });
       msg += `\n`;
 
-      // ৩. মোট পেন্ডিং পার্সেল
       msg += `⏳ <b>মোট পেন্ডিং পার্সেল: ${pendingParcels.length} টি</b>\n`;
       pendingParcels.forEach((o, i) => {
         const cid = o.consignmentId || 'N/A';
@@ -306,7 +298,6 @@ export default function Dashboard() {
       });
       msg += `\n`;
 
-      // ৪. আজকে রিটার্ন হওয়া পার্সেল
       msg += `❌ <b>আজকে রিটার্ন হওয়া পার্সেল: ${returnedToday.length} টি</b>\n`;
       returnedToday.forEach((o, i) => {
         const cid = o.consignmentId || 'N/A';
@@ -316,7 +307,6 @@ export default function Dashboard() {
       });
       msg += `\n`;
 
-      // ৫. মোট কালেকশন
       msg += `💰 <b>আজকের ডেলিভারি মোট কালেকশন: ৳ ${totalCollection}</b>\n\n`;
       if (isAutomatic) {
         msg += `<i>🤖 অটোমেটিক নাইট অডিট রিপোর্ট (রাত ১০টো স্টক)</i>`;
@@ -344,7 +334,6 @@ export default function Dashboard() {
     }
   };
 
-  // প্রতিদিন রাত ১০:০০ টায় অটোমেটিক নাইট অডিট রিপোর্ট পাঠানোর হুক
   useEffect(() => {
     const checkTenPM = () => {
       const now = new Date();
@@ -395,15 +384,14 @@ export default function Dashboard() {
     );
   };
 
+  // 🛠️ ফিক্সড: একই আইটেম বা মাল্টিপল আইটেম বারবার ড্রপডাউন থেকে যোগ করার ব্যবস্থা (ডুপ্লিকেট চেক বাদ দেওয়া হয়েছে)
   const handleAddItem = (orderId: number, storeId: string, itemToAdd: string) => {
     if (!itemToAdd) return;
     setOrders((prev) =>
       prev.map((order) => {
         if (order.id === orderId && order.storeId === storeId) {
           const currentItems = order.items ? order.items.split(',').map((s) => s.trim()).filter(Boolean) : [];
-          if (!currentItems.includes(itemToAdd)) {
-            currentItems.push(itemToAdd);
-          }
+          currentItems.push(itemToAdd);
           return { ...order, items: currentItems.join(', ') };
         }
         return order;
@@ -680,7 +668,6 @@ export default function Dashboard() {
     }
   };
 
-  // স্ট্যাটাস অনুযায়ী ডাইনামিক কালার ম্যাপিং
   const getCourierBoxStyle = (status: string) => {
     const s = (status || '').toLowerCase();
     if (s === 'delivered') {

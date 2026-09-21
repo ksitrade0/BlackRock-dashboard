@@ -98,7 +98,10 @@ export async function POST(req: Request) {
         status: status || 'processing',
         billing: billingShipping,
         shipping: billingShipping,
-        meta_data: metaData,
+        meta_data: [
+          ...metaData,
+          { key: '_is_manual_dashboard_order', value: 'yes' } // 🛠️ শুধুমাত্র ড্যাশবোর্ড থেকে তৈরি অর্ডারে এই ট্যাগটি যোগ হবে
+        ],
       };
 
       const createRes = await fetch(`${cleanUrl}/wp-json/wc/v3/orders`, {
@@ -118,7 +121,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, order: createData, isNew: true });
     }
 
-    // পুরনো অর্ডার আপডেট (PUT) - এখানে orderId আছে, তাই এটি সবসময় বর্তমান অর্ডারটিই আপডেট করবে, নতুন কোনো অর্ডার তৈরি করবে না!
+    // পুরনো অর্ডার আপডেট (PUT) - এখানে orderId আছে
     const updatePayload: any = {
       status: status || 'processing',
       total: String(total || '0'),
