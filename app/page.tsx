@@ -877,13 +877,13 @@ export default function Dashboard() {
                 `
               }} />
 
-              {/* ১. হরিজন্টাল স্ক্রলবার বার - স্ক্রল করলে ঠিক ওপরের দিকে (top-0) এসে ফিক্সড থাকবে */}
+              {/* ১. হরিজন্টাল স্ক্রলবার বার - স্ক্রল করে ওপরে গেলে এটি স্ক্রিনের টপে (top-0) এসে ফিক্সড থাকবে */}
               <div ref={topScrollRef} onScroll={handleTopScroll} className="sticky top-0 z-30 overflow-x-auto slim-scroll bg-slate-100 border-b border-slate-300 h-3.5 shadow-xs w-full">
                 <div className="min-w-[1900px] h-full"></div>
               </div>
 
               {/* ২. মূল টেবিল র‍্যাপার */}
-              <div ref={tableScrollRef} onScroll={handleTableScroll} className="max-h-[calc(100vh-270px)] overflow-y-auto overflow-x-auto slim-scroll relative w-full">
+              <div ref={tableScrollRef} onScroll={handleTableScroll} className="overflow-x-auto slim-scroll relative w-full">
                 <table className="w-full text-left border-collapse min-w-[1900px]">
                   
                   {/* টেবিল হেডার হরিজন্টাল স্ক্রলবারের ঠিক নিচে ফিক্সড থাকবে */}
