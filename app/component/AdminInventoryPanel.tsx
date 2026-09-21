@@ -62,7 +62,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
       const data = await res.json();
       const rows = data.data || [];
       setHistoryData(rows);
-      // ডিফল্টভাবে সবগুলো সিলেক্টেড থাকবে প্রিন্টের জন্য
       setSelectedRowIds(rows.map((r: any) => r.id));
     } catch (err) {
       console.error(err);
@@ -124,7 +123,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     }
   };
 
-  // চেকবক্স সিলেকশন হ্যান্ডলার
   const toggleSelectRow = (id: number) => {
     if (selectedRowIds.includes(id)) {
       setSelectedRowIds(selectedRowIds.filter(i => i !== id));
@@ -141,16 +139,13 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     }
   };
 
-  // পার্টির নামগুলোর তালিকা ইউনিক করা ফিল্টারের জন্য
   const uniqueParties = Array.from(new Set(historyData.map(item => item.party_name))).filter(Boolean);
 
-  // ফিল্টার করা ডেটা
   const filteredHistory = historyData.filter(row => {
     if (selectedPartyFilter === 'all') return true;
     return row.party_name === selectedPartyFilter;
   });
 
-  // প্রিন্টের জন্য ফিল্টারড ডেটা থেকে শুধু টিক দেওয়া বা সিলেক্টেড রো গুলো নেওয়া
   const printableData = filteredHistory.filter(row => selectedRowIds.includes(row.id));
   const grandTotalAmount = printableData.reduce((sum, row) => sum + (Number(row.quantity) * Number(row.buying_price)), 0);
 
@@ -208,9 +203,9 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         <History className="w-3.5 h-3.5 text-indigo-600" /> পারচেজ হিস্ট্রি
       </button>
 
-      {/* Auth Modal */}
+      {/* Auth Modal (Centered & Clean) */}
       {authTarget && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-[200] p-4">
           <form onSubmit={handleAuth} className="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl border border-slate-100">
             <div className="flex flex-col items-center mb-6">
               <div className="bg-rose-50 p-4 rounded-2xl mb-3 shadow-inner">
@@ -255,27 +250,27 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         </div>
       )}
 
-      {/* Entry Modal */}
+      {/* Full-Screen Inventory Entry Panel */}
       {activePanel === 'entry' && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center z-[100] p-4 text-left">
-          <div className="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 flex flex-col no-print">
-            <div className="bg-slate-50 border-b border-slate-200 p-6 flex justify-between items-center sticky top-0 z-10">
-              <div className="flex items-center gap-4">
-                <div className="bg-slate-900 p-3 rounded-xl shadow-sm">
-                  <ShoppingCart className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-black uppercase text-slate-900 tracking-wide">পারচেজ ও ইনভেন্টরি এন্ট্রি</h2>
-                  <p className="text-xs font-bold text-slate-500 mt-0.5"> নির্দিষ্ট প্রিসেট আইটেম থেকে সাপ্লায়ার স্টক যুক্ত করুন</p>
-                </div>
+        <div className="fixed inset-0 z-[250] bg-slate-100 flex flex-col w-screen h-screen overflow-hidden text-left animate-in fade-in duration-200">
+          <div className="bg-white border-b border-slate-200 px-6 md:px-12 py-4 flex justify-between items-center shadow-xs shrink-0">
+            <div className="flex items-center gap-4">
+              <div className="bg-slate-900 p-3 rounded-xl shadow-sm">
+                <ShoppingCart className="w-6 h-6 text-white" />
               </div>
-              <button onClick={closePanel} className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer">
-                <X className="w-6 h-6" />
-              </button>
+              <div>
+                <h2 className="text-xl font-black uppercase text-slate-900 tracking-wide">পারচেজ ও ইনভেন্টরি এন্ট্রি</h2>
+                <p className="text-xs font-bold text-slate-500 mt-0.5">নির্দিষ্ট প্রিসেট আইটেম থেকে সাপ্লায়ার স্টক যুক্ত করুন</p>
+              </div>
             </div>
+            <button onClick={closePanel} className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer border border-slate-200">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
 
-            <form onSubmit={handleSavePurchase} className="p-6 md:p-8 space-y-6">
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex-1 overflow-y-auto p-6 md:p-10">
+            <form onSubmit={handleSavePurchase} className="max-w-5xl mx-auto space-y-6">
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
                   <UserCircle className="w-5 h-5 text-indigo-600" />
                   <label className="block text-sm font-black text-slate-800">সাপ্লায়ার বা পার্টির নাম</label>
@@ -290,17 +285,18 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                 />
               </div>
 
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                <div className="grid grid-cols-12 gap-3 p-4 border-b border-slate-200 bg-slate-100 text-[11px] font-black text-slate-600 uppercase tracking-wider text-center">
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm p-6">
+                <h3 className="text-xs font-black uppercase text-slate-500 tracking-wider mb-4">আইটেমের বিবরণ ও দাম</h3>
+                <div className="grid grid-cols-12 gap-3 p-3 border-b border-slate-200 bg-slate-100 text-[11px] font-black text-slate-600 uppercase tracking-wider text-center rounded-lg mb-3">
                   <div className="col-span-5 text-left pl-2">নির্ধারিত আইটেম</div>
                   <div className="col-span-3">পরিমাণ (পিস)</div>
                   <div className="col-span-3">কেনা দাম (প্রতি পিস ৳)</div>
                   <div className="col-span-1">বাদ</div>
                 </div>
 
-                <div className="p-4 space-y-3 bg-white">
+                <div className="space-y-3">
                   {purchaseItems.map((item, index) => (
-                    <div key={index} className="grid grid-cols-12 gap-3 items-center bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                    <div key={index} className="grid grid-cols-12 gap-3 items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
                       <div className="col-span-5">
                         <select
                           value={item.itemName}
@@ -347,7 +343,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                   <button
                     type="button"
                     onClick={() => setPurchaseItems([...purchaseItems, { itemName: '', quantity: 1, buyingPrice: 0 }])}
-                    className="mt-2 flex items-center justify-center gap-1.5 w-full border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-3 rounded-xl transition cursor-pointer text-xs"
+                    className="mt-3 flex items-center justify-center gap-1.5 w-full border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl transition cursor-pointer text-xs"
                   >
                     <Plus className="w-4 h-4" /> আরেকটি আইটেম যোগ করুন
                   </button>
@@ -369,50 +365,46 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         </div>
       )}
 
-      {/* History Modal with Party Filter & Print Selection */}
+      {/* Full-Screen Purchase History Panel */}
       {activePanel === 'history' && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center z-[100] p-4 text-left">
-          <div className="bg-white rounded-3xl w-full max-w-6xl max-h-[92vh] overflow-hidden shadow-2xl flex flex-col border border-slate-100">
-            
-            {/* Header */}
-            <div className="bg-slate-50 border-b border-slate-200 p-6 flex flex-wrap justify-between items-center gap-4 no-print">
-              <div className="flex items-center gap-4">
-                <div className="bg-slate-900 p-3 rounded-xl shadow-sm">
-                  <History className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-black uppercase text-slate-900 tracking-wide">পারচেজ হিস্ট্রি ও রিপোর্ট</h2>
-                  <p className="text-xs font-bold text-slate-500 mt-0.5">পার্টি অনুযায়ী ফিল্টার ও প্রিন্ট অপশন</p>
-                </div>
+        <div className="fixed inset-0 z-[250] bg-slate-100 flex flex-col w-screen h-screen overflow-hidden text-left animate-in fade-in duration-200">
+          <div className="bg-white border-b border-slate-200 px-6 md:px-12 py-4 flex flex-wrap justify-between items-center gap-4 shadow-xs shrink-0 no-print">
+            <div className="flex items-center gap-4">
+              <div className="bg-slate-900 p-3 rounded-xl shadow-sm">
+                <History className="w-6 h-6 text-white" />
               </div>
-
-              {/* ফিল্টার ড্রপডাউন */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-white border border-slate-300 px-3 py-2 rounded-xl">
-                  <span className="text-xs font-bold text-slate-600">পার্টি ফিল্টার:</span>
-                  <select
-                    value={selectedPartyFilter}
-                    onChange={(e) => setSelectedPartyFilter(e.target.value)}
-                    className="bg-transparent text-xs font-black text-slate-900 outline-none cursor-pointer"
-                  >
-                    <option value="all">সকল পার্টি ({historyData.length})</option>
-                    {uniqueParties.map((party, idx) => (
-                      <option key={idx} value={party}>{party}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <button onClick={handlePrint} className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-black hover:bg-black transition shadow-md cursor-pointer">
-                  <Printer className="w-4 h-4" /> সিলেক্টেড প্রিন্ট ({printableData.length})
-                </button>
-                <button onClick={closePanel} className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-xl transition cursor-pointer">
-                  <X className="w-5 h-5" />
-                </button>
+              <div>
+                <h2 className="text-xl font-black uppercase text-slate-900 tracking-wide">পারচেজ হিস্ট্রি ও রিপোর্ট</h2>
+                <p className="text-xs font-bold text-slate-500 mt-0.5">পার্টি অনুযায়ী ফিল্টার ও প্রিন্ট অপশন</p>
               </div>
             </div>
 
-            {/* Table Area */}
-            <div className="overflow-y-auto p-6 flex-1 bg-slate-100/50 no-print">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 px-3 py-2 rounded-xl">
+                <span className="text-xs font-bold text-slate-600">পার্টি ফিল্টার:</span>
+                <select
+                  value={selectedPartyFilter}
+                  onChange={(e) => setSelectedPartyFilter(e.target.value)}
+                  className="bg-transparent text-xs font-black text-slate-900 outline-none cursor-pointer"
+                >
+                  <option value="all">সকল পার্টি ({historyData.length})</option>
+                  {uniqueParties.map((party, idx) => (
+                    <option key={idx} value={party}>{party}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button onClick={handlePrint} className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-black hover:bg-black transition shadow-md cursor-pointer">
+                <Printer className="w-4 h-4" /> সিলেক্টেড প্রিন্ট ({printableData.length})
+              </button>
+              <button onClick={closePanel} className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 rounded-xl transition cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-y-auto p-6 md:p-10 flex-1 no-print">
+            <div className="max-w-6xl mx-auto">
               {isLoadingHistory ? (
                 <div className="text-center py-20 font-bold text-slate-500 animate-pulse text-base">লোড হচ্ছে...</div>
               ) : filteredHistory.length === 0 ? (
@@ -473,48 +465,47 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Printable Area (সঠিক বিন্যাস: তারিখ, আইটেম, রেট, পরিমাণ, মোট দাম এবং সর্বমোট নিচে) */}
-            <div id="printable-invoice" className="hidden text-black bg-white w-full p-4">
-              <div className="text-center mb-6 border-b-2 border-slate-800 pb-4">
-                <h1 className="text-2xl font-black uppercase tracking-wider">BLACK ROCK CORPORATION</h1>
-                <p className="text-xs font-bold text-slate-600 mt-0.5">Ruhama Wear | Purchase Report</p>
-                <p className="text-[11px] font-bold text-slate-500 mt-1">প্রিন্টের তারিখ: {new Date().toLocaleDateString('en-GB')}</p>
-                {selectedPartyFilter !== 'all' && <p className="text-xs font-black text-indigo-700 mt-1">সাপ্লায়ার/পার্টি: {selectedPartyFilter}</p>}
-              </div>
-
-              <table>
-                <thead>
-                  <tr>
-                    <th>তারিখ</th>
-                    <th>পার্টির নাম</th>
-                    <th>আইটেমের নাম</th>
-                    <th style={{ textAlign: 'center' }}>পরিমাণ</th>
-                    <th style={{ textAlign: 'right' }}>রেট (৳)</th>
-                    <th style={{ textAlign: 'right' }}>মোট দাম (৳)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {printableData.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.created_at ? new Date(row.created_at).toLocaleDateString('en-GB') : 'N/A'}</td>
-                      <td><b>{row.party_name}</b></td>
-                      <td>{row.item_name}</td>
-                      <td style={{ textAlign: 'center' }}>{row.quantity} পিস</td>
-                      <td style={{ textAlign: 'right' }}>{row.buying_price}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{Number(row.quantity) * Number(row.buying_price)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* সবার নিচে সর্বমোট দাম */}
-              <div style={{ marginTop: '20px', textAlign: 'right', fontSize: '14px', fontWeight: 'bold' }}>
-                <p>সর্বমোট খরচ (Grand Total): <span style={{ color: '#047857', fontSize: '16px' }}>৳ {grandTotalAmount}</span></p>
-              </div>
+          {/* Printable Area */}
+          <div id="printable-invoice" className="hidden text-black bg-white w-full p-4">
+            <div className="text-center mb-6 border-b-2 border-slate-800 pb-4">
+              <h1 className="text-2xl font-black uppercase tracking-wider">BLACK ROCK CORPORATION</h1>
+              <p className="text-xs font-bold text-slate-600 mt-0.5">Ruhama Wear | Purchase Report</p>
+              <p className="text-[11px] font-bold text-slate-500 mt-1">প্রিন্টের তারিখ: {new Date().toLocaleDateString('en-GB')}</p>
+              {selectedPartyFilter !== 'all' && <p className="text-xs font-black text-indigo-700 mt-1">সাপ্লায়ার/পার্টি: {selectedPartyFilter}</p>}
             </div>
 
+            <table>
+              <thead>
+                <tr>
+                  <th>তারিখ</th>
+                  <th>পার্টির নাম</th>
+                  <th>আইটেমের নাম</th>
+                  <th style={{ textAlign: 'center' }}>পরিমাণ</th>
+                  <th style={{ textAlign: 'right' }}>রেট (৳)</th>
+                  <th style={{ textAlign: 'right' }}>মোট দাম (৳)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printableData.map((row) => (
+                  <tr key={row.id}>
+                    <td>{row.created_at ? new Date(row.created_at).toLocaleDateString('en-GB') : 'N/A'}</td>
+                    <td><b>{row.party_name}</b></td>
+                    <td>{row.item_name}</td>
+                    <td style={{ textAlign: 'center' }}>{row.quantity} পিস</td>
+                    <td style={{ textAlign: 'right' }}>{row.buying_price}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{Number(row.quantity) * Number(row.buying_price)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div style={{ marginTop: '20px', textAlign: 'right', fontSize: '14px', fontWeight: 'bold' }}>
+              <p>সর্বমোট খরচ (Grand Total): <span style={{ color: '#047857', fontSize: '16px' }}>৳ {grandTotalAmount}</span></p>
+            </div>
           </div>
+
         </div>
       )}
     </div>
