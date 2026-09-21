@@ -41,9 +41,9 @@ export default function StockBar() {
   };
 
   useEffect(() => {
-    fetchLiveStock(); // প্রথমবার লোড হবে[cite: 10]
-    const interval = setInterval(fetchLiveStock, 15000); // প্রতি ১৫ সেকেন্ডে লাইভ আপডেট[cite: 10]
-    window.addEventListener('stockUpdated', fetchLiveStock); // পারচেজ অ্যাড/ডিলিট করলে সাথে সাথে আপডেট[cite: 10]
+    fetchLiveStock();
+    const interval = setInterval(fetchLiveStock, 15000);
+    window.addEventListener('stockUpdated', fetchLiveStock);
 
     return () => {
       clearInterval(interval);
@@ -64,19 +64,27 @@ export default function StockBar() {
         <div className="grid grid-cols-16 gap-1 min-w-[1350px]">
           {STOCK_LABELS.map((item) => {
             const currentStock = stock[item.key] ?? 0;
-            const isLowStock = currentStock <= 20;
-            const backgroundStyle = isLowStock
-              ? 'bg-rose-950/90 border-rose-600 shadow-rose-900/50 shadow-inner animate-pulse'
+            const isLowStock = currentStock <= 10;
+            const isCritical = currentStock < 5;
+
+            const backgroundStyle = isCritical
+              ? 'bg-red-950/95 border-red-500 shadow-red-900/90 shadow-inner ring-2 ring-red-500 animate-pulse relative'
+              : isLowStock
+              ? 'bg-rose-950/90 border-rose-600 shadow-rose-900/50 shadow-inner'
               : item.type === 'white'
-              ? 'bg-slate-800/90 border-slate-600 text-slate-100'
+              ? 'bg-slate-800/90 border-slate-600 text-slate-200'
               : 'bg-slate-950 border-slate-850 text-slate-300';
+
             return (
               <div key={item.key} className={`flex flex-col rounded border p-1 text-center transition-all ${backgroundStyle}`}>
-                <div className="text-[10px] font-black truncate py-0.5 border-b border-slate-700/50" title={item.label}>
+                {isCritical && (
+                  <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500 animate-ping" title="ক্রিটিক্যাল স্টক (<5)"></span>
+                )}
+                <div className="text-[10px] font-bold truncate py-0.5 border-b border-slate-700/50 text-slate-300" title={item.label}>
                   {item.label}
                 </div>
                 <div className="flex items-center justify-center gap-1 py-1">
-                  <span className={`text-xs font-black ${isLowStock ? 'text-rose-400 font-extrabold' : 'text-emerald-400'}`}>
+                  <span className={`text-xs font-black ${isCritical ? 'text-red-400 font-extrabold' : isLowStock ? 'text-rose-400 font-extrabold' : 'text-emerald-400'}`}>
                     {currentStock}
                   </span>
                   {isLowStock && <AlertTriangle className="w-2.5 h-2.5 text-rose-500 shrink-0" />}
