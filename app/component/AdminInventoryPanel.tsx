@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Lock, Package, History, X, Save, ShoppingCart, Printer, Plus, Trash2, UserCircle, CheckSquare, Square } from 'lucide-react';
 
 export default function AdminInventoryPanel({ existingItems }: { existingItems: string[] }) {
+  const [mounted, setMounted] = useState(false);
   const [authTarget, setAuthTarget] = useState<'entry' | 'history' | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -13,13 +15,16 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
-  // ফিল্টার এবং সিলেকশন স্টেট
   const [selectedPartyFilter, setSelectedPartyFilter] = useState('all');
   const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
 
   const [partyName, setPartyName] = useState('');
   const [purchaseItems, setPurchaseItems] = useState([{ itemName: '', quantity: 1, buyingPrice: 0 }]);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,6 +193,8 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     }
   };
 
+  if (!mounted) return null;
+
   return (
     <div className="flex flex-col gap-1.5 w-48">
       <button
@@ -203,10 +210,10 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         <History className="w-3.5 h-3.5 text-indigo-600" /> পারচেজ হিস্ট্রি
       </button>
 
-      {/* Auth Modal (Centered & Clean) */}
-      {authTarget && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-[200] p-4">
-          <form onSubmit={handleAuth} className="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl border border-slate-100">
+      {/* Auth Modal via Portal (Perfect Center & Background Overlay) */}
+      {authTarget && createPortal(
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-[999999] p-4">
+          <form onSubmit={handleAuth} className="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex flex-col items-center mb-6">
               <div className="bg-rose-50 p-4 rounded-2xl mb-3 shadow-inner">
                 <Lock className="w-7 h-7 text-rose-600" />
@@ -247,12 +254,13 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
               </button>
             </div>
           </form>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Full-Screen Inventory Entry Panel */}
-      {activePanel === 'entry' && (
-        <div className="fixed inset-0 z-[250] bg-slate-100 flex flex-col w-screen h-screen overflow-hidden text-left animate-in fade-in duration-200">
+      {/* Full-Screen Inventory Entry Panel via Portal */}
+      {activePanel === 'entry' && createPortal(
+        <div className="fixed inset-0 z-[999999] bg-slate-100 flex flex-col w-screen h-screen overflow-hidden text-left animate-in fade-in duration-200">
           <div className="bg-white border-b border-slate-200 px-6 md:px-12 py-4 flex justify-between items-center shadow-xs shrink-0">
             <div className="flex items-center gap-4">
               <div className="bg-slate-900 p-3 rounded-xl shadow-sm">
@@ -362,12 +370,13 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Full-Screen Purchase History Panel */}
-      {activePanel === 'history' && (
-        <div className="fixed inset-0 z-[250] bg-slate-100 flex flex-col w-screen h-screen overflow-hidden text-left animate-in fade-in duration-200">
+      {/* Full-Screen Purchase History Panel via Portal */}
+      {activePanel === 'history' && createPortal(
+        <div className="fixed inset-0 z-[999999] bg-slate-100 flex flex-col w-screen h-screen overflow-hidden text-left animate-in fade-in duration-200">
           <div className="bg-white border-b border-slate-200 px-6 md:px-12 py-4 flex flex-wrap justify-between items-center gap-4 shadow-xs shrink-0 no-print">
             <div className="flex items-center gap-4">
               <div className="bg-slate-900 p-3 rounded-xl shadow-sm">
@@ -505,8 +514,8 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
               <p>সর্বমোট খরচ (Grand Total): <span style={{ color: '#047857', fontSize: '16px' }}>৳ {grandTotalAmount}</span></p>
             </div>
           </div>
-
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
