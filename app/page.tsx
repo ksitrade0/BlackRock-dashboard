@@ -153,7 +153,6 @@ export default function Dashboard() {
       .catch(() => router.push('/login'));
   }, [router]);
 
-  // ফেচ অর্ডার ফাংশন[cite: 8, 9]
   const fetchOrders = async (isSilent = false) => {
     if (!isSilent) {
       setLoading(true);
@@ -231,7 +230,6 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
-  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট[cite: 8, 9]
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
     if (!isAutomatic) {
@@ -767,7 +765,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-200/70 text-slate-900 p-2 md:p-3 font-sans w-full overflow-x-hidden">
       <div className="max-w-[1950px] mx-auto w-full">
-        {/* Header Area - পুরোটাই স্ক্রল করলে ওপরে চলে যাবে (হাইড হবে) */}
+        {/* Header Area - স্বাভাবিকভাবে স্ক্রল হয়ে ওপরের দিকে চলে যাবে */}
         <div className="bg-slate-200/95 pb-2 pt-2 w-full">
           <div className="flex flex-col lg:flex-row justify-between items-center mb-2 gap-2 bg-white p-2 md:px-4 rounded-2xl shadow-sm border border-slate-300 w-full">
             <div className="flex items-center gap-3 w-full lg:w-auto justify-center lg:justify-start">
@@ -850,7 +848,7 @@ export default function Dashboard() {
         )}
 
         {/* Orders Table with Synchronized Top Scrollbar & Sticky Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden mt-4 w-full">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-300 mt-4 w-full">
           {loading ? (
             <div className="p-20 text-center text-slate-600 font-bold text-sm">অর্ডার লোড হচ্ছে...</div>
           ) : filteredOrders.length === 0 ? (
@@ -877,7 +875,7 @@ export default function Dashboard() {
                 `
               }} />
 
-              {/* ১. হরিজন্টাল স্ক্রলবার বার - স্ক্রল করে ওপরে গেলে এটি স্ক্রিনের টপে (top-0) এসে ফিক্সড থাকবে */}
+              {/* ১. হরিজন্টাল স্ক্রলবার বার - স্ক্রল করার সময় স্ক্রিনের একদম টপে (top-0) ফিক্সড থাকবে */}
               <div ref={topScrollRef} onScroll={handleTopScroll} className="sticky top-0 z-30 overflow-x-auto slim-scroll bg-slate-100 border-b border-slate-300 h-3.5 shadow-xs w-full">
                 <div className="min-w-[1900px] h-full"></div>
               </div>
@@ -886,7 +884,7 @@ export default function Dashboard() {
               <div ref={tableScrollRef} onScroll={handleTableScroll} className="overflow-x-auto slim-scroll relative w-full">
                 <table className="w-full text-left border-collapse min-w-[1900px]">
                   
-                  {/* টেবিল হেডার হরিজন্টাল স্ক্রলবারের ঠিক নিচে ফিক্সড থাকবে */}
+                  {/* টেবিল হেডার হরিজন্টাল স্ক্রলবারের ঠিক নিচে (top-[14px]) ফিক্সড থাকবে */}
                   <thead className="sticky top-[14px] z-30 bg-slate-900 text-white shadow-md">
                     <tr className="text-[11px] uppercase font-bold tracking-wider">
                       <th className="p-3.5 w-36 border-r border-slate-800">Invoice / Store</th>
