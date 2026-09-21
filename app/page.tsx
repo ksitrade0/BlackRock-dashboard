@@ -97,6 +97,16 @@ export default function Dashboard() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
+  // মেসেজ ৫ সেকেন্ড পর অটো-ক্লিয়ার করার এফেক্ট
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => {
+        setMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
+
   // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)
   const topScrollRef = useRef<HTMLDivElement>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
@@ -143,7 +153,7 @@ export default function Dashboard() {
       .catch(() => router.push('/login'));
   }, [router]);
 
-  // ফেচ অর্ডার ফাংশন[cite: 5, 6]
+  // ফেচ অর্ডার ফাংশন[cite: 9]
   const fetchOrders = async (isSilent = false) => {
     if (!isSilent) {
       setLoading(true);
@@ -221,7 +231,7 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
-  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট[cite: 5, 6]
+  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট[cite: 9]
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
     if (!isAutomatic) {
@@ -734,6 +744,15 @@ export default function Dashboard() {
     }
   };
 
+  const isTodayOrder = (dateStr: string) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    const today = new Date();
+    return d.getDate() === today.getDate() &&
+           d.getMonth() === today.getMonth() &&
+           d.getFullYear() === today.getFullYear();
+  };
+
   const getStatusColor = (status: string) => {
     const s = status.toLowerCase();
     if (s === 'processing') return 'bg-amber-100 text-amber-900 border-amber-400';
@@ -889,8 +908,21 @@ export default function Dashboard() {
                       const isRecent = phoneInfo && phoneInfo.recentOrders.length > 1;
                       const selectedDistrictObj = BANGLADESH_DISTRICTS.find((d) => d.district === order.district);
                       const availableThanas = selectedDistrictObj ? selectedDistrictObj.thanas : [];
+                      
+                      // আজকের অর্ডার হলে সবুজ, পুরোনো বা অন্যদিনের হলে হলুদ/অ্যাম্বার হাইলাইট
+                      const isToday = isTodayOrder(order.dateCreated);
                       const isEven = index % 2 === 0;
-                      const rowBgClass = order.isNewRow ? 'bg-emerald-50 border-2 border-emerald-500' : isRecent ? 'bg-rose-50 hover:bg-rose-100/70' : isDuplicate ? 'bg-amber-50 hover:bg-amber-100/70' : isEven ? 'bg-white hover:bg-slate-50' : 'bg-slate-50/70 hover:bg-slate-100/70';
+                      
+                      let rowBgClass = order.isNewRow 
+                        ? 'bg-emerald-50 border-2 border-emerald-500' 
+                        : isRecent 
+                        ? 'bg-rose-50 hover:bg-rose-100/70' 
+                        : isDuplicate 
+                        ? 'bg-amber-50 hover:bg-amber-100/70' 
+                        : isToday 
+                        ? 'bg-emerald-50/60 hover:bg-emerald-100/60 border-l-4 border-l-emerald-500' // আজকের অর্ডার (সবুজ লাইট/থিম)
+                        : 'bg-amber-50/40 hover:bg-amber-100/50 border-l-4 border-l-amber-400'; // আগের দিনের পেন্ডিং (হলুদ থিম)
+
                       const currentItemList = order.items ? order.items.split(',').map((s) => s.trim()).filter(Boolean) : [];
 
                       return (
@@ -920,9 +952,9 @@ export default function Dashboard() {
                               <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                               <span className="font-bold text-slate-900">{formatOrderTime(order.dateCreated)}</span>
                             </div>
-                            <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
-                              <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                              <span className="font-bold text-slate-800">{formatOrderDate(order.dateCreated)}</span>
+                            <div className={`w-full h-[32px] flex items-center gap-1.5 border px-2.5 rounded shadow-2xs text-[11px] ${isToday ? 'bg-emerald-100 border-emerald-400 text-emerald-950 font-black' : 'bg-amber-100 border-amber-300 text-amber-950 font-black'}`}>
+                              <Calendar className="w-3.5 h-3.5 shrink-0" />
+                              <span>{formatOrderDate(order.dateCreated)}</span>
                             </div>
                           </td>
 
