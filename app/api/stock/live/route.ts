@@ -3,20 +3,24 @@ import { query } from '@/lib/db';
 
 export async function GET() {
   try {
-    // ডাটাবেজ টেবিলে স্বয়ংক্রিয়ভাবে ট্র্যাকিং কলাম যুক্ত করার কোড (যদি না থাকে)
+    // ডাটাবেজ টেবিলে ট্র্যাকিং কলাম নিশ্চিত করা
     await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking_code VARCHAR(255)");
     await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS consignment_id VARCHAR(255)");
 
     const purchases: any = await query("SELECT item_name, quantity FROM purchases");
-    // শুধুমাত্র সেই অর্ডারগুলো থেকে স্টক মাইনাস হবে যেগুলো কুরিয়ারে পাঠানো হয়েছে (ট্রেকিং কোড বা সিআইডি আছে)
-    const orders: any = await query("SELECT items FROM orders WHERE (tracking_code IS NOT NULL AND tracking_code != '') OR (consignment_id IS NOT NULL AND consignment_id != '')");
+    const orders: any = await query(`
+      SELECT items FROM orders 
+      WHERE ((tracking_code IS NOT NULL AND tracking_code != '') OR (consignment_id IS NOT NULL AND consignment_id != '')) 
+      AND status != 'cancelled' 
+      AND status != 'failed'
+    `);
 
     let liveStock: Record<string, number> = {};
 
-    // কেনা প্রোডাক্ট যোগ (+)
+    // কেনা প্রোডাক্ট যোগ (+) - সমস্ত স্পেস ও কেস ট্রিম করে নিখুঁতভাবে যোগ করা
     if (Array.isArray(purchases)) {
       purchases.forEach((p: any) => {
-        const itemName = p.item_name ? p.item_name.trim() : '';
+        const itemName = p.item_name ? p.item_name.toString().trim() : '';
         if (itemName) {
           if (!liveStock[itemName]) liveStock[itemName] = 0;
           liveStock[itemName] += Number(p.quantity || 0);
@@ -30,8 +34,15 @@ export async function GET() {
         if (o.items) {
           const itemsArr = o.items.split(',').map((s: string) => s.trim()).filter(Boolean);
           itemsArr.forEach((itemName: string) => {
-            if (liveStock[itemName] !== undefined) {
-              liveStock[itemName] -= 1;
+            const cleanItem = itemName.trim();
+            if (liveStock[cleanItem] !== undefined) {
+              liveStock[cleanItem] -= 1;
+            } else {
+              // যদি নামের স্ট্রিংয়ে সামান্য অমিল থাকে, কেস-ইনসেন্সিটিভ মিলিয়ে মাইনাস করা
+              const matchedKey = Object.keys(liveStock).find(k => k.toLowerCase() === cleanItem.toLowerCase());
+              if (matchedKey) {
+                liveStock[matchedKey] -= 1;
+              }
             }
           });
         }
