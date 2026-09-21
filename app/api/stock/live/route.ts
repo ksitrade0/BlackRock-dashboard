@@ -4,7 +4,8 @@ import { query } from '@/lib/db';
 export async function GET() {
   try {
     const purchases: any = await query("SELECT item_name, quantity FROM purchases");
-    const orders: any = await query("SELECT items FROM orders WHERE status != 'cancelled' AND status != 'failed'");
+    // শুধুমাত্র কুরিয়ারে পাঠানো অর্ডারগুলো থেকে স্টক মাইনাস হবে
+    const orders: any = await query("SELECT items FROM orders WHERE (tracking_code IS NOT NULL AND tracking_code != '') OR (consignment_id IS NOT NULL AND consignment_id != '')");
 
     let liveStock: Record<string, number> = {};
 
@@ -19,7 +20,7 @@ export async function GET() {
       });
     }
 
-    // বিক্রি হওয়া প্রোডাক্ট বিয়োগ (-)
+    // কুরিয়ারে পাঠানো বিক্রি হওয়া প্রোডাক্ট বিয়োগ (-)
     if (Array.isArray(orders)) {
       orders.forEach((o: any) => {
         if (o.items) {
