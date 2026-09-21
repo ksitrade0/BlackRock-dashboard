@@ -8,22 +8,22 @@ interface StockData {
 }
 
 const STOCK_LABELS = [
-  { key: 'N সাদা-৩৮', label: 'N সাদা-৩৮', type: 'white' },
-  { key: 'N সাদা-৪০', label: 'N সাদা-৪০', type: 'white' },
-  { key: 'N সাদা-৪২', label: 'N সাদা-৪২', type: 'white' },
-  { key: 'N সাদা-৪৪', label: 'N সাদা-৪৪', type: 'white' },
-  { key: 'N কালো-৩৮', label: 'N কালো-৩৮', type: 'black' },
-  { key: 'N কালো-৪০', label: 'N কালো-৪০', type: 'black' },
-  { key: 'N কালো-৪২', label: 'N কালো-৪২', type: 'black' },
-  { key: 'N কালো-৪৪', label: 'N কালো-৪৪', type: 'black' },
-  { key: 'D সাদা-৩৮', label: 'D সাদা-৩৮', type: 'white' },
-  { key: 'D সাদা-৪০', label: 'D সাদা-৪০', type: 'white' },
-  { key: 'D সাদা-৪২', label: 'D সাদা-৪২', type: 'white' },
-  { key: 'D সাদা-৪৪', label: 'D সাদা-৪৪', type: 'white' },
-  { key: 'D কালো-৩৮', label: 'D কালো-৩৮', type: 'black' },
-  { key: 'D কালো-৪০', label: 'D কালো-৪০', type: 'black' },
-  { key: 'D কালো-৪২', label: 'D কালো-৪২', type: 'black' },
-  { key: 'D কালো-৪৪', label: 'D কালো-৪৪', type: 'black' },
+  { key: 'N-White-38', label: 'N-White-38', type: 'white' },
+  { key: 'N-White-40', label: 'N-White-40', type: 'white' },
+  { key: 'N-White-42', label: 'N-White-42', type: 'white' },
+  { key: 'N-White-44', label: 'N-White-44', type: 'white' },
+  { key: 'N-Black-38', label: 'N-Black-38', type: 'black' },
+  { key: 'N-Black-40', label: 'N-Black-40', type: 'black' },
+  { key: 'N-Black-42', label: 'N-Black-42', type: 'black' },
+  { key: 'N-Black-44', label: 'N-Black-44', type: 'black' },
+  { key: 'D-White-38', label: 'D-White-38', type: 'white' },
+  { key: 'D-White-40', label: 'D-White-40', type: 'white' },
+  { key: 'D-White-42', label: 'D-White-42', type: 'white' },
+  { key: 'D-White-44', label: 'D-White-44', type: 'white' },
+  { key: 'D-Black-38', label: 'D-Black-38', type: 'black' },
+  { key: 'D-Black-40', label: 'D-Black-40', type: 'black' },
+  { key: 'D-Black-42', label: 'D-Black-42', type: 'black' },
+  { key: 'D-Black-44', label: 'D-Black-44', type: 'black' },
 ];
 
 export default function StockBar() {
@@ -41,9 +41,9 @@ export default function StockBar() {
   };
 
   useEffect(() => {
-    fetchLiveStock(); // প্রথমবার লোড হবে[cite: 12]
-    const interval = setInterval(fetchLiveStock, 15000); // প্রতি ১৫ সেকেন্ডে লাইভ আপডেট[cite: 12]
-    window.addEventListener('stockUpdated', fetchLiveStock); // পারচেজ অ্যাড/ডিলিট করলে সাথে সাথে আপডেট[cite: 12]
+    fetchLiveStock(); // প্রথমবার লোড হবে[cite: 10]
+    const interval = setInterval(fetchLiveStock, 15000); // প্রতি ১৫ সেকেন্ডে লাইভ আপডেট[cite: 10]
+    window.addEventListener('stockUpdated', fetchLiveStock); // পারচেজ অ্যাড/ডিলিট করলে সাথে সাথে আপডেট[cite: 10]
 
     return () => {
       clearInterval(interval);
