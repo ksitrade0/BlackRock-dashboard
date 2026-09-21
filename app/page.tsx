@@ -153,7 +153,7 @@ export default function Dashboard() {
       .catch(() => router.push('/login'));
   }, [router]);
 
-  // ফেচ অর্ডার ফাংশন[cite: 9]
+  // ফেচ অর্ডার ফাংশন[cite: 8, 9]
   const fetchOrders = async (isSilent = false) => {
     if (!isSilent) {
       setLoading(true);
@@ -231,7 +231,7 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
-  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট[cite: 9]
+  // রিয়েল-টাইম কুরিয়ার অডিট রিপোর্ট[cite: 8, 9]
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
     if (!isAutomatic) {
@@ -765,11 +765,11 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-200/70 text-slate-900 p-2 md:p-3 font-sans">
-      <div className="max-w-[1950px] mx-auto">
-        {/* Header Area - স্ক্রল করলে ওপরের দিকে চলে যাবে */}
-        <div className="bg-slate-200/95 pb-2 pt-2">
-          <div className="flex flex-col lg:flex-row justify-between items-center mb-2 gap-2 bg-white p-2 md:px-4 rounded-2xl shadow-sm border border-slate-300">
+    <div className="min-h-screen bg-slate-200/70 text-slate-900 p-2 md:p-3 font-sans w-full overflow-x-hidden">
+      <div className="max-w-[1950px] mx-auto w-full">
+        {/* Header Area - পুরোটাই স্ক্রল করলে ওপরে চলে যাবে (হাইড হবে) */}
+        <div className="bg-slate-200/95 pb-2 pt-2 w-full">
+          <div className="flex flex-col lg:flex-row justify-between items-center mb-2 gap-2 bg-white p-2 md:px-4 rounded-2xl shadow-sm border border-slate-300 w-full">
             <div className="flex items-center gap-3 w-full lg:w-auto justify-center lg:justify-start">
               {hasLogoImg ? (
                 <div onClick={() => (window.location.href = '/')} className="flex items-center gap-3.5 cursor-pointer select-none transition hover:opacity-90" title="Dashboard Reload">
@@ -783,7 +783,7 @@ export default function Dashboard() {
                 </div>
               )}
               <div>
-                <h1 className="text-xl md:text-2xl lg:text-3xl font-black tracking-wider text-slate-950 uppercase flex items-center gap-2">BLACK ROCK CORPORATION</h1>
+                <h1 className="text-lg md:text-xl lg:text-2xl font-black tracking-wider text-slate-950 uppercase flex items-center gap-2">BLACK ROCK CORPORATION</h1>
                 <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 mt-0.5">
                   <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span>Enterprise Multi-Store & Courier Logistics Portal</span>
@@ -791,24 +791,24 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-center lg:justify-end">
-              <div className="flex flex-col justify-center items-center bg-slate-100 border border-slate-300 px-4 py-1.5 rounded-xl h-[78px] min-w-[170px] shadow-2xs">
+            <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-center lg:justify-end">
+              <div className="flex flex-col justify-center items-center bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-xl h-[78px] min-w-[150px] shadow-2xs">
                 <User className="w-5 h-5 text-slate-700 mb-1" />
                 <div className="text-xs font-black text-slate-900 leading-tight text-center">{currentUser}</div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <button onClick={() => fetchOrders(false)} className="w-36 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition border border-slate-300 cursor-pointer active:scale-95 shadow-2xs">
+                <button onClick={() => fetchOrders(false)} className="w-32 md:w-36 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition border border-slate-300 cursor-pointer active:scale-95 shadow-2xs">
                   <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${loading ? 'animate-spin' : ''}`} /> Refresh Orders
                 </button>
-                <button onClick={handleLogout} className="w-36 h-[36px] flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-xs transition border border-rose-200 cursor-pointer active:scale-95 shadow-2xs">
+                <button onClick={handleLogout} className="w-32 md:w-36 h-[36px] flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-xs transition border border-rose-200 cursor-pointer active:scale-95 shadow-2xs">
                   <LogOut className="w-3.5 h-3.5" /> লগআউট
                 </button>
               </div>
               <div className="flex flex-col gap-1.5">
-                <button onClick={() => handleSendCourierReport(false)} disabled={reporting} className="w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg font-bold text-xs transition cursor-pointer border border-slate-800 disabled:opacity-50 shadow-2xs">
+                <button onClick={() => handleSendCourierReport(false)} disabled={reporting} className="w-44 md:w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg font-bold text-xs transition cursor-pointer border border-slate-800 disabled:opacity-50 shadow-2xs">
                   <BarChart2 className={`w-3.5 h-3.5 text-amber-400 ${reporting ? 'animate-spin' : ''}`} /> {reporting ? 'রিপোর্ট যাচ্ছে...' : 'কুরিয়ার অডিট রিপোর্ট'}
                 </button>
-                <button onClick={handleAddNewBlankRow} className="w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition cursor-pointer border border-slate-300 active:scale-95 shadow-2xs">
+                <button onClick={handleAddNewBlankRow} className="w-44 md:w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition cursor-pointer border border-slate-300 active:scale-95 shadow-2xs">
                   <Plus className="w-3.5 h-3.5 text-emerald-600 font-black" /> + নতুন অর্ডার যোগ করুন
                 </button>
               </div>
@@ -821,11 +821,11 @@ export default function Dashboard() {
 
           <StockBar />
 
-          <div className="flex flex-col lg:flex-row justify-between items-center gap-2 bg-white p-2 md:px-4 rounded-xl shadow-sm border border-slate-300 mt-2">
-            <div className="flex gap-2 overflow-x-auto w-full lg:w-auto pb-1 lg:pb-0">
-              <button onClick={() => setSelectedStore('all')} className={`px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${selectedStore === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>All Stores</button>
-              <button onClick={() => setSelectedStore('Ruhama Wear')} className={`px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${selectedStore === 'Ruhama Wear' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>Ruhama Wear</button>
-              <button onClick={() => setSelectedStore('Aastha Naturals BD')} className={`px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${selectedStore === 'Aastha Naturals BD' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>Aastha Naturals BD</button>
+          <div className="flex flex-col lg:flex-row justify-between items-center gap-2 bg-white p-2 md:px-4 rounded-xl shadow-sm border border-slate-300 mt-2 w-full">
+            <div className="flex gap-2 overflow-x-auto w-full lg:w-auto pb-1 lg:pb-0 slim-scroll">
+              <button onClick={() => setSelectedStore('all')} className={`px-3 md:px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${selectedStore === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>All Stores</button>
+              <button onClick={() => setSelectedStore('Ruhama Wear')} className={`px-3 md:px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${selectedStore === 'Ruhama Wear' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>Ruhama Wear</button>
+              <button onClick={() => setSelectedStore('Aastha Naturals BD')} className={`px-3 md:px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${selectedStore === 'Aastha Naturals BD' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>Aastha Naturals BD</button>
             </div>
             <div className="flex flex-col sm:flex-row gap-2.5 w-full lg:w-auto items-center">
               <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="w-full sm:w-auto border border-slate-300 rounded-lg px-3 py-2 text-xs bg-white text-slate-900 font-bold focus:outline-none focus:border-slate-900 cursor-pointer">
@@ -850,7 +850,7 @@ export default function Dashboard() {
         )}
 
         {/* Orders Table with Synchronized Top Scrollbar & Sticky Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden mt-4">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden mt-4 w-full">
           {loading ? (
             <div className="p-20 text-center text-slate-600 font-bold text-sm">অর্ডার লোড হচ্ছে...</div>
           ) : filteredOrders.length === 0 ? (
@@ -878,12 +878,12 @@ export default function Dashboard() {
               }} />
 
               {/* ১. হরিজন্টাল স্ক্রলবার বার - স্ক্রল করলে ঠিক ওপরের দিকে (top-0) এসে ফিক্সড থাকবে */}
-              <div ref={topScrollRef} onScroll={handleTopScroll} className="sticky top-0 z-30 overflow-x-auto slim-scroll bg-slate-100 border-b border-slate-300 h-3.5 shadow-xs">
+              <div ref={topScrollRef} onScroll={handleTopScroll} className="sticky top-0 z-30 overflow-x-auto slim-scroll bg-slate-100 border-b border-slate-300 h-3.5 shadow-xs w-full">
                 <div className="min-w-[1900px] h-full"></div>
               </div>
 
               {/* ২. মূল টেবিল র‍্যাপার */}
-              <div ref={tableScrollRef} onScroll={handleTableScroll} className="max-h-[calc(100vh-270px)] overflow-y-auto overflow-x-auto slim-scroll relative">
+              <div ref={tableScrollRef} onScroll={handleTableScroll} className="max-h-[calc(100vh-270px)] overflow-y-auto overflow-x-auto slim-scroll relative w-full">
                 <table className="w-full text-left border-collapse min-w-[1900px]">
                   
                   {/* টেবিল হেডার হরিজন্টাল স্ক্রলবারের ঠিক নিচে ফিক্সড থাকবে */}
