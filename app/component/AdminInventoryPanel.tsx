@@ -210,10 +210,10 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         <History className="w-3.5 h-3.5 text-indigo-600" /> পারচেজ হিস্ট্রি
       </button>
 
-      {/* Auth Modal via Portal (Perfect Center & Background Overlay) */}
+      {/* Auth Modal via Portal (Guaranteed Dead Center Alignment) */}
       {authTarget && createPortal(
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-[999999] p-4">
-          <form onSubmit={handleAuth} className="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-[999999] w-screen h-screen bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <form onSubmit={handleAuth} className="m-auto bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex flex-col items-center mb-6">
               <div className="bg-rose-50 p-4 rounded-2xl mb-3 shadow-inner">
                 <Lock className="w-7 h-7 text-rose-600" />
