@@ -55,7 +55,7 @@ export default function StockBar() {
     <div className="bg-slate-900 text-white rounded-xl p-2.5 mb-3 shadow-md border border-slate-800">
       <div className="flex items-center justify-between mb-2 px-1">
         <h2 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
           লাইভ ইনভেন্টরি স্টক বার (ক্যালকুলেটেড)
         </h2>
         {loading && <RefreshCw className="w-3.5 h-3.5 text-slate-400 animate-spin" />}
@@ -64,30 +64,28 @@ export default function StockBar() {
         <div className="grid grid-cols-16 gap-1 min-w-[1350px]">
           {STOCK_LABELS.map((item) => {
             const currentStock = stock[item.key] ?? 0;
-            const isLowStock = currentStock <= 10;
             const isCritical = currentStock < 5;
+            const isLowStock = currentStock <= 10 && !isCritical;
 
+            const defaultBg = item.type === 'white' ? 'bg-slate-800/90 text-slate-200' : 'bg-slate-950 text-slate-300';
+
+            // এখানে সবকটি বক্সে স্থায়ীভাবে border-2 ব্যবহার করা হয়েছে যাতে সাইজ পরিবর্তনের কোনো সুযোগ না থাকে
             const backgroundStyle = isCritical
-              ? 'bg-red-950/95 border-red-500 shadow-red-900/90 shadow-inner ring-2 ring-red-500 animate-pulse relative'
+              ? 'bg-red-950 border-red-500 text-white border-2'
               : isLowStock
-              ? 'bg-rose-950/90 border-rose-600 shadow-rose-900/50 shadow-inner'
-              : item.type === 'white'
-              ? 'bg-slate-800/90 border-slate-600 text-slate-200'
-              : 'bg-slate-950 border-slate-850 text-slate-300';
+              ? `${defaultBg} border-red-500 border-2`
+              : `${defaultBg} border-slate-700 border-2`;
 
             return (
-              <div key={item.key} className={`flex flex-col rounded border p-1 text-center transition-all ${backgroundStyle}`}>
-                {isCritical && (
-                  <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500 animate-ping" title="ক্রিটিক্যাল স্টক (<5)"></span>
-                )}
-                <div className="text-[10px] font-bold truncate py-0.5 border-b border-slate-700/50 text-slate-300" title={item.label}>
+              <div key={item.key} className={`flex flex-col rounded p-1 text-center transition-colors ${backgroundStyle}`}>
+                <div className="text-[10px] font-bold truncate py-0.5 border-b border-slate-700/50" title={item.label}>
                   {item.label}
                 </div>
                 <div className="flex items-center justify-center gap-1 py-1">
-                  <span className={`text-xs font-black ${isCritical ? 'text-red-400 font-extrabold' : isLowStock ? 'text-rose-400 font-extrabold' : 'text-emerald-400'}`}>
+                  <span className={`text-xs font-black ${isCritical ? 'text-red-400' : isLowStock ? 'text-red-400' : 'text-emerald-400'}`}>
                     {currentStock}
                   </span>
-                  {isLowStock && <AlertTriangle className="w-2.5 h-2.5 text-rose-500 shrink-0" />}
+                  {isLowStock && <AlertTriangle className="w-2.5 h-2.5 text-red-500 shrink-0" />}
                 </div>
               </div>
             );
