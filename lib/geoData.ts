@@ -4,7 +4,7 @@ export interface DistrictData {
 }
 
 export const BANGLADESH_DISTRICTS: DistrictData[] = [
-  // --- ঢাকা বিভাগ ---
+  // --- ঢাকা বিভাগ (১৩টি জেলা) ---
   {
     district: 'Dhaka',
     thanas: [
@@ -18,7 +18,7 @@ export const BANGLADESH_DISTRICTS: DistrictData[] = [
   },
   {
     district: 'Gazipur',
-    thanas: ['Gazipur Sadar', 'Kaliakair', 'Kaliganj', 'Kapasia', 'Sreepur', 'Tongi']
+    thanas: ['Gazipur Sadar', 'Kaliakair', 'Kaliganj', 'Kapasia', 'Sreepur', 'Tongi', 'Pubail', 'Konabari', 'Kashimpur']
   },
   {
     district: 'Narayanganj',
@@ -34,7 +34,7 @@ export const BANGLADESH_DISTRICTS: DistrictData[] = [
   },
   {
     district: 'Manikganj',
-    thanas: ['Manikganj Sadar', 'Daulatpur', 'Gior', 'Harirampur', 'Saturia', 'Shivalaya', 'Singair']
+    thanas: ['Manikganj Sadar', 'Daulatpur', 'Ghior', 'Harirampur', 'Saturia', 'Shivalaya', 'Singair']
   },
   {
     district: 'Munshiganj',
@@ -65,19 +65,20 @@ export const BANGLADESH_DISTRICTS: DistrictData[] = [
     thanas: ['Narsingdi Sadar', 'Belabo', 'Monohardi', 'Raipura', 'Shibpur', 'Palash']
   },
 
-  // --- চট্টগ্রাম বিভাগ ---
+  // --- চট্টগ্রাম বিভাগ (১১টি জেলা) ---
   {
     district: 'Chattogram',
     thanas: [
       'Anwara', 'Banshkhali', 'Boalkhali', 'Chandanaish', 'Fatikchhari', 'Hathazari', 
       'Lohagara', 'Mirsharai', 'Patiya', 'Rangunia', 'Raozan', 'Sandwip', 'Satkania', 
       'Sitakunda', 'Bandar', 'Bayazid Bostami', 'Bakalia', 'Chandgaon', 'Double Mooring', 
-      'EPZ', 'Halishahar', 'Karnafuli', 'Khulshi', 'Kotwali', 'Pahartali', 'Panchlaish', 'Sadarghat'
+      'EPZ', 'Halishahar', 'Karnafuli', 'Khulshi', 'Kotwali', 'Pahartali', 'Panchlaish', 
+      'Sadarghat', 'Patenga', 'Doublemuring', 'Akbarshah', 'Bhujpur', 'Pahartali'
     ]
   },
   {
-    district: 'Cox\'s Bazar',
-    thanas: ['Cox\'s Bazar Sadar', 'Chakaria', 'Kutubdia', 'Maheshkhali', 'Ramu', 'Teknaf', 'Ukhia', 'Pekua', 'Eidgah']
+    district: "Cox's Bazar",
+    thanas: ["Cox's Bazar Sadar", 'Chakaria', 'Kutubdia', 'Maheshkhali', 'Ramu', 'Teknaf', 'Ukhia', 'Pekua', 'Eidgah', 'Moheshkhali']
   },
   {
     district: 'Cumilla',
@@ -109,21 +110,21 @@ export const BANGLADESH_DISTRICTS: DistrictData[] = [
   },
   {
     district: 'Rangamati',
-    thanas: ['Rangamati Sadar', 'Belaichhari', 'Bagaichhari', 'Barkal', 'Juraichhari', 'Karnafuli', 'Langadu', 'Nannerchar', 'Rajsthali', 'Kaptai']
+    thanas: ['Rangamati Sadar', 'Belaichhari', 'Bagaichhari', 'Barkal', 'Juraichhari', 'Langadu', 'Nannerchar', 'Rajsthali', 'Kaptai']
   },
   {
     district: 'Bandarban',
     thanas: ['Bandarban Sadar', 'Alikadam', 'Naikhongchhari', 'Rowangchhari', 'Ruma', 'Thanchi', 'Lama']
   },
 
-  // --- রাজশাহী বিভাগ ---
+  // --- রাজশাহী বিভাগ (৮টি জেলা) ---
   {
     district: 'Rajshahi',
-    thanas: ['Bagha', 'Tanore', 'Paba', 'Puthia', 'Godagari', 'Mohanpur', 'Charghat', 'Durgapur', 'Boalia', 'Rajpara', 'Matihar', 'Shah Makhdum', 'Paba']
+    thanas: ['Bagha', 'Tanore', 'Paba', 'Puthia', 'Godagari', 'Mohanpur', 'Charghat', 'Durgapur', 'Boalia', 'Rajpara', 'Matihar', 'Shah Makhdum', 'Kashiadanga', 'Damkura']
   },
   {
     district: 'Bogura',
-    thanas: ['Bogura Sadar', 'Adamdighi', 'Dhunat', 'Dhupchanchia', 'Gabtali', 'Kahaloo', 'Nandigram', 'Sariakandi', 'Sherpur', 'Shibganj', 'Sonatala', 'Gabtali']
+    thanas: ['Bogura Sadar', 'Adamdighi', 'Dhunat', 'Dhupchanchia', 'Gabtali', 'Kahaloo', 'Nandigram', 'Sariakandi', 'Sherpur', 'Shibganj', 'Sonatala']
   },
   {
     district: 'Natore',
@@ -143,14 +144,14 @@ export const BANGLADESH_DISTRICTS: DistrictData[] = [
   },
   {
     district: 'Sirajganj',
-    thanas: ['Sirajganj Sadar', 'Belkuchi', 'Chauhali', 'Kamarkhanda', 'Kazipur', '_', 'Shahjadpur', 'Tarash', 'Ullahpara']
+    thanas: ['Sirajganj Sadar', 'Belkuchi', 'Chauhali', 'Kamarkhanda', 'Kazipur', 'Shahjadpur', 'Tarash', 'Ullahpara', 'Salanga']
   },
   {
     district: 'Joypurhat',
     thanas: ['Joypurhat Sadar', 'Akkelpur', 'Kalai', 'Khetlal', 'Panchbibi']
   },
 
-  // --- খুলনা বিভাগ ---
+  // --- খুলনা বিভাগ (১০টি জেলা) ---
   {
     district: 'Khulna',
     thanas: ['Batiaghata', 'Dacope', 'Dumuria', 'Dighalia', 'Koyra', 'Paikgachha', 'Phultala', 'Rupsa', 'Terokhada', 'Daulatpur', 'Khalishpur', 'Khan Jahan Ali', 'Kotwali', 'Sonadanga', 'Harintana']
@@ -177,7 +178,7 @@ export const BANGLADESH_DISTRICTS: DistrictData[] = [
   },
   {
     district: 'Kushtia',
-    thanas: ['Kushtia Sadar', 'Bheramara', 'Kumarkhali', 'Khoksa', 'Mirpur', 'Daulatpur']
+    thanas: ['Kushtia Sadar', 'Bheramara', 'Kumarkhali', 'Khoksa', 'Mirpur', 'Daulatpur', 'Islami University']
   },
   {
     district: 'Chuadanga',
@@ -192,10 +193,10 @@ export const BANGLADESH_DISTRICTS: DistrictData[] = [
     thanas: ['Bagerhat Sadar', 'Chitalmari', 'Fakirhat', 'Kachua', 'Mollahat', 'Mongla', 'Morrelganj', 'Rampal', 'Sarankhola']
   },
 
-  // --- বরিশাল বিভাগ ---
+  // --- বরিশাল বিভাগ (৬টি জেলা) ---
   {
     district: 'Barishal',
-    thanas: ['Agailjhara', 'Babuganj', 'Bakerganj', 'Banaripara', 'Gaurnadi', 'Hizla', 'Barishal Sadar', 'Mehendiganj', 'Muladi', 'Wazirpur', 'Kotwali']
+    thanas: ['Agailjhara', 'Babuganj', 'Bakerganj', 'Banaripara', 'Gaurnadi', 'Hizla', 'Barishal Sadar', 'Mehendiganj', 'Muladi', 'Wazirpur', 'Kotwali', 'Bandar']
   },
   {
     district: 'Barguna',
@@ -211,17 +212,17 @@ export const BANGLADESH_DISTRICTS: DistrictData[] = [
   },
   {
     district: 'Patuakhali',
-    thanas: ['Patuakhali Sadar', 'Bauphal', 'Dashmina', 'Galachipa', 'Kalapara', 'Mirzaganj', 'Rangabali', 'Dumki']
+    thanas: ['Patuakhali Sadar', 'Bauphal', 'Dashmina', 'Galachipa', 'Kalapara', 'Mirzaganj', 'Rangabali', 'Dumki', 'Kuakata']
   },
   {
     district: 'Pirojpur',
     thanas: ['Pirojpur Sadar', 'Bhandaria', 'Kawkhali', 'Mathbaria', 'Nazirpur', 'Nesarabad', 'Zianagar']
   },
 
-  // --- সিলেট বিভাগ ---
+  // --- সিলেট বিভাগ (৪টি জেলা) ---
   {
     district: 'Sylhet',
-    thanas: ['Balaganj', 'Beani Bazar', 'Bishwanath', 'Companiganj', 'Fenchuganj', 'Golapganj', 'Gowainghat', 'Jaintiapur', 'Kanaighat', 'Sylhet Sadar', 'Zakiganj', 'South Surma', 'Biswanath']
+    thanas: ['Balaganj', 'Beani Bazar', 'Bishwanath', 'Companiganj', 'Fenchuganj', 'Golapganj', 'Gowainghat', 'Jaintiapur', 'Kanaighat', 'Sylhet Sadar', 'Zakiganj', 'South Surma', 'Airport']
   },
   {
     district: 'Moulvibazar',
@@ -233,13 +234,13 @@ export const BANGLADESH_DISTRICTS: DistrictData[] = [
   },
   {
     district: 'Sunamganj',
-    thanas: ['Sunamganj Sadar', 'Bishwamvarpur', 'Chhatak', 'Derai', 'Dharamapassa', 'Dowarabazar', 'Jagannathpur', 'Jamalganj', 'Sullah', 'Tahirpur', 'South Sunamganj']
+    thanas: ['Sunamganj Sadar', 'Bishwamvarpur', 'Chhatak', 'Derai', 'Dharamapassa', 'Dowarabazar', 'Jagannathpur', 'Jamalganj', 'Sullah', 'Tahirpur', 'South Sunamganj', 'Madhyanagar']
   },
 
-  // --- রংপুর বিভাগ ---
+  // --- রংপুর বিভাগ (৮টি জেলা) ---
   {
     district: 'Rangpur',
-    thanas: ['Rangpur Sadar', 'Badarganj', 'Gangachara', 'Kaunia', 'Mithapukur', 'Pirgachha', 'Pirganj', 'Taraganj']
+    thanas: ['Rangpur Sadar', 'Badarganj', 'Gangachara', 'Kaunia', 'Mithapukur', 'Pirgachha', 'Pirganj', 'Taraganj', 'Kotwali']
   },
   {
     district: 'Dinajpur',
@@ -270,10 +271,10 @@ export const BANGLADESH_DISTRICTS: DistrictData[] = [
     thanas: ['Thakurgaon Sadar', 'Baliadangi', 'Haripur', 'Ranisankail', 'Pirganj']
   },
 
-  // --- ময়মনসিংহ বিভাগ ---
+  // --- ময়মনসিংহ বিভাগ (৪টি জেলা) ---
   {
     district: 'Mymensingh',
-    thanas: ['Mymensingh Sadar', 'Bhaluka', 'Dhobaura', 'Fulbaria', 'Gaffargaon', 'Gauripur', 'Haluaghat', 'Ishwarganj', 'Muktagachha', 'Nandail', 'Phulpur', 'Trishal', 'Kandapara']
+    thanas: ['Mymensingh Sadar', 'Bhaluka', 'Dhobaura', 'Fulbaria', 'Gaffargaon', 'Gauripur', 'Haluaghat', 'Ishwarganj', 'Muktagachha', 'Nandail', 'Phulpur', 'Trishal', 'Kotwali']
   },
   {
     district: 'Jamalpur',
@@ -281,7 +282,7 @@ export const BANGLADESH_DISTRICTS: DistrictData[] = [
   },
   {
     district: 'Netrokona',
-    thanas: ['Netrokona Sadar', 'Atpara', 'Barhatta', 'Durgapur', 'Khaliajuri', 'Kachua', 'Madan', 'Mohanganj', 'Purbadhala', 'Kendua']
+    thanas: ['Netrokona Sadar', 'Atpara', 'Barhatta', 'Durgapur', 'Khaliajuri', 'Madan', 'Mohanganj', 'Purbadhala', 'Kendua', 'Barhatta']
   },
   {
     district: 'Sherpur',

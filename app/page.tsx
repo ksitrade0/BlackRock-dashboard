@@ -264,7 +264,10 @@ export default function Dashboard() {
 
       const sentToday = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && isToday(o.dateSent || o.dateCreated) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return');
       const deliveredToday = updatedOrders.filter((o) => (o.status === 'completed' || o.courierStatus?.toLowerCase() === 'delivered') && isToday(o.dateCreated));
-      const pendingParcels = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return' && o.courierStatus?.toLowerCase() !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'in_review' && !isToday(o.dateSent || o.dateCreated));
+      
+      // ইন-রিভিউসহ পেছনের সমস্ত পেন্ডিং পার্সেল অন্তর্ভুক্ত করার জন্য 'in_review' ফিল্টারটি বাদ দেওয়া হয়েছে
+      const pendingParcels = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return' && o.courierStatus?.toLowerCase() !== 'cancelled' && !isToday(o.dateSent || o.dateCreated));
+      
       const returnedToday = updatedOrders.filter((o) => (o.courierStatus?.toLowerCase() === 'cancelled' || o.courierStatus?.toLowerCase() === 'returned' || o.courierStatus?.toLowerCase() === 'return' || o.courierStatus?.toLowerCase() === 'cancelled_approval_pending') && isToday(o.dateCreated));
 
       let totalCollection = 0;
@@ -299,7 +302,7 @@ export default function Dashboard() {
       msg += `⏳ <b>মোট পেন্ডিং পার্সেল: ${pendingParcels.length} টি</b>\n`;
       pendingParcels.forEach((o, i) => {
         const cid = o.consignmentId || 'N/A';
-        const sentDate = o.dateCreated ? new Date(o.dateCreated).toLocaleDateString('en-GB') : 'N/A';
+        const sentDate = o.dateSent ? new Date(o.dateSent).toLocaleDateString('en-GB') : (o.dateCreated ? new Date(o.dateCreated).toLocaleDateString('en-GB') : 'N/A');
         const name = o.customerName || 'কাস্টমার';
         const items = o.items || 'আইটেম নাই';
         msg += `${i + 1}. #${o.invoice} / ${cid} [পাঠানোর তারিখ: ${sentDate}] - ${name} | ${items} | ৳ ${o.total}\n`;
