@@ -2,21 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Lock, Package, History, X, Save, ShoppingCart, Printer, Plus, Trash2, UserCircle, CheckSquare, Square } from 'lucide-react';
+import { Lock, Package, FileText, X, Save, ShoppingCart, Printer, Plus, Trash2, UserCircle, CheckSquare, Square, ArrowDownLeft, ArrowUpRight, RotateCcw } from 'lucide-react';
 
 export default function AdminInventoryPanel({ existingItems }: { existingItems: string[] }) {
   const [mounted, setMounted] = useState(false);
-  const [authTarget, setAuthTarget] = useState<'entry' | 'history' | null>(null);
+  const [authTarget, setAuthTarget] = useState<'entry' | 'statement' | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  const [activePanel, setActivePanel] = useState<'entry' | 'history' | null>(null);
+  const [activePanel, setActivePanel] = useState<'entry' | 'statement' | null>(null);
 
-  const [historyData, setHistoryData] = useState<any[]>([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [statementData, setStatementData] = useState<any[]>([]);
+  const [isLoadingStatement, setIsLoadingStatement] = useState(false);
 
-  const [selectedPartyFilter, setSelectedPartyFilter] = useState('all');
-  const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState('all');
+  const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
 
   const [partyName, setPartyName] = useState('');
   const [purchaseItems, setPurchaseItems] = useState([{ itemName: '', quantity: 1, buyingPrice: 0 }]);
@@ -40,8 +40,8 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         setActivePanel(authTarget);
         setAuthTarget(null);
         setPassword('');
-        if (authTarget === 'history') {
-          fetchHistory();
+        if (authTarget === 'statement') {
+          fetchStatement();
         }
       } else {
         alert('❌ ভুল জিমেইল বা পাসওয়ার্ড! আবার চেষ্টা করুন।');
@@ -60,19 +60,19 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     setPurchaseItems([{ itemName: '', quantity: 1, buyingPrice: 0 }]);
   };
 
-  const fetchHistory = async () => {
-    setIsLoadingHistory(true);
+  const fetchStatement = async () => {
+    setIsLoadingStatement(true);
     try {
-      const res = await fetch('/api/purchases');
+      const res = await fetch('/api/stock/statement');
       const data = await res.json();
       const rows = data.data || [];
-      setHistoryData(rows);
+      setStatementData(rows);
       setSelectedRowIds(rows.map((r: any) => r.id));
     } catch (err) {
       console.error(err);
-      setHistoryData([]);
+      setStatementData([]);
     } finally {
-      setIsLoadingHistory(false);
+      setIsLoadingStatement(false);
     }
   };
 
@@ -98,7 +98,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
       });
       const result = await res.json();
       if (res.ok && result.success) {
-        alert('✅ সফলভাবে স্টক যুক্ত হয়েছে!');
+        alert('✅ সফলভাবে স্টক ইনভেন্টরি যুক্ত হয়েছে!');
         closePanel();
         window.dispatchEvent(new Event('stockUpdated'));
       } else {
@@ -111,24 +111,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     }
   };
 
-  const handleDeletePurchase = async (id: number) => {
-    if (!confirm('সতর্কবার্তা! আপনি কি নিশ্চিত যে এই পারচেজটি ডিলিট করতে চান?')) return;
-    try {
-      const res = await fetch(`/api/purchases/${id}`, { method: 'DELETE' });
-      const result = await res.json();
-      if (res.ok && result.success) {
-        alert('✅ পারচেজ সফলভাবে ডিলিট হয়েছে!');
-        fetchHistory();
-        window.dispatchEvent(new Event('stockUpdated'));
-      } else {
-        alert('❌ ডিলিট হতে সমস্যা হয়েছে: ' + (result.error || 'অজানা ত্রুটি'));
-      }
-    } catch (err) {
-      alert('❌ নেটওয়ার্ক বা সার্ভার এরর!');
-    }
-  };
-
-  const toggleSelectRow = (id: number) => {
+  const toggleSelectRow = (id: string) => {
     if (selectedRowIds.includes(id)) {
       setSelectedRowIds(selectedRowIds.filter(i => i !== id));
     } else {
@@ -137,22 +120,20 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   };
 
   const toggleSelectAll = () => {
-    if (selectedRowIds.length === filteredHistory.length) {
+    if (selectedRowIds.length === filteredStatement.length) {
       setSelectedRowIds([]);
     } else {
-      setSelectedRowIds(filteredHistory.map(r => r.id));
+      setSelectedRowIds(filteredStatement.map(r => r.id));
     }
   };
 
-  const uniqueParties = Array.from(new Set(historyData.map(item => item.party_name))).filter(Boolean);
-
-  const filteredHistory = historyData.filter(row => {
-    if (selectedPartyFilter === 'all') return true;
-    return row.party_name === selectedPartyFilter;
+  const filteredStatement = statementData.filter(row => {
+    if (selectedTypeFilter === 'all') return true;
+    return row.type === selectedTypeFilter;
   });
 
-  const printableData = filteredHistory.filter(row => selectedRowIds.includes(row.id));
-  const grandTotalAmount = printableData.reduce((sum, row) => sum + (Number(row.quantity) * Number(row.buying_price)), 0);
+  const printableData = filteredStatement.filter(row => selectedRowIds.includes(row.id));
+  const grandTotalCost = printableData.reduce((sum, row) => sum + Number(row.total || 0), 0);
 
   const handlePrint = () => {
     const printContent = document.getElementById('printable-invoice');
@@ -163,7 +144,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
       printWindow.document.write(`
         <html>
           <head>
-            <title>Purchase History Report</title>
+            <title>Stock Statement Report</title>
             ${styles}
             <style>
               body { background-color: white !important; margin: 0; padding: 20px; color: black; font-family: sans-serif; }
@@ -204,13 +185,13 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         <Package className="w-3.5 h-3.5 text-amber-400" /> ইনভেন্টরি এন্ট্রি
       </button>
       <button
-        onClick={() => setAuthTarget('history')}
+        onClick={() => setAuthTarget('statement')}
         className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg text-xs font-bold transition shadow-2xs border border-slate-300 cursor-pointer"
       >
-        <History className="w-3.5 h-3.5 text-indigo-600" /> পারচেজ হিস্ট্রি
+        <FileText className="w-3.5 h-3.5 text-indigo-600" /> স্টক স্টেটমেন্ট
       </button>
 
-      {/* Auth Modal via Portal (Guaranteed Dead Center Alignment) */}
+      {/* Auth Modal via Portal */}
       {authTarget && createPortal(
         <div className="fixed inset-0 z-[999999] w-screen h-screen bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
           <form onSubmit={handleAuth} className="m-auto bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
@@ -258,7 +239,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         document.body
       )}
 
-      {/* Full-Screen Inventory Entry Panel via Portal */}
+      {/* Full-Screen Inventory Entry Panel */}
       {activePanel === 'entry' && createPortal(
         <div className="fixed inset-0 z-[999999] bg-slate-100 flex flex-col w-screen h-screen overflow-hidden text-left animate-in fade-in duration-200">
           <div className="bg-white border-b border-slate-200 px-6 md:px-12 py-4 flex justify-between items-center shadow-xs shrink-0">
@@ -374,32 +355,32 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         document.body
       )}
 
-      {/* Full-Screen Purchase History Panel via Portal */}
-      {activePanel === 'history' && createPortal(
+      {/* Full-Screen Stock Statement Panel */}
+      {activePanel === 'statement' && createPortal(
         <div className="fixed inset-0 z-[999999] bg-slate-100 flex flex-col w-screen h-screen overflow-hidden text-left animate-in fade-in duration-200">
           <div className="bg-white border-b border-slate-200 px-6 md:px-12 py-4 flex flex-wrap justify-between items-center gap-4 shadow-xs shrink-0 no-print">
             <div className="flex items-center gap-4">
               <div className="bg-slate-900 p-3 rounded-xl shadow-sm">
-                <History className="w-6 h-6 text-white" />
+                <FileText className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-black uppercase text-slate-900 tracking-wide">পারচেজ হিস্ট্রি ও রিপোর্ট</h2>
-                <p className="text-xs font-bold text-slate-500 mt-0.5">পার্টি অনুযায়ী ফিল্টার ও প্রিন্ট অপশন</p>
+                <h2 className="text-xl font-black uppercase text-slate-900 tracking-wide">স্টক স্টেটমেন্ট ও লেজার</h2>
+                <p className="text-xs font-bold text-slate-500 mt-0.5">সকল ইন-আউট ও ট্রানজেকশনের সম্পূর্ণ ব্যাংক স্টেটমেন্ট</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 px-3 py-2 rounded-xl">
-                <span className="text-xs font-bold text-slate-600">পার্টি ফিল্টার:</span>
+                <span className="text-xs font-bold text-slate-600">ফিল্টার:</span>
                 <select
-                  value={selectedPartyFilter}
-                  onChange={(e) => setSelectedPartyFilter(e.target.value)}
+                  value={selectedTypeFilter}
+                  onChange={(e) => setSelectedTypeFilter(e.target.value)}
                   className="bg-transparent text-xs font-black text-slate-900 outline-none cursor-pointer"
                 >
-                  <option value="all">সকল পার্টি ({historyData.length})</option>
-                  {uniqueParties.map((party, idx) => (
-                    <option key={idx} value={party}>{party}</option>
-                  ))}
+                  <option value="all">সকল ট্রানজেকশন ({statementData.length})</option>
+                  <option value="STOCK_IN">🟢 স্টক ইন (Purchase)</option>
+                  <option value="STOCK_OUT">🔴 স্টক আউট (Courier)</option>
+                  <option value="RESTORED">🔵 স্টক রিস্টোর (Return/Cancel)</option>
                 </select>
               </div>
 
@@ -413,11 +394,11 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
           </div>
 
           <div className="overflow-y-auto p-6 md:p-10 flex-1 no-print">
-            <div className="max-w-6xl mx-auto">
-              {isLoadingHistory ? (
+            <div className="max-w-7xl mx-auto">
+              {isLoadingStatement ? (
                 <div className="text-center py-20 font-bold text-slate-500 animate-pulse text-base">লোড হচ্ছে...</div>
-              ) : filteredHistory.length === 0 ? (
-                <div className="text-center py-20 font-bold text-slate-400 text-base">কোনো পারচেজ হিস্ট্রি পাওয়া যায়নি।</div>
+              ) : filteredStatement.length === 0 ? (
+                <div className="text-center py-20 font-bold text-slate-400 text-base">কোনো ট্রানজেকশন রেকর্ড পাওয়া যায়নি।</div>
               ) : (
                 <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                   <table className="w-full text-sm text-left border-collapse">
@@ -425,20 +406,21 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                       <tr>
                         <th className="px-4 py-4 w-12 text-center">
                           <button onClick={toggleSelectAll} className="cursor-pointer text-slate-700">
-                            {selectedRowIds.length === filteredHistory.length ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4" />}
+                            {selectedRowIds.length === filteredStatement.length ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4" />}
                           </button>
                         </th>
-                        <th className="px-6 py-4">তারিখ</th>
-                        <th className="px-6 py-4">পার্টির নাম (সাপ্লায়ার)</th>
-                        <th className="px-6 py-4">আইটেম / প্রোডাক্ট</th>
-                        <th className="px-6 py-4 text-center">পরিমাণ</th>
-                        <th className="px-6 py-4 text-right">কেনা দাম (পিস)</th>
-                        <th className="px-6 py-4 text-right">মোট দাম</th>
-                        <th className="px-6 py-4 text-center">অ্যাকশন</th>
+                        <th className="px-5 py-4">তারিখ ও সময়</th>
+                        <th className="px-5 py-4">ধরণ (Type)</th>
+                        <th className="px-5 py-4">পার্টি বা কাস্টমার রেফারেন্স</th>
+                        <th className="px-5 py-4">আইটেম নাম</th>
+                        <th className="px-5 py-4 text-center">পরিমাণ</th>
+                        <th className="px-5 py-4 text-right">রেট (৳)</th>
+                        <th className="px-5 py-4 text-right">মোট দাম (৳)</th>
+                        <th className="px-5 py-4 text-center">স্ট্যাটাস</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {filteredHistory.map((row) => {
+                      {filteredStatement.map((row) => {
                         const isSelected = selectedRowIds.includes(row.id);
                         return (
                           <tr key={row.id} className={`hover:bg-slate-50 transition text-slate-900 ${isSelected ? 'bg-emerald-50/40' : ''}`}>
@@ -447,24 +429,41 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                                 {isSelected ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4 text-slate-300" />}
                               </button>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-slate-600">
-                              {row.created_at ? new Date(row.created_at).toLocaleDateString('en-GB') : 'N/A'}
+                            <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-600">
+                              {row.date ? new Date(row.date).toLocaleString('en-GB') : 'N/A'}
                             </td>
-                            <td className="px-6 py-4 font-black text-xs text-slate-800">{row.party_name}</td>
-                            <td className="px-6 py-4 text-xs font-bold text-slate-700">{row.item_name}</td>
-                            <td className="px-6 py-4 text-center">
-                              <span className="bg-slate-100 text-slate-800 px-3 py-1.5 rounded-lg font-black text-xs border border-slate-200 shadow-sm">
-                                {row.quantity} পিস
+                            <td className="px-5 py-4 whitespace-nowrap">
+                              {row.type === 'STOCK_IN' && (
+                                <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-md text-[11px] font-black">
+                                  <ArrowDownLeft className="w-3.5 h-3.5" /> STOCK IN
+                                </span>
+                              )}
+                              {row.type === 'STOCK_OUT' && (
+                                <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 px-2.5 py-1 rounded-md text-[11px] font-black">
+                                  <ArrowUpRight className="w-3.5 h-3.5" /> STOCK OUT
+                                </span>
+                              )}
+                              {row.type === 'RESTORED' && (
+                                <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2.5 py-1 rounded-md text-[11px] font-black">
+                                  <RotateCcw className="w-3.5 h-3.5" /> RESTORED
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-5 py-4 font-black text-xs text-slate-800">{row.reference}</td>
+                            <td className="px-5 py-4 text-xs font-bold text-slate-700">{row.itemName}</td>
+                            <td className="px-5 py-4 text-center">
+                              <span className={`px-3 py-1.5 rounded-lg font-black text-xs border shadow-sm ${row.type === 'STOCK_OUT' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-100 text-slate-800 border-slate-200'}`}>
+                                {row.type === 'STOCK_OUT' ? `-${row.quantity}` : `+${row.quantity}`} পিস
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-right font-mono text-xs font-bold text-slate-600">৳ {row.buying_price}</td>
-                            <td className="px-6 py-4 text-right font-black text-emerald-700 font-mono text-sm">
-                              ৳ {Number(row.quantity) * Number(row.buying_price)}
+                            <td className="px-5 py-4 text-right font-mono text-xs font-bold text-slate-600">
+                              {row.rate > 0 ? `৳ ${row.rate}` : '-'}
                             </td>
-                            <td className="px-6 py-4 text-center">
-                              <button onClick={() => handleDeletePurchase(row.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-100 rounded-lg transition cursor-pointer" title="ডিলিট করুন">
-                                <Trash2 className="w-4 h-4 mx-auto" />
-                              </button>
+                            <td className="px-5 py-4 text-right font-black text-slate-800 font-mono text-sm">
+                              {row.total > 0 ? `৳ ${row.total}` : '-'}
+                            </td>
+                            <td className="px-5 py-4 text-center text-xs font-bold text-slate-600">
+                              {row.statusText}
                             </td>
                           </tr>
                         );
@@ -480,17 +479,18 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
           <div id="printable-invoice" className="hidden text-black bg-white w-full p-4">
             <div className="text-center mb-6 border-b-2 border-slate-800 pb-4">
               <h1 className="text-2xl font-black uppercase tracking-wider">BLACK ROCK CORPORATION</h1>
-              <p className="text-xs font-bold text-slate-600 mt-0.5">Ruhama Wear | Purchase Report</p>
+              <p className="text-xs font-bold text-slate-600 mt-0.5">Ruhama Wear | Stock Statement & Ledger</p>
               <p className="text-[11px] font-bold text-slate-500 mt-1">প্রিন্টের তারিখ: {new Date().toLocaleDateString('en-GB')}</p>
-              {selectedPartyFilter !== 'all' && <p className="text-xs font-black text-indigo-700 mt-1">সাপ্লায়ার/পার্টি: {selectedPartyFilter}</p>}
+              {selectedTypeFilter !== 'all' && <p className="text-xs font-black text-indigo-700 mt-1">ফিল্টার ধরণ: {selectedTypeFilter}</p>}
             </div>
 
             <table>
               <thead>
                 <tr>
-                  <th>তারিখ</th>
-                  <th>পার্টির নাম</th>
-                  <th>আইটেমের নাম</th>
+                  <th>তারিখ ও সময়</th>
+                  <th>ধরণ</th>
+                  <th>রেফারেন্স (পার্টি/কাস্টমার)</th>
+                  <th>আইটেম নাম</th>
                   <th style={{ textAlign: 'center' }}>পরিমাণ</th>
                   <th style={{ textAlign: 'right' }}>রেট (৳)</th>
                   <th style={{ textAlign: 'right' }}>মোট দাম (৳)</th>
@@ -499,19 +499,20 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
               <tbody>
                 {printableData.map((row) => (
                   <tr key={row.id}>
-                    <td>{row.created_at ? new Date(row.created_at).toLocaleDateString('en-GB') : 'N/A'}</td>
-                    <td><b>{row.party_name}</b></td>
-                    <td>{row.item_name}</td>
-                    <td style={{ textAlign: 'center' }}>{row.quantity} পিস</td>
-                    <td style={{ textAlign: 'right' }}>{row.buying_price}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{Number(row.quantity) * Number(row.buying_price)}</td>
+                    <td>{row.date ? new Date(row.date).toLocaleString('en-GB') : 'N/A'}</td>
+                    <td><b>{row.type}</b></td>
+                    <td>{row.reference}</td>
+                    <td>{row.itemName}</td>
+                    <td style={{ textAlign: 'center' }}>{row.type === 'STOCK_OUT' ? `-${row.quantity}` : `+${row.quantity}`} পিস</td>
+                    <td style={{ textAlign: 'right' }}>{row.rate > 0 ? row.rate : '-'}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{row.total > 0 ? row.total : '-'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
             <div style={{ marginTop: '20px', textAlign: 'right', fontSize: '14px', fontWeight: 'bold' }}>
-              <p>সর্বমোট খরচ (Grand Total): <span style={{ color: '#047857', fontSize: '16px' }}>৳ {grandTotalAmount}</span></p>
+              <p>সর্বমোট পারচেজ খরচ (Grand Total Cost): <span style={{ color: '#047857', fontSize: '16px' }}>৳ {grandTotalCost}</span></p>
             </div>
           </div>
         </div>,
