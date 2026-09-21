@@ -3,10 +3,8 @@ import { query } from '@/lib/db';
 
 export async function GET() {
   try {
-    // ডাটাবেজ কানেকশনের এনকোডিং এনসিওর করা
     await query("SET NAMES utf8mb4");
 
-    // টেবিল তৈরি ও কলাম নিশ্চিত করা
     await query(`
       CREATE TABLE IF NOT EXISTS purchases (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -51,17 +49,14 @@ export async function GET() {
 
     let liveStock: Record<string, number> = {};
 
-    // স্ট্রিং ক্লেনিং ফাংশন (বাংলা হাইফেন, স্পেস ও ইউনিকোড স্ট্যান্ডার্ড করার জন্য)
     const cleanStr = (str: string) => {
       if (!str) return '';
       return str.toString().trim().replace(/\s+/g, ' ').replace(/[–—]/g, '-');
     };
 
-    // কেনা প্রোডাক্ট যোগ (+)
     if (Array.isArray(purchases)) {
       purchases.forEach((p: any) => {
-        const rawName = p.item_name ? p.item_name.toString() : '';
-        const itemName = cleanStr(rawName);
+        const itemName = cleanStr(p.item_name);
         if (itemName) {
           if (!liveStock[itemName]) liveStock[itemName] = 0;
           liveStock[itemName] += Number(p.quantity || 0);
@@ -69,7 +64,6 @@ export async function GET() {
       });
     }
 
-    // কুরিয়ারে পাঠানো প্রোডাক্ট বিয়োগ (-)
     if (Array.isArray(orders)) {
       orders.forEach((o: any) => {
         if (o.items) {
@@ -78,7 +72,6 @@ export async function GET() {
             if (liveStock[cleanItem] !== undefined) {
               liveStock[cleanItem] -= 1;
             } else {
-              // ফ্লেক্সিবল ম্যাচিং (কেস এবং স্পেস ইগ্নোর করে মেলানো)
               const matchedKey = Object.keys(liveStock).find(k => cleanStr(k).toLowerCase() === cleanItem.toLowerCase());
               if (matchedKey) {
                 liveStock[matchedKey] -= 1;
@@ -89,7 +82,8 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({ success: true, liveStock, rawPurchases: purchases });
+    // ফ্রন্টএন্ড যাতে সরাসরি ডিকশনারি অবজেক্ট পায়
+    return NextResponse.json(liveStock);
   } catch (error: any) {
     console.error('Live Stock API Error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
