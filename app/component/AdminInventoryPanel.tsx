@@ -111,6 +111,52 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     }
   };
 
+  // স্টক স্টেটমেন্ট থেকে সিঙ্গেল পারচেজ ডিলিট
+  const handleDeleteStatementRow = async (rowId: string) => {
+    if (!rowId.startsWith('pur-')) {
+      alert('⚠️ শুধুমাত্র পারচেজ এন্ট্রি (Stock In) ডিলিট করা সম্ভব।');
+      return;
+    }
+    if (!confirm('সতর্কবার্তা! আপনি কি এই পারচেজ রেকর্ডটি স্থায়ীভাবে মুছে ফেলতে চান?')) return;
+
+    const realId = rowId.replace('pur-', '');
+    try {
+      const res = await fetch(`/api/purchases/${realId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert('✅ পারচেজ সফলভাবে ডিলিট হয়েছে!');
+        fetchStatement();
+        window.dispatchEvent(new Event('stockUpdated'));
+      } else {
+        alert('❌ ডিলিট করতে সমস্যা হয়েছে: ' + (data.error || ''));
+      }
+    } catch (err) {
+      alert('❌ সার্ভার সমস্যা!');
+    }
+  };
+
+  // স্টক স্টেটমেন্ট থেকে একসাথে একাধিক (Bulk) ডিলিট
+  const handleBulkDeleteStatement = async () => {
+    const purIds = selectedRowIds.filter(id => id.startsWith('pur-')).map(id => id.replace('pur-', ''));
+    if (purIds.length === 0) {
+      alert('ডিলিট করার জন্য কোনো পারচেজ এন্ট্রি সিলেক্ট করা হয়নি।');
+      return;
+    }
+    if (!confirm(`সতর্কবার্তা! আপনি কি সিলেক্ট করা ${purIds.length} টি পারচেজ রেকর্ড স্থায়ীভাবে মুছে ফেলতে চান?`)) return;
+
+    try {
+      for (const id of purIds) {
+        await fetch(`/api/purchases/${id}`, { method: 'DELETE' });
+      }
+      alert('✅ সিলেক্টেড রেকর্ডগুলো সফলভাবে ডিলিট হয়েছে!');
+      fetchStatement();
+      window.dispatchEvent(new Event('stockUpdated'));
+      setSelectedRowIds([]);
+    } catch (err) {
+      alert('❌ বাল্ক ডিলিট করতে সমস্যা হয়েছে!');
+    }
+  };
+
   const toggleSelectRow = (id: string) => {
     if (selectedRowIds.includes(id)) {
       setSelectedRowIds(selectedRowIds.filter(i => i !== id));
@@ -191,7 +237,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         <FileText className="w-3.5 h-3.5 text-indigo-600" /> স্টক স্টেটমেন্ট
       </button>
 
-      {/* Auth Modal via Portal */}
       {authTarget && createPortal(
         <div className="fixed inset-0 z-[999999] w-screen h-screen bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
           <form onSubmit={handleAuth} className="m-auto bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
@@ -239,7 +284,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         document.body
       )}
 
-      {/* Full-Screen Inventory Entry Panel */}
       {activePanel === 'entry' && createPortal(
         <div className="fixed inset-0 z-[999999] bg-slate-100 flex flex-col w-screen h-screen overflow-hidden text-left animate-in fade-in duration-200">
           <div className="bg-white border-b border-slate-200 px-6 md:px-12 py-4 flex justify-between items-center shadow-xs shrink-0">
@@ -355,7 +399,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         document.body
       )}
 
-      {/* Full-Screen Stock Statement Panel */}
       {activePanel === 'statement' && createPortal(
         <div className="fixed inset-0 z-[999999] bg-slate-100 flex flex-col w-screen h-screen overflow-hidden text-left animate-in fade-in duration-200">
           <div className="bg-white border-b border-slate-200 px-6 md:px-12 py-4 flex flex-wrap justify-between items-center gap-4 shadow-xs shrink-0 no-print">
@@ -384,6 +427,9 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                 </select>
               </div>
 
+              <button onClick={handleBulkDeleteStatement} className="flex items-center gap-2 bg-rose-600 text-white px-4 py-2.5 rounded-xl text-sm font-black hover:bg-rose-700 transition shadow-md cursor-pointer">
+                <Trash2 className="w-4 h-4" /> সিলেক্টেড ডিলিট
+              </button>
               <button onClick={handlePrint} className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-black hover:bg-black transition shadow-md cursor-pointer">
                 <Printer className="w-4 h-4" /> সিলেক্টেড প্রিন্ট ({printableData.length})
               </button>
@@ -417,11 +463,13 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                         <th className="px-5 py-4 text-right">রেট (৳)</th>
                         <th className="px-5 py-4 text-right">মোট দাম (৳)</th>
                         <th className="px-5 py-4 text-center">স্ট্যাটাস</th>
+                        <th className="px-4 py-4 text-center w-20">অ্যাকশন</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {filteredStatement.map((row) => {
                         const isSelected = selectedRowIds.includes(row.id);
+                        const isPurchase = row.id.startsWith('pur-');
                         return (
                           <tr key={row.id} className={`hover:bg-slate-50 transition text-slate-900 ${isSelected ? 'bg-emerald-50/40' : ''}`}>
                             <td className="px-4 py-4 text-center">
@@ -465,6 +513,19 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                             <td className="px-5 py-4 text-center text-xs font-bold text-slate-600">
                               {row.statusText}
                             </td>
+                            <td className="px-4 py-4 text-center">
+                              {isPurchase ? (
+                                <button
+                                  onClick={() => handleDeleteStatementRow(row.id)}
+                                  className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-100 rounded-lg transition cursor-pointer"
+                                  title="ডিলিট করুন"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              ) : (
+                                <span className="text-[10px] text-slate-400 font-bold">-</span>
+                              )}
+                            </td>
                           </tr>
                         );
                       })}
@@ -475,7 +536,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
             </div>
           </div>
 
-          {/* Printable Area */}
           <div id="printable-invoice" className="hidden text-black bg-white w-full p-4">
             <div className="text-center mb-6 border-b-2 border-slate-800 pb-4">
               <h1 className="text-2xl font-black uppercase tracking-wider">BLACK ROCK CORPORATION</h1>

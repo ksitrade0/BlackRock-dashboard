@@ -767,8 +767,8 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-200/70 text-slate-900 p-2 md:p-3 font-sans">
       <div className="max-w-[1950px] mx-auto">
-        {/* Sticky/Fixed Header Area */}
-        <div className="sticky top-0 z-40 bg-slate-200/95 backdrop-blur-md pb-2 pt-2">
+        {/* Header Area - স্ক্রল করলে ওপরের দিকে চলে যাবে */}
+        <div className="bg-slate-200/95 pb-2 pt-2">
           <div className="flex flex-col lg:flex-row justify-between items-center mb-2 gap-2 bg-white p-2 md:px-4 rounded-2xl shadow-sm border border-slate-300">
             <div className="flex items-center gap-3 w-full lg:w-auto justify-center lg:justify-start">
               {hasLogoImg ? (
@@ -877,17 +877,17 @@ export default function Dashboard() {
                 `
               }} />
 
-              {/* ১. টেবিলের ঠিক মাথার উপরে আলাদা চিকন হরিজন্টাল স্ক্রলবার বার (ডানে-বামে সরানোর জন্য) */}
-              <div ref={topScrollRef} onScroll={handleTopScroll} className="overflow-x-auto slim-scroll bg-slate-100 border-b border-slate-300 h-3.5">
+              {/* ১. হরিজন্টাল স্ক্রলবার বার - স্ক্রল করলে ঠিক ওপরের দিকে (top-0) এসে ফিক্সড থাকবে */}
+              <div ref={topScrollRef} onScroll={handleTopScroll} className="sticky top-0 z-30 overflow-x-auto slim-scroll bg-slate-100 border-b border-slate-300 h-3.5 shadow-xs">
                 <div className="min-w-[1900px] h-full"></div>
               </div>
 
-              {/* ২. মূল টেবিল র‍্যাপার (হেডার ফ্রিজ থাকবে এবং মাউস দিয়ে ওপর-নিচ করা যাবে) */}
+              {/* ২. মূল টেবিল র‍্যাপার */}
               <div ref={tableScrollRef} onScroll={handleTableScroll} className="max-h-[calc(100vh-270px)] overflow-y-auto overflow-x-auto slim-scroll relative">
                 <table className="w-full text-left border-collapse min-w-[1900px]">
                   
-                  {/* টেবিল হেডার একদম টপে ফিক্সড (Sticky) */}
-                  <thead className="sticky top-0 z-30 bg-slate-900 text-white shadow-md">
+                  {/* টেবিল হেডার হরিজন্টাল স্ক্রলবারের ঠিক নিচে ফিক্সড থাকবে */}
+                  <thead className="sticky top-[14px] z-30 bg-slate-900 text-white shadow-md">
                     <tr className="text-[11px] uppercase font-bold tracking-wider">
                       <th className="p-3.5 w-36 border-r border-slate-800">Invoice / Store</th>
                       <th className="p-3.5 w-60 border-r border-slate-800">Customer Name (নাম)</th>
@@ -909,7 +909,6 @@ export default function Dashboard() {
                       const selectedDistrictObj = BANGLADESH_DISTRICTS.find((d) => d.district === order.district);
                       const availableThanas = selectedDistrictObj ? selectedDistrictObj.thanas : [];
                       
-                      // আজকের অর্ডার হলে সবুজ, পুরোনো বা অন্যদিনের হলে হলুদ/অ্যাম্বার হাইলাইট
                       const isToday = isTodayOrder(order.dateCreated);
                       const isEven = index % 2 === 0;
                       
@@ -920,8 +919,8 @@ export default function Dashboard() {
                         : isDuplicate 
                         ? 'bg-amber-50 hover:bg-amber-100/70' 
                         : isToday 
-                        ? 'bg-emerald-50/60 hover:bg-emerald-100/60 border-l-4 border-l-emerald-500' // আজকের অর্ডার (সবুজ লাইট/থিম)
-                        : 'bg-amber-50/40 hover:bg-amber-100/50 border-l-4 border-l-amber-400'; // আগের দিনের পেন্ডিং (হলুদ থিম)
+                        ? 'bg-emerald-50/60 hover:bg-emerald-100/60 border-l-4 border-l-emerald-500' 
+                        : 'bg-amber-50/40 hover:bg-amber-100/50 border-l-4 border-l-amber-400';
 
                       const currentItemList = order.items ? order.items.split(',').map((s) => s.trim()).filter(Boolean) : [];
 
@@ -1076,7 +1075,6 @@ export default function Dashboard() {
 
                           {/* 8. Steadfast Courier */}
                           <td className="p-3 align-top space-y-1.5">
-                            {/* যদি কুরিয়ারে পাঠানো না হয়ে থাকে, তবে নোট বক্স ও সেন্ড বাটন দেখাবে */}
                             {!order.trackingCode && !order.consignmentId && (
                               <>
                                 <div className="w-full h-[34px] flex items-center bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
@@ -1090,7 +1088,6 @@ export default function Dashboard() {
                               </>
                             )}
 
-                            {/* একবার কুরিয়ারে পাঠানো হয়ে গেলে নোট বক্স ও সেন্ড বাটন গায়েব হয়ে মাল্টি-কালার ইনফো বক্সটি আসবে */}
                             {(order.trackingCode || order.consignmentId) && (
                               (() => {
                                 const style = getCourierBoxStyle(order.courierStatus);
@@ -1114,7 +1111,6 @@ export default function Dashboard() {
                                       <div>
                                         <span className="text-slate-600">আইটেম:</span> <span className="text-slate-950">{order.items || 'N/A'} {order.size ? `[সাইজ: ${order.size}]` : ''}</span>
                                       </div>
-                                      {/* কাস্টমার নোট বা কল রিমার্ক প্রদর্শন */}
                                       {order.customNote && (
                                         <div className="bg-white/90 border border-slate-300 rounded p-1 text-[11px] font-bold text-slate-900 mt-1">
                                           <span className="text-rose-700">নোট/রিমার্ক:</span> {order.customNote}
