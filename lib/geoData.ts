@@ -182,7 +182,7 @@ export const BANGLADESH_DISTRICTS: DistrictData[] = [
   },
   {
     district: 'Chuadanga',
-    thanas: ['Chuadanga Sadar', 'Alamdanga', 'Damurhuda', 'Jibannagar']
+    thanas: ['Chuadanga Sadar', 'Alamdanga', 'Damurhuda', 'Jibannagar', 'Darshana']
   },
   {
     district: 'Meherpur',
