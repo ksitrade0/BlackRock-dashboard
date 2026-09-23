@@ -18,7 +18,7 @@ export const BANGLADESH_DISTRICTS: DistrictData[] = [
   },
   {
     district: 'Gazipur',
-    thanas: ['Gazipur Sadar', 'Kaliakair', 'Kaliganj', 'Kapasia', 'Sreepur', 'Tongi', 'Pubail', 'Konabari', 'Kashimpur']
+    thanas: ['Gazipur Sadar', 'Kaliakair', 'Kaliganj', 'Kapasia', 'Sreepur', 'Tongi', 'Pubail', 'Konabari', 'Kashimpur', 'Basan']
   },
   {
     district: 'Narayanganj',
