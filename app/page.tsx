@@ -97,7 +97,6 @@ export default function Dashboard() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
-  // মেসেজ ৫ সেকেন্ড পর অটো-ক্লিয়ার করার এফেক্ট
   useEffect(() => {
     if (message) {
       const timer = setTimeout(() => {
@@ -107,7 +106,6 @@ export default function Dashboard() {
     }
   }, [message]);
 
-  // দুটি স্ক্রলবার সিঙ্ক করার জন্য রেফ (Ref)
   const topScrollRef = useRef<HTMLDivElement>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
 
@@ -153,6 +151,9 @@ export default function Dashboard() {
       .catch(() => router.push('/login'));
   }, [router]);
 
+  // ==========================================
+  // আপডেট: সাইলেন্ট পোলিং লজিক (নিরাপদভাবে)
+  // ==========================================
   const fetchOrders = async (isSilent = false) => {
     if (!isSilent) {
       setLoading(true);
@@ -177,15 +178,45 @@ export default function Dashboard() {
         }));
 
         setOrders((prevOrders) => {
-          const unsavedNewRows = prevOrders.filter((o) => o.isNewRow);
-          return [...unsavedNewRows, ...mappedOrders];
+          if (!isSilent) {
+            // প্রথমবার লোড হওয়ার সময় পুরো ডাটাবেজ তুলে আনবে
+            const unsavedNewRows = prevOrders.filter((o) => o.isNewRow);
+            return [...unsavedNewRows, ...mappedOrders];
+          } else {
+            // ব্যাকগ্রাউন্ড অটো-রিফ্রেশের সময়: শুধু কুরিয়ার স্ট্যাটাস আপডেট করবে যাতে আপনার টাইপিং মুছে না যায়
+            return prevOrders.map(prevOrder => {
+              if (prevOrder.isNewRow) return prevOrder;
+              const dbOrder = mappedOrders.find(m => m.id === prevOrder.id && m.storeId === prevOrder.storeId);
+              if (dbOrder) {
+                return {
+                  ...prevOrder,
+                  courierStatus: dbOrder.courierStatus,
+                  status: dbOrder.status 
+                };
+              }
+              return prevOrder;
+            });
+          }
         });
 
-        const snapshot: Record<string, Order> = {};
-        mappedOrders.forEach((item) => {
-          snapshot[`${item.storeId}-${item.id}`] = JSON.parse(JSON.stringify(item));
+        setInitialOrders((prevInit) => {
+          const newInit = { ...prevInit };
+          if (!isSilent) {
+            mappedOrders.forEach((item) => {
+              newInit[`${item.storeId}-${item.id}`] = JSON.parse(JSON.stringify(item));
+            });
+          } else {
+             // সাইলেন্ট আপডেটেও initial data আপডেট করা হচ্ছে যাতে সেভ বাটনে কনফ্লিক্ট না হয়
+             mappedOrders.forEach((dbOrder) => {
+                const key = `${dbOrder.storeId}-${dbOrder.id}`;
+                if (newInit[key]) {
+                  newInit[key].courierStatus = dbOrder.courierStatus;
+                  newInit[key].status = dbOrder.status;
+                }
+             });
+          }
+          return newInit;
         });
-        setInitialOrders(snapshot);
       } else {
         if (!isSilent) setOrders([]);
       }
@@ -200,8 +231,17 @@ export default function Dashboard() {
     }
   };
 
+  // ==========================================
+  // অটো-রিফ্রেশ টাইমার: প্রতি ৬০ সেকেন্ডে চেক করবে
+  // ==========================================
   useEffect(() => {
-    fetchOrders(false);
+    fetchOrders(false); // প্রথমবার নরমাল লোড
+
+    const intervalId = setInterval(() => {
+      fetchOrders(true); // এরপর থেকে প্রতি ৬০ সেকেন্ডে সাইলেন্ট লোড
+    }, 60000);
+
+    return () => clearInterval(intervalId); // কম্পোনেন্ট আনমাউন্ট হলে টাইমার বন্ধ করবে
   }, []);
 
   const handleAddNewBlankRow = () => {
@@ -656,9 +696,6 @@ export default function Dashboard() {
     }
   };
 
-  // ==========================================
-  // নতুন আপডেট করা লাইভ চেক ফাংশন
-  // ==========================================
   const handleCheckCourierStatus = async (order: Order) => {
     if (!order.trackingCode && !order.consignmentId) return;
     setTrackingId(order.id);
@@ -747,9 +784,6 @@ export default function Dashboard() {
     return matchesStore && matchesStatus && matchesSearch;
   });
 
-  // ==========================================
-  // টাইমজোন ফিক্স করা হয়েছে (Asia/Dhaka)
-  // ==========================================
   const formatOrderDate = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
