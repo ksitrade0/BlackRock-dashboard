@@ -258,14 +258,17 @@ export default function Dashboard() {
       const currentTime = now.toLocaleTimeString('en-BD', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: true });
       const isToday = (dateString: string) => {
         if (!dateString) return false;
-        const d = new Date(dateString);
-        return d.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' }) === todayDate;
+        try {
+          const d = new Date(dateString);
+          return d.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' }) === todayDate;
+        } catch {
+          return false;
+        }
       };
 
       const sentToday = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && isToday(o.dateSent || o.dateCreated) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return');
       const deliveredToday = updatedOrders.filter((o) => (o.status === 'completed' || o.courierStatus?.toLowerCase() === 'delivered') && isToday(o.dateCreated));
       
-      // ইন-রিভিউসহ পেছনের সমস্ত পেন্ডিং পার্সেল অন্তর্ভুক্ত করার জন্য 'in_review' ফিল্টারটি বাদ দেওয়া হয়েছে
       const pendingParcels = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return' && o.courierStatus?.toLowerCase() !== 'cancelled' && !isToday(o.dateSent || o.dateCreated));
       
       const returnedToday = updatedOrders.filter((o) => (o.courierStatus?.toLowerCase() === 'cancelled' || o.courierStatus?.toLowerCase() === 'returned' || o.courierStatus?.toLowerCase() === 'return' || o.courierStatus?.toLowerCase() === 'cancelled_approval_pending') && isToday(o.dateCreated));
@@ -331,7 +334,6 @@ export default function Dashboard() {
         body: JSON.stringify({ text: msg, type: 'courier' }),
       });
 
-      const data = await res.json();
       if (res.ok && !isAutomatic) {
         setMessage({ text: 'স্টেডফাস্ট রিয়েল-টাইম ডেটাসহ কুরিয়ার রিপোর্ট সফলভাবে পাঠানো হয়েছে!', type: 'success' });
       }
@@ -654,6 +656,9 @@ export default function Dashboard() {
     }
   };
 
+  // ==========================================
+  // নতুন আপডেট করা লাইভ চেক ফাংশন
+  // ==========================================
   const handleCheckCourierStatus = async (order: Order) => {
     if (!order.trackingCode && !order.consignmentId) return;
     setTrackingId(order.id);
@@ -662,12 +667,27 @@ export default function Dashboard() {
       const queryParam = order.consignmentId ? `consignment_id=${order.consignmentId}` : `tracking_code=${order.trackingCode}`;
       const res = await fetch(`/api/courier/track?${queryParam}`);
       const result = await res.json();
+      
       if (res.ok && result.data) {
         const liveStatus = result.data.delivery_status || result.data.status || 'unknown';
+        
         setOrders((prev) =>
           prev.map((o) => (o.id === order.id && o.storeId === order.storeId ? { ...o, courierStatus: liveStatus } : o))
         );
-        setMessage({ text: `Order #${order.invoice} বর্তমান স্ট্যাটাস: ${liveStatus.toUpperCase()}`, type: 'success' });
+
+        let newWooStatus = order.status;
+        const s = liveStatus.toLowerCase();
+        if (s === 'delivered' || s === 'partial_delivered') newWooStatus = 'completed';
+        else if (s === 'cancelled' || s === 'returned' || s === 'return' || s === 'cancelled_approval_pending') newWooStatus = 'cancelled';
+
+        // ডাটাবেজে পার্মানেন্টলি সেভ করা
+        await handleSaveOrder(
+          { ...order, courierStatus: liveStatus }, 
+          newWooStatus, 
+          true 
+        );
+        
+        setMessage({ text: `Order #${order.invoice} স্ট্যাটাস: ${liveStatus.toUpperCase()} (সেভ হয়েছে)`, type: 'success' });
       } else {
         setMessage({ text: result.error || 'ট্র্যাকিং আপডেট পাওয়া যায়নি', type: 'error' });
       }
@@ -727,10 +747,13 @@ export default function Dashboard() {
     return matchesStore && matchesStatus && matchesSearch;
   });
 
+  // ==========================================
+  // টাইমজোন ফিক্স করা হয়েছে (Asia/Dhaka)
+  // ==========================================
   const formatOrderDate = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
-      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Dhaka' });
     } catch {
       return dateStr;
     }
@@ -739,7 +762,7 @@ export default function Dashboard() {
   const formatOrderTime = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
-      return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
+      return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' });
     } catch {
       return '';
     }
@@ -747,11 +770,14 @@ export default function Dashboard() {
 
   const isTodayOrder = (dateStr: string) => {
     if (!dateStr) return false;
-    const d = new Date(dateStr);
-    const today = new Date();
-    return d.getDate() === today.getDate() &&
-           d.getMonth() === today.getMonth() &&
-           d.getFullYear() === today.getFullYear();
+    try {
+      const d = new Date(dateStr);
+      const todayDateStr = new Date().toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka' });
+      const orderDateStr = d.toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka' });
+      return todayDateStr === orderDateStr;
+    } catch {
+      return false;
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -768,7 +794,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-200/70 text-slate-900 p-2 md:p-3 font-sans w-full overflow-x-hidden">
       <div className="max-w-[1950px] mx-auto w-full">
-        {/* Header Area - স্বাভাবিকভাবে স্ক্রল হয়ে ওপরের দিকে চলে যাবে */}
+        {/* Header Area */}
         <div className="bg-slate-200/95 pb-2 pt-2 w-full">
           <div className="flex flex-col lg:flex-row justify-between items-center mb-2 gap-2 bg-white p-2 md:px-4 rounded-2xl shadow-sm border border-slate-300 w-full">
             <div className="flex items-center gap-3 w-full lg:w-auto justify-center lg:justify-start">
@@ -850,7 +876,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Orders Table with Synchronized Top Scrollbar & Sticky Header */}
+        {/* Orders Table */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-300 mt-4 w-full">
           {loading ? (
             <div className="p-20 text-center text-slate-600 font-bold text-sm">অর্ডার লোড হচ্ছে...</div>
@@ -858,7 +884,6 @@ export default function Dashboard() {
             <div className="p-20 text-center text-slate-600 font-bold text-sm">কোনো অর্ডার পাওয়া যায়নি।</div>
           ) : (
             <>
-              {/* কাস্টম স্ক্রলবার স্টাইল */}
               <style dangerouslySetInnerHTML={{
                 __html: `
                 .slim-scroll::-webkit-scrollbar {
@@ -878,16 +903,13 @@ export default function Dashboard() {
                 `
               }} />
 
-              {/* ১. হরিজন্টাল স্ক্রলবার বার - স্ক্রল করার সময় স্ক্রিনের একদম টপে (top-0) ফিক্সড থাকবে */}
               <div ref={topScrollRef} onScroll={handleTopScroll} className="sticky top-0 z-30 overflow-x-auto slim-scroll bg-slate-100 border-b border-slate-300 h-3.5 shadow-xs w-full">
                 <div className="min-w-[1900px] h-full"></div>
               </div>
 
-              {/* ২. মূল টেবিল র‍্যাপার */}
               <div ref={tableScrollRef} onScroll={handleTableScroll} className="overflow-x-auto slim-scroll relative w-full">
                 <table className="w-full text-left border-collapse min-w-[1900px]">
                   
-                  {/* টেবিল হেডার হরিজন্টাল স্ক্রলবারের ঠিক নিচে (top-[14px]) ফিক্সড থাকবে */}
                   <thead className="sticky top-[14px] z-30 bg-slate-900 text-white shadow-md">
                     <tr className="text-[11px] uppercase font-bold tracking-wider">
                       <th className="p-3.5 w-36 border-r border-slate-800">Invoice / Store</th>
@@ -911,7 +933,6 @@ export default function Dashboard() {
                       const availableThanas = selectedDistrictObj ? selectedDistrictObj.thanas : [];
                       
                       const isToday = isTodayOrder(order.dateCreated);
-                      const isEven = index % 2 === 0;
                       
                       let rowBgClass = order.isNewRow 
                         ? 'bg-emerald-50 border-2 border-emerald-500' 
@@ -1074,7 +1095,6 @@ export default function Dashboard() {
                             </div>
                           </td>
 
-                          {/* 8. Steadfast Courier */}
                           <td className="p-3 align-top space-y-1.5">
                             {!order.trackingCode && !order.consignmentId && (
                               <>
