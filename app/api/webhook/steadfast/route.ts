@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { query } from '@/lib/db';
 
 export async function POST(req: Request) {
   try {
@@ -15,46 +16,107 @@ export async function POST(req: Request) {
     const riderName = body.rider_name || body.deliveryman_name || '';
     const riderPhone = body.rider_phone || body.deliveryman_phone || '';
 
+    let customerName = 'সম্মানিত কাস্টমার';
+    let address = 'ঠিকানা পাওয়া যায়নি';
+    let items = 'বিস্তারিত ড্যাশবোর্ডে দেখুন';
+    let orderDate = 'N/A';
+    let pendingText = '';
     let tgMessage = '';
 
-    if (status === 'delivered') {
-      let customerName = 'সম্মানিত কাস্টমার';
-      let address = 'ঠিকানা পাওয়া যায়নি';
-      let items = 'বিস্তারিত ড্যাশবোর্ডে দেখুন';
-      let orderDate = 'N/A';
-      let pendingText = '';
+    // =======================================================
+    // ১. ডাটাবেজ এবং WooCommerce রিয়েল-টাইম অটো-আপডেট লজিক
+    // =======================================================
+    try {
+      // লোকাল ডাটাবেজ থেকে ইনভয়েস দিয়ে অর্ডার খুঁজে বের করা
+      const orderRows: any = await query(
+        `SELECT * FROM orders WHERE invoice = ? OR consignment_id = ? LIMIT 1`,
+        [invoice, consignmentId]
+      );
 
+      if (orderRows && orderRows.length > 0) {
+        const dbOrder = orderRows[0];
+        const storeId = dbOrder.store_id;
+        const orderId = dbOrder.id;
+
+        customerName = dbOrder.customer_name || customerName;
+        address = dbOrder.address || address;
+        items = dbOrder.items || items;
+
+        // স্টেডফাস্টের লাইভ স্ট্যাটাস অনুযায়ী ড্যাশবোর্ডের স্ট্যাটাস কী হবে তা নির্ধারণ
+        let newWooStatus = '';
+        if (status === 'delivered' || status === 'partial_delivered') newWooStatus = 'completed';
+        else if (status === 'cancelled' || status === 'returned' || status === 'return' || status === 'cancelled_approval_pending') newWooStatus = 'cancelled';
+
+        // স্টোর অনুযায়ী WooCommerce ক্রেডেনশিয়াল সেটআপ
+        let url = '';
+        let key = '';
+        let secret = '';
+        const sId = String(storeId || '').toLowerCase();
+        
+        if (sId.includes('aastha') || sId === 'store2' || sId === '2') {
+          url = process.env.STORE2_URL || 'https://aasthanaturalsbd.com';
+          key = process.env.STORE2_KEY || '';
+          secret = process.env.STORE2_SECRET || '';
+        } else {
+          url = process.env.STORE1_URL || 'https://ruhamawear.com';
+          key = process.env.STORE1_KEY || '';
+          secret = process.env.STORE1_SECRET || '';
+        }
+
+        if (url && key && secret) {
+          const cleanUrl = url.replace(/\/$/, '');
+          const authHeader = 'Basic ' + Buffer.from(`${key}:${secret}`).toString('base64');
+
+          const updatePayload: any = { 
+            meta_data: [{ key: 'courierStatus', value: status }] 
+          };
+          if (newWooStatus) {
+            updatePayload.status = newWooStatus;
+          }
+
+          // WooCommerce ওয়েবসাইটে পুশ করা
+          await fetch(`${cleanUrl}/wp-json/wc/v3/orders/${orderId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: authHeader,
+            },
+            body: JSON.stringify(updatePayload),
+          });
+        }
+
+        // ড্যাশবোর্ডের ডাটাবেজে স্ট্যাটাস আপডেট করা (যাতে রিলোড দিলে পুরোনোটা না আসে)
+        if (newWooStatus) {
+           await query(
+             `UPDATE orders SET status = ? WHERE id = ?`,
+             [newWooStatus, orderId]
+           );
+        }
+      }
+    } catch (dbErr) {
+      console.error("Webhook DB Sync Error:", dbErr);
+    }
+
+    // =======================================================
+    // ২. টেলিগ্রাম নোটিফিকেশন লজিক (আপনার আগের কোড অনুযায়ী)
+    // =======================================================
+    if (status === 'delivered') {
       try {
         const dashRes = await fetch('https://app.ruhamar.com/api/orders');
         
         if (dashRes.ok) {
           const dashData = await dashRes.json();
           if (dashData && Array.isArray(dashData.orders)) {
-            
             const matchedOrder = dashData.orders.find((o: any) => 
               String(o.invoice) === String(invoice) || String(o.consignmentId) === String(consignmentId)
             );
 
             if (matchedOrder) {
-              customerName = matchedOrder.customerName || customerName;
-              
-              const addrParts = [
-                matchedOrder.streetAddress || matchedOrder.address || '', 
-                matchedOrder.thana ? `Thana: ${matchedOrder.thana}` : '', 
-                matchedOrder.district ? `District: ${matchedOrder.district}` : ''
-              ].filter(Boolean);
-              address = addrParts.join(', ') || address;
-              
-              items = matchedOrder.items || 'N/A';
-              if (matchedOrder.size) items += ` [সাইজ: ${matchedOrder.size}]`;
-
               if (matchedOrder.dateCreated) {
                 const d = new Date(matchedOrder.dateCreated);
                 orderDate = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear().toString().slice(-2)}`;
-                
                 const todayStr = d.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' });
 
-                // ওই তারিখের বাকি পেন্ডিং পার্সেল বের করা (বর্তমান ডেলিভারি হওয়াটি বাদে)
                 const pendingOrders = dashData.orders.filter((o: any) => {
                   if (!o.dateCreated) return false;
                   const oDate = new Date(o.dateCreated).toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' });
@@ -70,7 +132,6 @@ export async function POST(req: Request) {
                   return oDate === todayStr && isPending && String(o.invoice) !== String(invoice);
                 });
                 
-                // পেন্ডিং পার্সেল থাকলে সেগুলোর বিস্তারিত তথ্য লিস্ট করা
                 if (pendingOrders.length > 0) {
                   pendingText = `আপনার ${orderDate} তারিখের আরও <b>${pendingOrders.length}টি</b> পার্সেল পেন্ডিং আছে:\n\n`;
                   pendingOrders.forEach((pO: any, index: number) => {
@@ -104,7 +165,6 @@ export async function POST(req: Request) {
         console.error("Dashboard Fetch Error inside Webhook:", err);
       }
 
-      // ব্যাকআপ API 
       if (customerName === 'সম্মানিত কাস্টমার' && consignmentId) {
         try {
           const apiKey = process.env.STEADFAST_API_KEY || 'n5wjg5pat2seuxiiz1mmw7evsl1ehzuw';
@@ -126,10 +186,7 @@ export async function POST(req: Request) {
 
       const today = new Date();
       const deliveryDate = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear().toString().slice(-2)}`;
-
-      if (!pendingText) {
-         pendingText = `আপনার ${orderDate} তারিখের আর কোন পার্সেল পেন্ডিং নাই।`;
-      }
+      if (!pendingText) pendingText = `আপনার ${orderDate} তারিখের আর কোন পার্সেল পেন্ডিং নাই।`;
 
       tgMessage = 
         `✅ <b>আজকে ডেলিভারি হওয়া আপনার পার্সেল সম্পূর্ণভাবে ডেলিভারি হয়েছে।</b>\n\n` +
@@ -140,15 +197,13 @@ export async function POST(req: Request) {
         `📦 <b>আইটেম:</b> ${items}\n\n` +
         `⏳ <b>পেন্ডিং আপডেট:</b>\n${pendingText}`;
 
-    } 
-    else if (status === 'cancelled' || status === 'partial_delivered') {
+    } else if (status === 'cancelled' || status === 'partial_delivered') {
       tgMessage = `❌ <b>পার্সেল রিটার্ন / আংশিক ডেলিভারি!</b>\n` +
         `• <b>ইনভয়েস:</b> #${invoice}\n` +
         `• <b>স্ট্যাটাস:</b> <code>${status.toUpperCase()}</code>\n` +
         `• <b>CID:</b> <code>${consignmentId}</code>\n` +
         `${note ? `• <b>কারণ / নোট:</b> <i>${note}</i>\n` : ''}`;
-    } 
-    else if (note || riderName) {
+    } else if (note || riderName) {
       tgMessage = `⚠️ <b>রাইডার আপডেট / বিশেষ নোট</b>\n` +
         `-----------------------\n` +
         `• <b>ইনভয়েস:</b> #${invoice}\n` +
