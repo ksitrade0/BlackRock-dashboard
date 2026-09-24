@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+// 🚀 ক্যাশ ধ্বংস করার এক্সট্রিম লজিক
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
 export async function GET() {
   const store1Url = (process.env.STORE1_URL || 'https://ruhamawear.com').replace(/\/$/, '');
@@ -13,7 +16,6 @@ export async function GET() {
     const store2Key = process.env.STORE2_KEY || '';
     const store2Secret = process.env.STORE2_SECRET || '';
 
-    // লোকাল ডাটাবেজ থেকে আপনার সেভ করা কাস্টম আইটেমগুলো আগে থেকেই ফেচ করে ম্যাপ করে নেওয়া
     let localOrdersMap = new Map();
     try {
       const localRows: any = await query(`SELECT store_id, id, items FROM orders`);
@@ -22,22 +24,24 @@ export async function GET() {
           localOrdersMap.set(`${row.store_id}-${row.id}`, row.items);
         });
       }
-    } catch (dbErr) {
-      console.error("Local orders map fetch error:", dbErr);
-    }
+    } catch (dbErr) {}
 
     const fetchStoreOrders = async (storeId: string, storeName: string, url: string, key: string, secret: string) => {
       if (!key || !secret) return [];
       try {
         const auth = 'Basic ' + Buffer.from(`${key}:${secret}`).toString('base64');
-        const res = await fetch(`${url}/wp-json/wc/v3/orders?per_page=100&status=any`, {
-          headers: { Authorization: auth },
+        
+        // 🚀 URL এর শেষে &_t=Date.now() বসানো হয়েছে যাতে Cloudflare বা WP ক্যাশ কাজ না করে
+        const res = await fetch(`${url}/wp-json/wc/v3/orders?per_page=100&status=any&_t=${Date.now()}`, {
+          headers: { 
+            Authorization: auth,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          },
           cache: 'no-store',
         });
-        if (!res.ok) {
-          console.error(`Error fetching from ${storeName}:`, res.statusText);
-          return [];
-        }
+        
+        if (!res.ok) return [];
         const data = await res.json();
         if (!Array.isArray(data)) return [];
 
@@ -51,7 +55,7 @@ export async function GET() {
           let trackingCode = '';
           let consignmentId = '';
           let courierStatus = '';
-          let customItems = ''; // 🚀 উকমার্স থেকে কাস্টম আইটেম রিড করার ভেরিয়েবল
+          let customItems = ''; 
 
           if (Array.isArray(o.meta_data)) {
             o.meta_data.forEach((m: any) => {
@@ -69,7 +73,7 @@ export async function GET() {
               if (k === 'trackingcode') trackingCode = val;
               if (k === 'consignmentid') consignmentId = val;
               if (k === 'courierstatus') courierStatus = val;
-              if (k === 'custom_dashboard_items') customItems = val; // 🚀 মেটা-ডাটা থেকে আইটেম পড়া হচ্ছে
+              if (k === 'custom_dashboard_items') customItems = val; // 🚀 উকমার্স থেকে কাস্টম আইটেম পড়া হচ্ছে
             });
           }
 
@@ -83,7 +87,7 @@ export async function GET() {
 
           const localSavedItems = localOrdersMap.get(`${storeId}-${o.id}`);
           
-          // 🚀 লজিক: মেটা-ডাটায় কাস্টম আইটেম থাকলে সেটা দেখাবে, না থাকলে লোকাল ডিবি, না থাকলে ডিফল্ট
+          // 🚀 মেটা-ডাটায় আইটেম থাকলে সেটা, না থাকলে লোকাল ডিবি, না থাকলে উকমার্সের ডিফল্ট
           const finalItems = customItems ? customItems : ((localSavedItems !== undefined && localSavedItems !== null && localSavedItems !== '')
             ? localSavedItems
             : (itemsSummary || 'Custom Order Item'));
@@ -104,14 +108,12 @@ export async function GET() {
             dateCreated: o.date_created || new Date().toISOString(),
             items: finalItems,
             staffName: staffName,
-            
             trackingCode: trackingCode,
             consignmentId: consignmentId,
             courierStatus: courierStatus,
           };
         });
       } catch (err) {
-        console.error(`Fetch exception for ${storeName}:`, err);
         return [];
       }
     };
@@ -127,7 +129,6 @@ export async function GET() {
 
     return NextResponse.json({ orders: combined });
   } catch (error: any) {
-    console.error('Global orders route error:', error);
     return NextResponse.json({ orders: [], error: error.message }, { status: 500 });
   }
 }

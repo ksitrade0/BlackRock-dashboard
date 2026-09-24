@@ -47,24 +47,19 @@ export async function POST(req: Request) {
     const cleanUrl = url.replace(/\/$/, '');
     const authHeader = 'Basic ' + Buffer.from(`${key}:${secret}`).toString('base64');
 
-    // ডিলিট অ্যাকশন
     if (action === 'delete') {
       if (!orderId) return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
-
       const deleteRes = await fetch(`${cleanUrl}/wp-json/wc/v3/orders/${orderId}?force=true`, {
         method: 'DELETE',
         headers: { Authorization: authHeader },
       });
-
       if (!deleteRes.ok) {
         const err = await deleteRes.json();
         return NextResponse.json({ error: err.message || 'Failed to delete' }, { status: deleteRes.status });
       }
-
       try {
         await query("DELETE FROM orders WHERE id = ?", [orderId]);
       } catch (e) {}
-
       return NextResponse.json({ success: true });
     }
 
@@ -93,16 +88,16 @@ export async function POST(req: Request) {
       country: 'BD',
     };
 
-    // 🚀 এখানে items কে উকমার্সের মেটা-ডাটায় যুক্ত করা হয়েছে
+    // 🚀 উকমার্স মেটা ডাটায় কাস্টম আইটেম যুক্ত করা হচ্ছে
     const metaData: any[] = [
       { key: '_processed_by_staff', value: staffName || 'Admin' },
+      { key: 'custom_dashboard_items', value: String(items || '') }, // 🚀 সব অবস্থায় আইটেম ওভাররাইট হবে
       ...(size ? [{ key: 'size', value: size }, { key: 'সাইজ', value: size }] : []),
       ...(district ? [{ key: 'district', value: district }] : []),
       ...(thana ? [{ key: 'thana', value: thana }] : []),
       ...(trackingCode ? [{ key: 'trackingCode', value: String(trackingCode) }] : []),
       ...(consignmentId ? [{ key: 'consignmentId', value: String(consignmentId) }] : []),
       ...(courierStatus ? [{ key: 'courierStatus', value: String(courierStatus) }] : []),
-      ...(items ? [{ key: 'custom_dashboard_items', value: String(items) }] : []),
     ];
 
     let finalOrderId = orderId;
