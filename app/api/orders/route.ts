@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,19 @@ export async function GET() {
     const store2Url = (process.env.STORE2_URL || 'https://aasthanaturalsbd.com').replace(/\/$/, '');
     const store2Key = process.env.STORE2_KEY || '';
     const store2Secret = process.env.STORE2_SECRET || '';
+
+    // লোকাল ডাটাবেজ থেকে আপনার সেভ করা কাস্টম আইটেমগুলো আগে থেকেই ফেচ করে ম্যাপ করে নেওয়া
+    let localOrdersMap = new Map();
+    try {
+      const localRows: any = await query(`SELECT store_id, id, items FROM orders`);
+      if (Array.isArray(localRows)) {
+        localRows.forEach((row: any) => {
+          localOrdersMap.set(`${row.store_id}-${row.id}`, row.items);
+        });
+      }
+    } catch (dbErr) {
+      console.error("Local orders map fetch error:", dbErr);
+    }
 
     const fetchStoreOrders = async (storeId: string, storeName: string, url: string, key: string, secret: string) => {
       if (!key || !secret) return [];
@@ -34,12 +48,10 @@ export async function GET() {
           let staffName = '';
           let extractedAddress = o.billing?.address_1 || '';
           
-          // 🛠️ Steadfast Tracking variables
           let trackingCode = '';
           let consignmentId = '';
           let courierStatus = '';
 
-          // উকমার্সের কাস্টম মেটা ফিল্ড বা Billing extra fields থেকে ঠিকানা ও অন্যান্য তথ্য রিড করা
           if (Array.isArray(o.meta_data)) {
             o.meta_data.forEach((m: any) => {
               const k = String(m.key || '').toLowerCase();
@@ -53,7 +65,6 @@ export async function GET() {
               if (k.includes('size') || k.includes('সাইজ')) customSize = val;
               if (k.includes('_processed_by_staff')) staffName = val;
               
-              // 🛠️ Fetching tracking info from database
               if (k === 'trackingcode') trackingCode = val;
               if (k === 'consignmentid') consignmentId = val;
               if (k === 'courierstatus') courierStatus = val;
@@ -67,6 +78,12 @@ export async function GET() {
           const itemsSummary = (o.line_items || [])
             .map((it: any) => `${it.name} x ${it.quantity}`)
             .join(', ');
+
+          // লোকাল ডাটাবেজে সেভ করা কাস্টম আইটেম থাকলে সেটি ব্যবহার করবে, না থাকলে উকমার্সের ডিফল্ট
+          const localSavedItems = localOrdersMap.get(`${storeId}-${o.id}`);
+          const finalItems = (localSavedItems !== undefined && localSavedItems !== null && localSavedItems !== '')
+            ? localSavedItems
+            : (itemsSummary || 'Custom Order Item');
 
           return {
             id: o.id,
@@ -82,10 +99,9 @@ export async function GET() {
             total: o.total || '0',
             status: o.status || 'pending',
             dateCreated: o.date_created || new Date().toISOString(),
-            items: itemsSummary || 'Custom Order Item',
+            items: finalItems,
             staffName: staffName,
             
-            // 🛠️ Sending tracking info to frontend
             trackingCode: trackingCode,
             consignmentId: consignmentId,
             courierStatus: courierStatus,

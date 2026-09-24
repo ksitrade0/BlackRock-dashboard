@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import crypto from 'crypto';
 
 export async function POST(req: Request) {
   try {
@@ -91,6 +92,51 @@ export async function POST(req: Request) {
              `UPDATE orders SET status = ? WHERE id = ?`,
              [newWooStatus, orderId]
            );
+        }
+
+        // =======================================================
+        // 🚀 META CONVERSIONS API (CAPI) - GENUINE PURCHASE TRIGGER
+        // =======================================================
+        if (newWooStatus === 'completed') {
+            const PIXEL_ID = '1407475261571485';
+            const ACCESS_TOKEN = 'EAAZBgIMx3nh0BSYfDyK54YtwjU7ejlxU0TrAc8tpakyOVPEatBs7kSOJKpnSlk06hoIZAaTxdfyUtOF7thgIUfifFAmvNQbUkEUpC2NakeRKZCSnlhCYPN5P4fXnn743W5xvOO9JohVloRjr2llm0Dh3k0fqp0ZByINexW9BbMh9VQgMP5kcZBG1oqDWuuQZDZD';
+            
+            const orderTotal = parseFloat(dbOrder.total || '0');
+            const orderPhone = dbOrder.phone || '';
+
+            const hashData = (data: string) => {
+                if (!data) return '';
+                return crypto.createHash('sha256').update(data.replace(/[^0-9]/g, '')).digest('hex');
+            };
+
+            const capiPayload = {
+                data: [
+                    {
+                        event_name: 'Purchase',
+                        event_time: Math.floor(Date.now() / 1000),
+                        action_source: 'website',
+                        event_id: orderId.toString(),
+                        user_data: {
+                            ph: orderPhone ? [hashData(orderPhone)] : []
+                        },
+                        custom_data: {
+                            currency: 'BDT',
+                            value: orderTotal
+                        }
+                    }
+                ]
+            };
+
+            try {
+                await fetch(`https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(capiPayload)
+                });
+                console.log(`CAPI Purchase Event Sent for Order #${invoice}`);
+            } catch (capiErr) {
+                console.error("CAPI Sending Error:", capiErr);
+            }
         }
       }
     } catch (dbErr) {
@@ -186,7 +232,10 @@ export async function POST(req: Request) {
 
       const today = new Date();
       const deliveryDate = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear().toString().slice(-2)}`;
-      if (!pendingText) pendingText = `আপনার ${orderDate} তারিখের আর কোন পার্সেল পেন্ডিং নাই।`;
+
+      if (!pendingText) {
+         pendingText = `আপনার ${orderDate} তারিখের আর কোন পার্সেল পেন্ডিং নাই।`;
+      }
 
       tgMessage = 
         `✅ <b>আজকে ডেলিভারি হওয়া আপনার পার্সেল সম্পূর্ণভাবে ডেলিভারি হয়েছে।</b>\n\n` +
@@ -197,13 +246,15 @@ export async function POST(req: Request) {
         `📦 <b>আইটেম:</b> ${items}\n\n` +
         `⏳ <b>পেন্ডিং আপডেট:</b>\n${pendingText}`;
 
-    } else if (status === 'cancelled' || status === 'partial_delivered') {
+    } 
+    else if (status === 'cancelled' || status === 'partial_delivered') {
       tgMessage = `❌ <b>পার্সেল রিটার্ন / আংশিক ডেলিভারি!</b>\n` +
         `• <b>ইনভয়েস:</b> #${invoice}\n` +
         `• <b>স্ট্যাটাস:</b> <code>${status.toUpperCase()}</code>\n` +
         `• <b>CID:</b> <code>${consignmentId}</code>\n` +
         `${note ? `• <b>কারণ / নোট:</b> <i>${note}</i>\n` : ''}`;
-    } else if (note || riderName) {
+    } 
+    else if (note || riderName) {
       tgMessage = `⚠️ <b>রাইডার আপডেট / বিশেষ নোট</b>\n` +
         `-----------------------\n` +
         `• <b>ইনভয়েস:</b> #${invoice}\n` +
