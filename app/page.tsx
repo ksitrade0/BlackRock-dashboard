@@ -669,7 +669,7 @@ export default function Dashboard() {
            consignmentId: cid,
            courierStatus: initialStatus,
            dateSent: currentTimestamp,
-        }, undefined, true);
+        }, 'pending', true);
 
         setMessage({ text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`, type: 'success' });
 
