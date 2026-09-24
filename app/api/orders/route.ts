@@ -51,6 +51,7 @@ export async function GET() {
           let trackingCode = '';
           let consignmentId = '';
           let courierStatus = '';
+          let customItems = ''; // 🚀 উকমার্স থেকে কাস্টম আইটেম রিড করার ভেরিয়েবল
 
           if (Array.isArray(o.meta_data)) {
             o.meta_data.forEach((m: any) => {
@@ -68,6 +69,7 @@ export async function GET() {
               if (k === 'trackingcode') trackingCode = val;
               if (k === 'consignmentid') consignmentId = val;
               if (k === 'courierstatus') courierStatus = val;
+              if (k === 'custom_dashboard_items') customItems = val; // 🚀 মেটা-ডাটা থেকে আইটেম পড়া হচ্ছে
             });
           }
 
@@ -79,11 +81,12 @@ export async function GET() {
             .map((it: any) => `${it.name} x ${it.quantity}`)
             .join(', ');
 
-          // লোকাল ডাটাবেজে সেভ করা কাস্টম আইটেম থাকলে সেটি ব্যবহার করবে, না থাকলে উকমার্সের ডিফল্ট
           const localSavedItems = localOrdersMap.get(`${storeId}-${o.id}`);
-          const finalItems = (localSavedItems !== undefined && localSavedItems !== null && localSavedItems !== '')
+          
+          // 🚀 লজিক: মেটা-ডাটায় কাস্টম আইটেম থাকলে সেটা দেখাবে, না থাকলে লোকাল ডিবি, না থাকলে ডিফল্ট
+          const finalItems = customItems ? customItems : ((localSavedItems !== undefined && localSavedItems !== null && localSavedItems !== '')
             ? localSavedItems
-            : (itemsSummary || 'Custom Order Item');
+            : (itemsSummary || 'Custom Order Item'));
 
           return {
             id: o.id,

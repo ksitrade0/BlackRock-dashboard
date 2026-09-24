@@ -68,9 +68,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true });
     }
 
-    // =======================================================
-    // 🛡️ CAPI ডুপ্লিকেট রোধ করার জন্য ডাটাবেজ থেকে আগের স্ট্যাটাস চেক
-    // =======================================================
     let oldStatus = '';
     if (orderId) {
       try {
@@ -96,6 +93,7 @@ export async function POST(req: Request) {
       country: 'BD',
     };
 
+    // 🚀 এখানে items কে উকমার্সের মেটা-ডাটায় যুক্ত করা হয়েছে
     const metaData: any[] = [
       { key: '_processed_by_staff', value: staffName || 'Admin' },
       ...(size ? [{ key: 'size', value: size }, { key: 'সাইজ', value: size }] : []),
@@ -104,11 +102,11 @@ export async function POST(req: Request) {
       ...(trackingCode ? [{ key: 'trackingCode', value: String(trackingCode) }] : []),
       ...(consignmentId ? [{ key: 'consignmentId', value: String(consignmentId) }] : []),
       ...(courierStatus ? [{ key: 'courierStatus', value: String(courierStatus) }] : []),
+      ...(items ? [{ key: 'custom_dashboard_items', value: String(items) }] : []),
     ];
 
     let finalOrderId = orderId;
 
-    // নতুন অর্ডার তৈরির ক্ষেত্রে (POST)
     if (!orderId || Number(orderId) <= 0 || String(orderId).length > 10) {
       const createPayload: any = {
         payment_method: 'cod',
@@ -151,7 +149,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, order: createData, isNew: true });
     }
 
-    // পুরনো অর্ডার আপডেট (PUT)
     const updatePayload: any = {
       status: status || 'processing',
       total: String(total || '0'),
@@ -183,12 +180,7 @@ export async function POST(req: Request) {
       );
     } catch (dbErr) {}
 
-    // =======================================================
-    // 🚀 META CONVERSIONS API (CAPI) - MANUAL & FALLBACK
-    // =======================================================
     const currentStatus = String(status || '').toLowerCase();
-    
-    // শর্ত: যদি আগের স্ট্যাটাস 'completed' না হয়ে থাকে এবং নতুন স্ট্যাটাস 'completed' হয়, তবেই পিক্সেল ফায়ার হবে
     if (oldStatus !== 'completed' && currentStatus === 'completed') {
         const PIXEL_ID = '1407475261571485';
         const ACCESS_TOKEN = 'EAAZBgIMx3nh0BSYfDyK54YtwjU7ejlxU0TrAc8tpakyOVPEatBs7kSOJKpnSlk06hoIZAaTxdfyUtOF7thgIUfifFAmvNQbUkEUpC2NakeRKZCSnlhCYPN5P4fXnn743W5xvOO9JohVloRjr2llm0Dh3k0fqp0ZByINexW9BbMh9VQgMP5kcZBG1oqDWuuQZDZD';
@@ -216,14 +208,12 @@ export async function POST(req: Request) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(capiPayload)
             });
-            console.log(`CAPI Purchase Event Sent for Order #${orderId} from Manual Update`);
         } catch (capiErr) {}
     }
 
     return NextResponse.json({ success: true, order: data });
 
   } catch (error: any) {
-    console.error('Order update/create error:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
