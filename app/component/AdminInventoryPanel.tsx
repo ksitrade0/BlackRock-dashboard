@@ -239,13 +239,13 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
               </select>
               
               {printPeriod === 'daily' && <input type="date" value={printDateVal} onChange={e=>setPrintDateVal(e.target.value)} className="w-full border border-slate-300 p-3 rounded-xl font-bold" />}
-              {printPeriod === 'monthly' && <input type="month" value={printMonthVal} onChange={e=>setMonthVal(e.target.value)} className="w-full border border-slate-300 p-3 rounded-xl font-bold" />}
+              {printPeriod === 'monthly' && <input type="month" value={printMonthVal} onChange={e=>setPrintMonthVal(e.target.value)} className="w-full border border-slate-300 p-3 rounded-xl font-bold" />}
               {printPeriod === 'yearly' && <select value={printYearVal} onChange={e=>setPrintYearVal(e.target.value)} className="w-full border border-slate-300 p-3 rounded-xl font-bold"><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option></select>}
             </div>
 
             <div className="flex gap-3">
-              <button onClick={() => setPrintModalTarget(null)} className="w-full py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200">বাতিল</button>
-              <button onClick={triggerPrint} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg flex justify-center gap-2"><Printer className="w-4 h-4"/> প্রিন্ট করুন</button>
+              <button onClick={() => setPrintModalTarget(null)} className="w-full py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 cursor-pointer">বাতিল</button>
+              <button onClick={triggerPrint} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg flex justify-center gap-2 cursor-pointer"><Printer className="w-4 h-4"/> প্রিন্ট করুন</button>
             </div>
           </div>
         </div>, document.body
@@ -268,7 +268,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div>
                     <label className="block text-xs font-black text-slate-600 mb-1">এন্ট্রির ধরণ</label>
-                    <select value={entryType} onChange={(e) => setEntryType(e.target.value as 'NEW'|'RETURN')} className="w-full border border-slate-300 p-3 rounded-xl font-bold text-sm bg-slate-50 outline-none">
+                    <select value={entryType} onChange={(e) => setEntryType(e.target.value as 'NEW'|'RETURN')} className="w-full border border-slate-300 p-3 rounded-xl font-bold text-sm bg-slate-50 outline-none cursor-pointer">
                       <option value="NEW">🟢 নতুন মাল (Fresh Stock)</option><option value="RETURN">🔴 রিটার্ন মাল (Returned Stock)</option>
                     </select>
                   </div>
@@ -286,13 +286,13 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                   <div className="p-3 space-y-3">
                     {purchaseItems.map((item, index) => (
                       <div key={index} className="grid grid-cols-12 gap-3 items-center">
-                        <select value={item.itemName} onChange={(e) => handleItemChange(index, 'itemName', e.target.value)} className="col-span-5 border border-slate-300 p-2.5 rounded-lg text-xs font-bold outline-none" required><option value="">-- আইটেম --</option>{existingItems.map(p => <option key={p} value={p}>{p}</option>)}</select>
+                        <select value={item.itemName} onChange={(e) => handleItemChange(index, 'itemName', e.target.value)} className="col-span-5 border border-slate-300 p-2.5 rounded-lg text-xs font-bold outline-none cursor-pointer" required><option value="">-- আইটেম --</option>{existingItems.map(p => <option key={p} value={p}>{p}</option>)}</select>
                         <input type="number" value={item.quantity || ''} onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))} placeholder="পিস" className="col-span-3 border border-slate-300 p-2.5 rounded-lg text-center text-xs font-bold outline-none" required />
                         <input type="number" value={item.buyingPrice || ''} onChange={(e) => handleItemChange(index, 'buyingPrice', Number(e.target.value))} placeholder="৳" className="col-span-3 border border-slate-300 p-2.5 rounded-lg text-center text-xs font-bold outline-none" required />
-                        <button type="button" onClick={() => handleRemoveItemRow(index)} className="col-span-1 p-2 text-rose-500 hover:bg-rose-50 rounded flex justify-center"><Trash2 className="w-4 h-4" /></button>
+                        <button type="button" onClick={() => handleRemoveItemRow(index)} className="col-span-1 p-2 text-rose-500 hover:bg-rose-50 rounded flex justify-center cursor-pointer"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     ))}
-                    <button type="button" onClick={() => setPurchaseItems([...purchaseItems, { itemName: '', quantity: 1, buyingPrice: 0 }])} className="w-full py-2.5 bg-slate-50 border-2 border-dashed border-slate-300 text-xs font-bold text-slate-600 rounded-lg hover:bg-slate-100 flex justify-center gap-1"><Plus className="w-4 h-4"/> আরও আইটেম</button>
+                    <button type="button" onClick={() => setPurchaseItems([...purchaseItems, { itemName: '', quantity: 1, buyingPrice: 0 }])} className="w-full py-2.5 bg-slate-50 border-2 border-dashed border-slate-300 text-xs font-bold text-slate-600 rounded-lg hover:bg-slate-100 flex justify-center gap-1 cursor-pointer"><Plus className="w-4 h-4"/> আরও আইটেম</button>
                   </div>
                 </div>
                 <button type="submit" disabled={isSaving} className="w-full bg-slate-900 text-white py-4 rounded-xl font-black text-sm hover:bg-black transition cursor-pointer">{isSaving ? 'সেভ হচ্ছে...' : 'এন্ট্রি সেভ করুন'}</button>
@@ -303,7 +303,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                   <select value={selectedTypeFilter} onChange={(e) => setSelectedTypeFilter(e.target.value)} className="border border-slate-300 px-3 py-2 rounded-lg text-xs font-black bg-white outline-none cursor-pointer">
                     <option value="all">সকল ট্রানজেকশন</option><option value="STOCK_IN">🟢 স্টক ইন</option><option value="STOCK_OUT">🔴 স্টক আউট</option><option value="RESTORED">🔵 স্টক রিস্টোর</option>
                   </select>
-                  <button onClick={() => setPrintModalTarget('stock')} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5"><Printer className="w-4 h-4"/> প্রিন্ট করুন</button>
+                  <button onClick={() => setPrintModalTarget('stock')} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer"><Printer className="w-4 h-4"/> প্রিন্ট করুন</button>
                 </div>
                 
                 <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
@@ -326,7 +326,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                               <td className="px-5 py-3 text-[11px] font-bold text-slate-700 leading-relaxed bg-slate-50 border-l border-r border-slate-100">{row.itemName}</td>
                               <td className="px-5 py-3 text-center text-xs font-black">{row.type === 'STOCK_OUT' ? `-${row.quantity}` : `+${row.quantity}`}</td>
                               <td className="px-5 py-3 text-right text-xs font-black">৳ {row.total}</td>
-                              <td className="px-5 py-3 text-center"><button onClick={() => handleDeleteStatementRow(row)} className="text-rose-500 hover:bg-rose-50 p-1.5 rounded"><Trash2 className="w-4 h-4"/></button></td>
+                              <td className="px-5 py-3 text-center"><button onClick={() => handleDeleteStatementRow(row)} className="text-rose-500 hover:bg-rose-50 p-1.5 rounded cursor-pointer"><Trash2 className="w-4 h-4"/></button></td>
                             </tr>
                           </React.Fragment>
                         );
@@ -364,10 +364,10 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-1">কে খরচা করেছে?</label>
-                  <select value={expSpender} onChange={e=>setExpSpender(e.target.value)} className="w-full border border-slate-300 p-2.5 rounded-lg font-bold text-sm outline-none bg-white">{STAFF_MEMBERS.map(s => <option key={s} value={s}>{s}</option>)}<option value="add_new">+ Add New (নতুন নাম)</option><option value={loggedInUser} className="hidden">{loggedInUser}</option></select>
+                  <select value={expSpender} onChange={e=>setExpSpender(e.target.value)} className="w-full border border-slate-300 p-2.5 rounded-lg font-bold text-sm outline-none bg-white cursor-pointer">{STAFF_MEMBERS.map(s => <option key={s} value={s}>{s}</option>)}<option value="add_new">+ Add New (নতুন নাম)</option><option value={loggedInUser} className="hidden">{loggedInUser}</option></select>
                 </div>
                 {expSpender === 'add_new' && <div><input type="text" value={expCustomSpender} onChange={e=>setExpCustomSpender(e.target.value)} placeholder="নতুন নাম লিখুন..." className="w-full border border-rose-300 p-2.5 rounded-lg font-bold text-sm outline-none bg-rose-50" required /></div>}
-                <div><label className="block text-xs font-bold text-slate-600 mb-1">তারিখ</label><input type="date" value={expDate} onChange={e=>setExpDate(e.target.value)} className="w-full border border-slate-300 p-2.5 rounded-lg font-bold text-sm outline-none" required /></div>
+                <div><label className="block text-xs font-bold text-slate-600 mb-1">তারিখ</label><input type="date" value={expDate} onChange={e=>setExpDate(e.target.value)} className="w-full border border-slate-300 p-2.5 rounded-lg font-bold text-sm outline-none cursor-pointer" required /></div>
                 
                 <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-3">
                   <label className="block text-[10px] uppercase tracking-wider font-black text-slate-500 mb-2">খরচের বিবরণ ও পরিমাণ</label>
@@ -375,10 +375,10 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                     <div key={index} className="flex items-center gap-2 bg-white p-2 border border-slate-200 rounded-lg">
                       <input type="text" value={item.description} onChange={e=>handleExpItemChange(index, 'description', e.target.value)} placeholder="কী খরচ হয়েছে?" className="w-full outline-none text-xs font-bold" required />
                       <input type="number" value={item.amount} onChange={e=>handleExpItemChange(index, 'amount', e.target.value)} placeholder="৳ 500" className="w-24 text-right outline-none text-xs font-black text-rose-600 border-l border-slate-200 pl-2" required />
-                      <button type="button" onClick={() => removeExpItem(index)} className="text-rose-400 hover:text-rose-600 pl-1"><Trash2 className="w-4 h-4"/></button>
+                      <button type="button" onClick={() => removeExpItem(index)} className="text-rose-400 hover:text-rose-600 pl-1 cursor-pointer"><Trash2 className="w-4 h-4"/></button>
                     </div>
                   ))}
-                  <button type="button" onClick={() => setExpenseItems([...expenseItems, { description: '', amount: '' }])} className="w-full py-2 bg-white border border-slate-300 text-[11px] font-bold text-slate-600 rounded-lg hover:bg-slate-100 flex justify-center gap-1"><Plus className="w-3.5 h-3.5"/> অ্যাড খরচ (+)</button>
+                  <button type="button" onClick={() => setExpenseItems([...expenseItems, { description: '', amount: '' }])} className="w-full py-2 bg-white border border-slate-300 text-[11px] font-bold text-slate-600 rounded-lg hover:bg-slate-100 flex justify-center gap-1 cursor-pointer"><Plus className="w-3.5 h-3.5"/> অ্যাড খরচ (+)</button>
                 </div>
                 
                 <button type="submit" disabled={isSaving} className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-black text-sm hover:bg-black transition cursor-pointer">{isSaving ? 'সেভ হচ্ছে...' : 'সব খরচ সেভ করুন'}</button>
@@ -390,20 +390,21 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                 <select value={expFilter} onChange={e=>setExpFilter(e.target.value)} className="border-none font-black text-sm outline-none cursor-pointer bg-transparent text-slate-800"><option value="all">সকল খরচের রেকর্ড</option><option value="today">আজকের খরচ</option><option value="month">এই মাসের খরচ</option><option value="year">এই বছরের খরচ</option></select>
                 <div className="flex gap-4 items-center">
                   <div className="text-xs font-bold text-slate-500">মোট খরচ: <span className="text-rose-600 font-black text-base">৳ {totalExpense}</span></div>
-                  <button onClick={() => setPrintModalTarget('expense')} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5"><Printer className="w-4 h-4"/> প্রিন্ট অপশন</button>
+                  <button onClick={() => setPrintModalTarget('expense')} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer"><Printer className="w-4 h-4"/> প্রিন্ট অপশন</button>
                 </div>
               </div>
 
               <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                 <table className="w-full text-sm text-left"><thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-black border-b border-slate-200"><tr><th className="px-5 py-3">তারিখ</th><th className="px-5 py-3">বিবরণ</th><th className="px-5 py-3">খরচকারী</th><th className="px-5 py-3 text-right">পরিমাণ</th><th className="px-5 py-3 text-center">অ্যাকশন</th></tr></thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredExpenses.map((row, idx) => {
+                    {filteredExpenses.length===0 ? <tr><td colSpan={5} className="p-10 text-center font-bold text-slate-400">কোনো রেকর্ড নেই</td></tr> :
+                     filteredExpenses.map((row, idx) => {
                        const currentDate = new Date(row.date).toLocaleDateString('en-GB'); const prevDate = idx > 0 ? new Date(filteredExpenses[idx - 1].date).toLocaleDateString('en-GB') : null;
                        return (
                          <React.Fragment key={row.id}>
                            {currentDate !== prevDate && <tr><td colSpan={5} className="bg-slate-800 text-rose-400 font-black text-xs text-center py-2 border-y-4 border-slate-950">📅 {currentDate}</td></tr>}
                            <tr className="hover:bg-slate-50">
-                             <td className="px-5 py-3 text-xs font-bold text-slate-600">{currentDate} <div className="text-[9px] text-blue-500 mt-0.5">👤 {row.createdBy}</div></td><td className="px-5 py-3 text-xs font-black text-slate-800">{row.description}</td><td className="px-5 py-3 text-xs font-bold text-slate-600 flex items-center gap-1.5"><UserCircle className="w-3.5 h-3.5"/>{row.spender}</td><td className="px-5 py-3 text-right text-sm font-black text-rose-600">৳ {row.amount}</td><td className="px-5 py-3 text-center"><button onClick={() => handleDeleteExpense(row.id)} className="text-rose-400 hover:bg-rose-50 p-1.5 rounded"><Trash2 className="w-4 h-4"/></button></td>
+                             <td className="px-5 py-3 text-xs font-bold text-slate-600">{currentDate} <div className="text-[9px] text-blue-500 mt-0.5">👤 {row.createdBy}</div></td><td className="px-5 py-3 text-xs font-black text-slate-800">{row.description}</td><td className="px-5 py-3 text-xs font-bold text-slate-600 flex items-center gap-1.5"><UserCircle className="w-3.5 h-3.5"/>{row.spender}</td><td className="px-5 py-3 text-right text-sm font-black text-rose-600">৳ {row.amount}</td><td className="px-5 py-3 text-center"><button onClick={() => handleDeleteExpense(row.id)} className="text-rose-400 hover:bg-rose-50 p-1.5 rounded cursor-pointer"><Trash2 className="w-4 h-4"/></button></td>
                            </tr>
                          </React.Fragment>
                        )
