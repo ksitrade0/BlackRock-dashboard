@@ -61,7 +61,7 @@ export default function Dashboard() {
   const handleTableScroll = (e: React.UIEvent<HTMLDivElement>) => { if (topScrollRef.current) topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft; };
 
   const sendActivityLog = async (logText: string, targetType: 'activity' | 'courier' = 'activity') => {
-    try { await fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: logText, type: targetType }) }); } catch (err) { }
+    try { await fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: logText, type: targetType }) }); } catch (err) {}
   };
 
   const handleLogout = async () => { try { await fetch('/api/auth/logout', { method: 'POST' }); router.push('/login'); } catch { router.push('/login'); } };
@@ -95,7 +95,7 @@ export default function Dashboard() {
           return newInit;
         });
       } else { if (!isSilent) setOrders([]); }
-    } catch (err: any) { if (!isSilent) { setMessage({ text: err.message || 'অর্ডার লোড করতে সমস্যা হয়েছে', type: 'error' }); setOrders([]); } }
+    } catch (err: any) { if (!isSilent) { setMessage({ text: err.message || 'অর্ডার লোড করতে সমস্যা হয়েছে', type: 'error' }); setOrders([]); } } 
     finally { if (!isSilent) setLoading(false); }
   };
 
@@ -114,18 +114,17 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
-  // 🚀 UPDATE: Advanced Courier Audit Report (With Auto-scaling Batch Processing)
+  // 🚀 UPDATE: Auto-Splitting (Chunking) for unlimited parcels
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
     if (!isAutomatic) setMessage({ text: 'স্টেডফাস্ট থেকে রিয়েল-টাইম ডেটা চেক করা হচ্ছে (অধিক পার্সেল থাকলে কিছুক্ষণ সময় লাগতে পারে)...', type: 'success' });
-
+    
     const updatedOrders = [...orders];
-
+    
     try {
-      // 🚀 BATCH PROCESSING LOGIC (যতই পার্সেল থাকুক, ১৫টা করে লুপ চালিয়ে সব বের করবে)
+      // ব্যাচ প্রসেসিং: ১৫টি করে পার্সেল চেক করবে
       const parcelsToCheck = updatedOrders.filter(o => o.trackingCode || o.consignmentId);
-      const batchSize = 15; // ১৫টি করে চেক করবে সার্ভার ক্র্যাশ এড়াতে
-
+      const batchSize = 15; 
       for (let i = 0; i < parcelsToCheck.length; i += batchSize) {
         const batch = parcelsToCheck.slice(i, i + batchSize);
         await Promise.all(batch.map(async (o) => {
@@ -134,22 +133,22 @@ export default function Dashboard() {
             const tRes = await fetch(`/api/courier/track?${queryParam}`);
             const tResult = await tRes.json();
             if (tResult.success && tResult.data) {
-              o.courierStatus = tResult.data.delivery_status || tResult.data.status || o.courierStatus;
+                o.courierStatus = tResult.data.delivery_status || tResult.data.status || o.courierStatus;
             }
-          } catch (e) { }
+          } catch (e) {}
         }));
       }
-
-      setOrders([...updatedOrders]); // লাইভ স্ট্যাটাসগুলো ড্যাশবোর্ডে আপডেট করে দেওয়া হলো
-
-      const now = new Date();
+      
+      setOrders([...updatedOrders]);
+      
+      const now = new Date(); 
       const todayDateStr = now.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' });
       const currentTime = now.toLocaleTimeString('en-BD', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: true });
-
-      const isToday = (dateString: string) => {
-        if (!dateString) return false;
-        try { return new Date(dateString).toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' }) === todayDateStr; }
-        catch { return false; }
+      
+      const isToday = (dateString: string) => { 
+        if (!dateString) return false; 
+        try { return new Date(dateString).toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' }) === todayDateStr; } 
+        catch { return false; } 
       };
 
       const formatDateOnly = (dateString: string) => {
@@ -158,72 +157,101 @@ export default function Dashboard() {
         catch { return 'N/A'; }
       };
 
-      // ডেটা ফিল্টারিং
       const sentToday = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && isToday(o.dateSent || o.dateCreated));
       const deliveredToday = updatedOrders.filter((o) => ((o.courierStatus || '').toLowerCase() === 'delivered' || (o.courierStatus || '').toLowerCase() === 'partial_delivered') && isToday(new Date().toISOString()));
       const returnedToday = updatedOrders.filter((o) => ['cancelled', 'returned', 'return', 'cancelled_approval_pending'].includes((o.courierStatus || '').toLowerCase()) && isToday(new Date().toISOString()));
 
-      // পেন্ডিং ফিল্টারিং
       const pendingParcels = updatedOrders.filter((o) => {
         if (!o.trackingCode && !o.consignmentId) return false;
         const s = (o.courierStatus || '').toLowerCase();
         return !['delivered', 'partial_delivered', 'cancelled', 'returned', 'return', 'cancelled_approval_pending'].includes(s);
       });
 
-      // সবচেয়ে পুরোনো পার্সেল আগে দেখানোর জন্য সর্টিং
       pendingParcels.sort((a, b) => new Date(a.dateSent || a.dateCreated).getTime() - new Date(b.dateSent || b.dateCreated).getTime());
 
       let totalCollection = 0; deliveredToday.forEach((o) => { totalCollection += parseFloat(o.total || '0'); });
 
-      // মেসেজ বিল্ড করা (Strict Order)
-      let msg = `<b>📊 কুরিয়ার অডিট রিপোর্ট</b>\n`;
-      msg += `📅 তারিখ: ${todayDateStr} | ⏰ সময়: ${currentTime}\n\n`;
+      // 🚀 Auto Chunking Logic (টেলিগ্রামের লিমিট এড়াতে মেসেজ ভাগ করা)
+      let messages = [];
+      let currentMsg = `<b>📊 কুরিয়ার অডিট রিপোর্ট</b>\n📅 তারিখ: ${todayDateStr} | ⏰ সময়: ${currentTime}\n\n`;
 
-      msg += `📦 <b>আজকে পাঠানো পার্সেল: ${sentToday.length} টি</b>\n`;
-      sentToday.forEach((o, i) => {
-        msg += `${i + 1}. #${o.invoice} | CID: ${o.consignmentId || 'N/A'} | ${o.customerName} | ৳${o.total}\n`;
+      const appendToMsg = (text) => {
+        // ৩০০০ অক্ষরের বেশি হলে নতুন মেসেজ তৈরি করবে
+        if (currentMsg.length + text.length > 3000) {
+            messages.push(currentMsg);
+            currentMsg = text;
+        } else {
+            currentMsg += text;
+        }
+      };
+
+      appendToMsg(`📦 <b>আজকে পাঠানো পার্সেল: ${sentToday.length} টি</b>\n`);
+      sentToday.forEach((o, i) => { 
+        appendToMsg(`${i + 1}. #${o.invoice} | CID: ${o.consignmentId || 'N/A'} | ${o.customerName} | ৳${o.total}\n`); 
       });
-      msg += `\n`;
+      appendToMsg(`\n`);
 
-      msg += `✅ <b>আজকে ডেলিভারি হয়েছে: ${deliveredToday.length} টি</b>\n`;
-      deliveredToday.forEach((o, i) => {
+      appendToMsg(`✅ <b>আজকে ডেলিভারি হয়েছে: ${deliveredToday.length} টি</b>\n`);
+      deliveredToday.forEach((o, i) => { 
         const sentD = formatDateOnly(o.dateSent || o.dateCreated);
-        msg += `${i + 1}. #${o.invoice} | CID: ${o.consignmentId || 'N/A'} | [পাঠানো: ${sentD}] | ৳${o.total}\n`;
+        appendToMsg(`${i + 1}. #${o.invoice} | CID: ${o.consignmentId || 'N/A'} | [পাঠানো: ${sentD}] | ৳${o.total}\n`); 
       });
-      msg += `\n`;
+      appendToMsg(`\n`);
 
-      // 🚀 পেন্ডিং পার্সেল লিস্ট (মোবাইল নম্বর সহ)
-      msg += `⏳ <b>মোট পেন্ডিং পার্সেল: ${pendingParcels.length} টি</b>\n`;
-      msg += `-----------------------------------\n`;
-      pendingParcels.forEach((o, i) => {
-        const address = o.district ? `${o.thana ? o.thana + ', ' : ''}${o.district}` : (o.streetAddress || 'N/A');
+      appendToMsg(`⏳ <b>মোট পেন্ডিং পার্সেল: ${pendingParcels.length} টি</b>\n-----------------------------------\n`);
+      pendingParcels.forEach((o, i) => { 
+        const address = o.district ? `${o.thana ? o.thana+', ' : ''}${o.district}` : (o.streetAddress || 'N/A');
         const sentD = formatDateOnly(o.dateSent || o.dateCreated);
         const status = (o.courierStatus || 'IN REVIEW').toUpperCase().replace(/_/g, ' ');
 
-        msg += `<b>${i + 1}. ইনভয়েস: #${o.invoice}</b>\n`;
-        msg += `🔖 CID: <code>${o.consignmentId || o.trackingCode}</code>\n`;
-        msg += `📅 পাঠানো: ${sentD}\n`;
-        msg += `👤 নাম: ${o.customerName || 'N/A'} | 📱 মোবাইল: <code>${o.phone || 'N/A'}</code>\n`;
-        msg += `📍 ঠিকানা: ${address}\n`;
-        msg += `📦 আইটেম: ${o.items || 'N/A'}\n`;
-        msg += `💰 COD: ৳${o.total} | 📌 স্ট্যাটাস: <b>${status}</b>\n\n`;
+        let pMsg = `<b>${i + 1}. ইনভয়েস: #${o.invoice}</b>\n`;
+        pMsg += `🔖 CID: <code>${o.consignmentId || o.trackingCode}</code>\n`;
+        pMsg += `📅 পাঠানো: ${sentD}\n`;
+        pMsg += `👤 নাম: ${o.customerName || 'N/A'} | 📱 মোবাইল: <code>${o.phone || 'N/A'}</code>\n`;
+        pMsg += `📍 ঠিকানা: ${address}\n`;
+        pMsg += `📦 আইটেম: ${o.items || 'N/A'}\n`;
+        pMsg += `💰 COD: ৳${o.total} | 📌 স্ট্যাটাস: <b>${status}</b>\n\n`;
+        
+        appendToMsg(pMsg);
       });
 
-      msg += `❌ <b>আজকে রিটার্ন/ক্যান্সেল: ${returnedToday.length} টি</b>\n`;
-      returnedToday.forEach((o, i) => {
-        msg += `${i + 1}. #${o.invoice} | CID: ${o.consignmentId || 'N/A'} | ${o.customerName} | ৳${o.total}\n`;
+      appendToMsg(`❌ <b>আজকে রিটার্ন/ক্যান্সেল: ${returnedToday.length} টি</b>\n`);
+      returnedToday.forEach((o, i) => { 
+        appendToMsg(`${i + 1}. #${o.invoice} | CID: ${o.consignmentId || 'N/A'} | ${o.customerName} | ৳${o.total}\n`); 
       });
-      msg += `\n`;
+      appendToMsg(`\n`);
 
-      msg += `💵 <b>আজকের মোট কালেকশন: ৳ ${totalCollection}</b>\n\n`;
-      msg += isAutomatic ? `<i>🤖 অটোমেটিক নাইট অডিট রিপোর্ট</i>` : `<i>রিপোর্ট তৈরি করেছেন: ${currentUser}</i>`;
+      appendToMsg(`💵 <b>আজকের মোট কালেকশন: ৳ ${totalCollection}</b>\n\n`);
+      appendToMsg(isAutomatic ? `<i>🤖 অটোমেটিক নাইট অডিট রিপোর্ট</i>` : `<i>রিপোর্ট তৈরি করেছেন: ${currentUser}</i>`);
 
-      const res = await fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: msg, type: 'courier' }) });
-      if (res.ok && !isAutomatic) setMessage({ text: 'কুরিয়ার রিপোর্ট সফলভাবে পাঠানো হয়েছে!', type: 'success' });
-    } catch (err: any) {
-      if (!isAutomatic) setMessage({ text: err.message || 'রিপোর্ট তৈরি করতে এরর হয়েছে', type: 'error' });
-    } finally {
-      setReporting(false);
+      if (currentMsg.trim().length > 0) {
+         messages.push(currentMsg);
+      }
+
+      // মেসেজগুলো এক এক করে টেলিগ্রামে পাঠানো
+      for (let i = 0; i < messages.length; i++) {
+        const partHeader = messages.length > 1 ? `<i>(Part ${i + 1}/${messages.length})</i>\n\n` : '';
+        const finalMsg = partHeader + messages[i];
+        
+        const res = await fetch('/api/telegram', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ text: finalMsg, type: 'courier' }) 
+        });
+        
+        if (!res.ok) throw new Error('টেলিগ্রামে মেসেজ পাঠাতে সমস্যা হয়েছে');
+        
+        // টেলিগ্রাম যেন ব্লক না করে তাই ১ সেকেন্ড বিরতি
+        if (i < messages.length - 1) {
+            await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+
+      if (!isAutomatic) setMessage({ text: 'কুরিয়ার রিপোর্ট সফলভাবে পাঠানো হয়েছে!', type: 'success' });
+    } catch (err: any) { 
+      if (!isAutomatic) setMessage({ text: err.message || 'রিপোর্ট তৈরি করতে এরর হয়েছে', type: 'error' }); 
+    } finally { 
+      setReporting(false); 
     }
   };
 
@@ -305,13 +333,13 @@ export default function Dashboard() {
         setOrders(prevOrders => prevOrders.map(o => (o.id === order.id ? updatedOrder : o)));
         setInitialOrders(prevInit => ({ ...prevInit, [`${order.storeId}-${returnedId}`]: JSON.parse(JSON.stringify(updatedOrder)) }));
         setMessage({ text: `Order #${finalInvoice} সফলভাবে সেভ করা হয়েছে!`, type: 'success' });
-
+        
         if (!isCourierPush) {
           const logMsg = `<b>${order.isNewRow ? 'নতুন অর্ডার তৈরি' : 'অর্ডার আপডেট'}</b>\n-----------------------\n🏬 <b>স্টোর:</b> ${order.storeName}\n🧾 <b>ইনভয়েস:</b> #${finalInvoice}\n👤 <b>কাস্টমার:</b> ${order.customerName}\n📌 <b>স্ট্যাটাস:</b> <code>${newStatus.toUpperCase()}</code>\n✍️ <b>স্টাফ:</b> ${currentUser}`;
           sendActivityLog(logMsg, 'activity');
         }
       } else setMessage({ text: result.error || 'সেভ করতে সমস্যা হয়েছে', type: 'error' });
-    } catch (err: any) { setMessage({ text: err.message || 'Network error', type: 'error' }); }
+    } catch (err: any) { setMessage({ text: err.message || 'Network error', type: 'error' }); } 
     finally { setUpdatingId(null); }
   };
 
@@ -322,7 +350,7 @@ export default function Dashboard() {
     try {
       const res = await fetch('/api/orders/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storeId: order.storeId, orderId: order.id, action: 'delete' }) });
       if (res.ok) { setOrders(prev => prev.filter(o => !(o.id === order.id && o.storeId === order.storeId))); setMessage({ text: `Order #${order.invoice} মুছে ফেলা হয়েছে!`, type: 'success' }); }
-    } catch (err: any) { setMessage({ text: err.message || 'Network error', type: 'error' }); }
+    } catch (err: any) { setMessage({ text: err.message || 'Network error', type: 'error' }); } 
     finally { setUpdatingId(null); }
   };
 
@@ -341,7 +369,7 @@ export default function Dashboard() {
         handleSaveOrder({ ...order, trackingCode: tracking, consignmentId: cid, courierStatus: initialStatus, dateSent: currentTimestamp }, 'pending', true);
         setMessage({ text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`, type: 'success' });
       } else setMessage({ text: result.error || 'কুরিয়ারে পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
-    } catch (err: any) { setMessage({ text: err.message || 'Network error', type: 'error' }); }
+    } catch (err: any) { setMessage({ text: err.message || 'Network error', type: 'error' }); } 
     finally { setSendingId(null); }
   };
 
@@ -361,7 +389,7 @@ export default function Dashboard() {
         await handleSaveOrder({ ...order, courierStatus: liveStatus }, newWooStatus, true);
         setMessage({ text: `Order #${order.invoice} স্ট্যাটাস: ${liveStatus.toUpperCase()}`, type: 'success' });
       }
-    } catch (err: any) { setMessage({ text: err.message || 'Tracking error', type: 'error' }); }
+    } catch (err: any) { setMessage({ text: err.message || 'Tracking error', type: 'error' }); } 
     finally { setTrackingId(null); }
   };
 
@@ -490,7 +518,7 @@ export default function Dashboard() {
                       const phoneInfo = phoneOrderData[cleanPhone];
                       const isDuplicate = phoneInfo && phoneInfo.count > 1; const isRecent = phoneInfo && phoneInfo.recentOrders.length > 1;
                       const availableThanas = BANGLADESH_DISTRICTS.find(d => d.district === order.district)?.thanas || [];
-
+                      
                       const isToday = isTodayOrder(order.dateCreated);
                       let rowBgClass = order.isNewRow ? 'bg-emerald-50 border-2 border-emerald-500' : isRecent ? 'bg-rose-50 hover:bg-rose-100/70' : isDuplicate ? 'bg-amber-50 hover:bg-amber-100/70' : isToday ? 'bg-emerald-50/60 hover:bg-emerald-100/60 border-l-4 border-l-emerald-500' : 'bg-amber-50/40 hover:bg-amber-100/50 border-l-4 border-l-amber-400';
                       const currentItemList = order.items ? order.items.split(',').map(s => s.trim()).filter(Boolean) : [];
@@ -521,7 +549,7 @@ export default function Dashboard() {
                                 <div className="flex items-center justify-center gap-2">
                                   <span>📅 {currentOrderDate} এর অর্ডারসমূহ</span>
                                   <span className="text-slate-300 font-bold bg-slate-700/50 px-2 py-0.5 rounded-full text-xs tracking-wider flex items-center gap-1.5 border border-slate-600">
-                                    মোট: {dateTotal}
+                                    মোট: {dateTotal} 
                                     {dateDelivered > 0 && <span className="text-emerald-400 ml-1">✅ {dateDelivered}</span>}
                                     {dateRed > 0 && <span className="text-rose-400 ml-1">❌ {dateRed}</span>}
                                   </span>
