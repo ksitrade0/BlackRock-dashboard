@@ -10,8 +10,8 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   const [mounted, setMounted] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState('Admin');
   
-  // 🚀 SUPER ADMIN CHECK LOGIC
-  const isSuperAdmin = loggedInUser.toLowerCase() === 'ksitrade0@gmail.com' || loggedInUser.toLowerCase() === 'ksitrade0@gmail.com';
+  // 🚀 STRICT SUPER ADMIN CHECK LOGIC
+  const isSuperAdmin = loggedInUser.toLowerCase() === 'ksitrade0@gmail.com';
 
   const [authTarget, setAuthTarget] = useState<'inventory' | 'expense' | 'activity' | null>(null);
   const [username, setUsername] = useState('');
@@ -65,6 +65,10 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
       const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
       const data = await res.json();
       if (res.ok && data.success) {
+        // 🚀 BUG FIX: সাথে সাথে ইউজারনেম আপডেট করা হচ্ছে
+        setLoggedInUser(username);
+        setExpSpender(username);
+        
         setActivePanel(authTarget); setAuthTarget(null); setPassword('');
         if (authTarget === 'inventory') fetchStatement();
         if (authTarget === 'expense') fetchExpenses();
