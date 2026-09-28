@@ -13,41 +13,20 @@ import {
 } from 'lucide-react';
 
 interface Order {
-  id: number;
-  storeId: string;
-  storeName: string;
-  invoice: string;
-  customerName: string;
-  phone: string;
-  streetAddress: string;
-  district?: string;
-  thana?: string;
-  size?: string;
-  customNote?: string;
-  total: string;
-  status: string;
-  dateCreated: string;
-  dateSent?: string;
-  items: string;
-  staffName?: string;
-  callDone?: boolean;
-  trackingCode?: string;
-  consignmentId?: number | string;
-  courierStatus?: string;
-  isNewRow?: boolean;
+  id: number; storeId: string; storeName: string; invoice: string; customerName: string;
+  phone: string; streetAddress: string; district?: string; thana?: string; size?: string;
+  customNote?: string; total: string; status: string; dateCreated: string; dateSent?: string;
+  items: string; staffName?: string; callDone?: boolean; trackingCode?: string;
+  consignmentId?: number | string; courierStatus?: string; isNewRow?: boolean;
 }
 
 const STAFF_MEMBERS = ['Awlad Hossain', 'Emdadullah Sakib', 'Omar Faruque'];
 
 const WOO_STATUSES = [
-  { label: 'Pending payment', value: 'pending' },
-  { label: 'Processing', value: 'processing' },
-  { label: 'On hold (রাখুন)', value: 'on-hold' },
-  { label: 'Completed', value: 'completed' },
-  { label: 'Cancelled', value: 'cancelled' },
-  { label: 'Refunded', value: 'refunded' },
-  { label: 'Failed', value: 'failed' },
-  { label: 'Draft', value: 'checkout-draft' },
+  { label: 'Pending payment', value: 'pending' }, { label: 'Processing', value: 'processing' },
+  { label: 'On hold (রাখুন)', value: 'on-hold' }, { label: 'Completed', value: 'completed' },
+  { label: 'Cancelled', value: 'cancelled' }, { label: 'Refunded', value: 'refunded' },
+  { label: 'Failed', value: 'failed' }, { label: 'Draft', value: 'checkout-draft' },
   { label: 'Main Order Accepted (CF)', value: 'main-order-accepted' },
 ];
 
@@ -60,7 +39,6 @@ const PRODUCT_VARIATIONS = [
 
 export default function Dashboard() {
   const router = useRouter();
-
   const [currentUser, setCurrentUser] = useState<string>('omar faruque (Admin)');
   const [orders, setOrders] = useState<Order[]>([]);
   const [initialOrders, setInitialOrders] = useState<Record<string, Order>>({});
@@ -71,122 +49,54 @@ export default function Dashboard() {
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [sendingId, setSendingId] = useState<number | null>(null);
   const [trackingId, setTrackingId] = useState<number | null>(null);
-
   const [reporting, setReporting] = useState<boolean>(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => {
-        setMessage(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [message]);
+  useEffect(() => { if (message) { const timer = setTimeout(() => setMessage(null), 5000); return () => clearTimeout(timer); } }, [message]);
 
   const topScrollRef = useRef<HTMLDivElement>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
-
-  const handleTopScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (tableScrollRef.current) {
-      tableScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
-    }
-  };
-
-  const handleTableScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (topScrollRef.current) {
-      topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
-    }
-  };
+  const handleTopScroll = (e: React.UIEvent<HTMLDivElement>) => { if (tableScrollRef.current) tableScrollRef.current.scrollLeft = e.currentTarget.scrollLeft; };
+  const handleTableScroll = (e: React.UIEvent<HTMLDivElement>) => { if (topScrollRef.current) topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft; };
 
   const sendActivityLog = async (logText: string, targetType: 'activity' | 'courier' = 'activity') => {
-    try {
-      await fetch('/api/telegram', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: logText, type: targetType }),
-      });
-    } catch (err) {}
+    try { await fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: logText, type: targetType }) }); } catch (err) {}
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/login');
-    } catch {
-      router.push('/login');
-    }
-  };
+  const handleLogout = async () => { try { await fetch('/api/auth/logout', { method: 'POST' }); router.push('/login'); } catch { router.push('/login'); } };
 
   useEffect(() => {
-    fetch('/api/auth/check')
-      .then((res) => {
-        if (!res.ok) router.push('/login');
-        else res.json().then((d) => d.username && setCurrentUser(d.username));
-      })
-      .catch(() => router.push('/login'));
+    fetch('/api/auth/check').then(res => { if (!res.ok) router.push('/login'); else res.json().then(d => d.username && setCurrentUser(d.username)); }).catch(() => router.push('/login'));
   }, [router]);
 
   const fetchOrders = async (isSilent = false) => {
-    if (!isSilent) {
-      setLoading(true);
-      setMessage(null);
-    }
+    if (!isSilent) { setLoading(true); setMessage(null); }
     try {
       const res = await fetch('/api/orders');
       if (!res.ok) throw new Error(`সার্ভার এরর (Status: ${res.status})`);
       const data = await res.json();
       if (data && Array.isArray(data.orders)) {
         const mappedOrders: Order[] = data.orders.map((o: any) => ({
-          ...o,
-          streetAddress: o.address || '', district: o.district || '', thana: o.thana || '',
-          size: o.size || '', customNote: o.customNote || '', staffName: o.staffName || '',
-          courierStatus: o.courierStatus || '', dateSent: o.dateSent || '', isNewRow: false,
+          ...o, streetAddress: o.address || '', district: o.district || '', thana: o.thana || '', size: o.size || '', customNote: o.customNote || '', staffName: o.staffName || '', courierStatus: o.courierStatus || '', dateSent: o.dateSent || '', isNewRow: false,
         }));
-
-        setOrders((prevOrders) => {
-          if (!isSilent) {
-            const unsavedNewRows = prevOrders.filter((o) => o.isNewRow);
-            return [...unsavedNewRows, ...mappedOrders];
-          } else {
-            return prevOrders.map(prevOrder => {
-              if (prevOrder.isNewRow) return prevOrder;
-              const dbOrder = mappedOrders.find(m => m.id === prevOrder.id && m.storeId === prevOrder.storeId);
-              if (dbOrder) {
-                return { ...prevOrder, courierStatus: dbOrder.courierStatus, status: dbOrder.status };
-              }
-              return prevOrder;
-            });
-          }
+        setOrders(prevOrders => {
+          if (!isSilent) return [...prevOrders.filter(o => o.isNewRow), ...mappedOrders];
+          return prevOrders.map(prevOrder => {
+            if (prevOrder.isNewRow) return prevOrder;
+            const dbOrder = mappedOrders.find(m => m.id === prevOrder.id && m.storeId === prevOrder.storeId);
+            return dbOrder ? { ...prevOrder, courierStatus: dbOrder.courierStatus, status: dbOrder.status } : prevOrder;
+          });
         });
-
-        setInitialOrders((prevInit) => {
+        setInitialOrders(prevInit => {
           const newInit = { ...prevInit };
-          if (!isSilent) {
-            mappedOrders.forEach((item) => { newInit[`${item.storeId}-${item.id}`] = JSON.parse(JSON.stringify(item)); });
-          } else {
-             mappedOrders.forEach((dbOrder) => {
-                const key = `${dbOrder.storeId}-${dbOrder.id}`;
-                if (newInit[key]) {
-                  newInit[key].courierStatus = dbOrder.courierStatus;
-                  newInit[key].status = dbOrder.status;
-                }
-             });
-          }
+          if (!isSilent) mappedOrders.forEach(item => { newInit[`${item.storeId}-${item.id}`] = JSON.parse(JSON.stringify(item)); });
+          else mappedOrders.forEach(dbOrder => { const key = `${dbOrder.storeId}-${dbOrder.id}`; if (newInit[key]) { newInit[key].courierStatus = dbOrder.courierStatus; newInit[key].status = dbOrder.status; } });
           return newInit;
         });
-      } else {
-        if (!isSilent) setOrders([]);
-      }
-    } catch (err: any) {
-      if (!isSilent) {
-        setMessage({ text: err.message || 'অর্ডার লোড করতে সমস্যা হয়েছে', type: 'error' });
-        setOrders([]);
-      }
-    } finally {
-      if (!isSilent) setLoading(false);
-    }
+      } else { if (!isSilent) setOrders([]); }
+    } catch (err: any) { if (!isSilent) { setMessage({ text: err.message || 'অর্ডার লোড করতে সমস্যা হয়েছে', type: 'error' }); setOrders([]); } } 
+    finally { if (!isSilent) setLoading(false); }
   };
 
   useEffect(() => {
@@ -198,12 +108,9 @@ export default function Dashboard() {
   const handleAddNewBlankRow = () => {
     const tempId = Date.now();
     const blankOrder: Order = {
-      id: tempId, storeId: 'store1', storeName: 'Ruhama Wear', invoice: 'NEW', customerName: '', phone: '',
-      streetAddress: '', district: 'Patuakhali', thana: 'Patuakhali Sadar', size: 'XL', customNote: '',
-      total: '', status: 'on-hold', dateCreated: new Date().toISOString(), items: '', staffName: currentUser,
-      callDone: false, isNewRow: true,
+      id: tempId, storeId: 'store1', storeName: 'Ruhama Wear', invoice: 'NEW', customerName: '', phone: '', streetAddress: '', district: 'Patuakhali', thana: 'Patuakhali Sadar', size: 'XL', customNote: '', total: '', status: 'on-hold', dateCreated: new Date().toISOString(), items: '', staffName: currentUser, callDone: false, isNewRow: true,
     };
-    setOrders((prev) => [blankOrder, ...prev]);
+    setOrders(prev => [blankOrder, ...prev]);
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
@@ -223,64 +130,39 @@ export default function Dashboard() {
         }
       }
       setOrders(updatedOrders);
-
-      const now = new Date();
-      const todayDate = now.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' });
+      const now = new Date(); const todayDate = now.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' });
       const currentTime = now.toLocaleTimeString('en-BD', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: true });
-      const isToday = (dateString: string) => {
-        if (!dateString) return false;
-        try {
-          return new Date(dateString).toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' }) === todayDate;
-        } catch { return false; }
-      };
+      const isToday = (dateString: string) => { if (!dateString) return false; try { return new Date(dateString).toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' }) === todayDate; } catch { return false; } };
 
       const sentToday = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && isToday(o.dateSent || o.dateCreated) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return');
       const deliveredToday = updatedOrders.filter((o) => (o.status === 'completed' || o.courierStatus?.toLowerCase() === 'delivered') && isToday(o.dateCreated));
       const pendingParcels = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return' && o.courierStatus?.toLowerCase() !== 'cancelled' && !isToday(o.dateSent || o.dateCreated));
       const returnedToday = updatedOrders.filter((o) => (o.courierStatus?.toLowerCase() === 'cancelled' || o.courierStatus?.toLowerCase() === 'returned' || o.courierStatus?.toLowerCase() === 'return' || o.courierStatus?.toLowerCase() === 'cancelled_approval_pending') && isToday(o.dateCreated));
 
-      let totalCollection = 0;
-      deliveredToday.forEach((o) => { totalCollection += parseFloat(o.total || '0'); });
+      let totalCollection = 0; deliveredToday.forEach((o) => { totalCollection += parseFloat(o.total || '0'); });
 
       let msg = `<b>📊 কুরিয়ার অডিট রিপোর্ট</b>\nতারিখ: ${todayDate} | সময়: ${currentTime}\n\n`;
       msg += `📦 <b>আজকে পাঠানো পার্সেল: ${sentToday.length} টি</b>\n`;
-      sentToday.forEach((o, i) => {
-        msg += `${i + 1}. #${o.invoice} / ${o.consignmentId || 'N/A'} | ${o.customerName || 'কাস্টমার'} | ৳ ${o.total}\n`;
-      });
+      sentToday.forEach((o, i) => { msg += `${i + 1}. #${o.invoice} / ${o.consignmentId || 'N/A'} | ${o.customerName || 'কাস্টমার'} | ৳ ${o.total}\n`; });
       msg += `\n✅ <b>আজকে ডেলিভারি: ${deliveredToday.length} টি</b>\n`;
-      deliveredToday.forEach((o, i) => {
-        msg += `${i + 1}. #${o.invoice} / ${o.consignmentId || 'N/A'} | ${o.customerName || 'কাস্টমার'} | ৳ ${o.total}\n`;
-      });
+      deliveredToday.forEach((o, i) => { msg += `${i + 1}. #${o.invoice} / ${o.consignmentId || 'N/A'} | ${o.customerName || 'কাস্টমার'} | ৳ ${o.total}\n`; });
       msg += `\n⏳ <b>মোট পেন্ডিং: ${pendingParcels.length} টি</b>\n`;
-      pendingParcels.forEach((o, i) => {
-        msg += `${i + 1}. #${o.invoice} / ${o.consignmentId || 'N/A'} | ৳ ${o.total}\n`;
-      });
+      pendingParcels.forEach((o, i) => { msg += `${i + 1}. #${o.invoice} / ${o.consignmentId || 'N/A'} | ৳ ${o.total}\n`; });
       msg += `\n❌ <b>আজকে রিটার্ন: ${returnedToday.length} টি</b>\n`;
-      returnedToday.forEach((o, i) => {
-        msg += `${i + 1}. #${o.invoice} / ${o.consignmentId || 'N/A'} | ৳ ${o.total}\n`;
-      });
+      returnedToday.forEach((o, i) => { msg += `${i + 1}. #${o.invoice} / ${o.consignmentId || 'N/A'} | ৳ ${o.total}\n`; });
       msg += `\n💰 <b>আজকের কালেকশন: ৳ ${totalCollection}</b>\n\n`;
       msg += isAutomatic ? `<i>🤖 অটোমেটিক নাইট অডিট রিপোর্ট (রাত ১০টো স্টক)</i>` : `<i>রিপোর্টটি চেয়েছেন: ${currentUser}</i>`;
 
       const res = await fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: msg, type: 'courier' }) });
       if (res.ok && !isAutomatic) setMessage({ text: 'কুরিয়ার রিপোর্ট সফলভাবে পাঠানো হয়েছে!', type: 'success' });
-    } catch (err: any) {
-      if (!isAutomatic) setMessage({ text: err.message || 'রিপোর্ট তৈরি করতে এরর হয়েছে', type: 'error' });
-    } finally {
-      setReporting(false);
-    }
+    } catch (err: any) { if (!isAutomatic) setMessage({ text: err.message || 'রিপোর্ট তৈরি করতে এরর হয়েছে', type: 'error' }); } 
+    finally { setReporting(false); }
   };
 
   useEffect(() => {
     const checkTenPM = () => {
-      const now = new Date();
-      const hours = now.getHours();
-      const minutes = now.getMinutes();
-      const todayKey = 'courier_report_sent_' + now.toLocaleDateString();
-      if (hours === 22 && minutes <= 2 && !localStorage.getItem(todayKey)) {
-        localStorage.setItem(todayKey, 'true');
-        handleSendCourierReport(true);
-      }
+      const now = new Date(); const hours = now.getHours(); const minutes = now.getMinutes(); const todayKey = 'courier_report_sent_' + now.toLocaleDateString();
+      if (hours === 22 && minutes <= 2 && !localStorage.getItem(todayKey)) { localStorage.setItem(todayKey, 'true'); handleSendCourierReport(true); }
     };
     const timerInterval = setInterval(checkTenPM, 60000);
     return () => clearInterval(timerInterval);
@@ -294,102 +176,66 @@ export default function Dashboard() {
       if (cleanPhone.length >= 10) {
         if (!data[cleanPhone]) data[cleanPhone] = { count: 0, recentOrders: [] };
         data[cleanPhone].count += 1;
-        if (now - new Date(o.dateCreated).getTime() <= 24 * 60 * 60 * 1000) {
-          data[cleanPhone].recentOrders.push(o);
-        }
+        if (now - new Date(o.dateCreated).getTime() <= 24 * 60 * 60 * 1000) data[cleanPhone].recentOrders.push(o);
       }
     });
     return data;
   }, [orders]);
 
   const handleFieldChange = (orderId: number, storeId: string, field: keyof Order, value: any) => {
-    setOrders((prev) =>
-      prev.map((order) => {
-        if (order.id === orderId && order.storeId === storeId) {
-          if (field === 'district') return { ...order, district: value, thana: '' };
-          if (field === 'storeId') return { ...order, storeId: value, storeName: value === 'store2' ? 'Aastha Naturals BD' : 'Ruhama Wear' };
-          return { ...order, [field]: value };
-        }
-        return order;
-      })
-    );
+    setOrders(prev => prev.map(order => {
+      if (order.id === orderId && order.storeId === storeId) {
+        if (field === 'district') return { ...order, district: value, thana: '' };
+        if (field === 'storeId') return { ...order, storeId: value, storeName: value === 'store2' ? 'Aastha Naturals BD' : 'Ruhama Wear' };
+        return { ...order, [field]: value };
+      }
+      return order;
+    }));
   };
 
   const handleAddItem = (orderId: number, storeId: string, itemToAdd: string) => {
     if (!itemToAdd) return;
-    setOrders((prev) =>
-      prev.map((order) => {
-        if (order.id === orderId && order.storeId === storeId) {
-          const currentItems = order.items ? order.items.split(',').map((s) => s.trim()).filter(Boolean) : [];
-          currentItems.push(itemToAdd);
-          return { ...order, items: currentItems.join(', ') };
-        }
-        return order;
-      })
-    );
+    setOrders(prev => prev.map(order => {
+      if (order.id === orderId && order.storeId === storeId) {
+        const currentItems = order.items ? order.items.split(',').map(s => s.trim()).filter(Boolean) : [];
+        currentItems.push(itemToAdd); return { ...order, items: currentItems.join(', ') };
+      }
+      return order;
+    }));
   };
 
   const handleRemoveItem = (orderId: number, storeId: string, indexToRemove: number) => {
-    setOrders((prev) =>
-      prev.map((order) => {
-        if (order.id === orderId && order.storeId === storeId) {
-          const currentItems = order.items ? order.items.split(',').map((s) => s.trim()).filter(Boolean) : [];
-          currentItems.splice(indexToRemove, 1);
-          return { ...order, items: currentItems.join(', ') };
-        }
-        return order;
-      })
-    );
+    setOrders(prev => prev.map(order => {
+      if (order.id === orderId && order.storeId === storeId) {
+        const currentItems = order.items ? order.items.split(',').map(s => s.trim()).filter(Boolean) : [];
+        currentItems.splice(indexToRemove, 1); return { ...order, items: currentItems.join(', ') };
+      }
+      return order;
+    }));
   };
 
   const handleSaveOrder = async (order: Order, overrideStatus?: string, isCourierPush?: boolean) => {
-    if (!order.customerName.trim() || !order.phone.trim()) {
-      setMessage({ text: 'অনুগ্রহ করে কাস্টমারের নাম এবং ফোন নম্বর লিখুন।', type: 'error' });
-      return;
-    }
-    const newStatus = overrideStatus || order.status;
-    const assignedStaff = order.staffName || currentUser;
-    const key = `${order.storeId}-${order.id}`;
-    const prev = initialOrders[key];
+    if (!order.customerName.trim() || !order.phone.trim()) { setMessage({ text: 'অনুগ্রহ করে কাস্টমারের নাম এবং ফোন নম্বর লিখুন।', type: 'error' }); return; }
+    const newStatus = overrideStatus || order.status; const assignedStaff = order.staffName || currentUser;
+    const key = `${order.storeId}-${order.id}`; const prev = initialOrders[key];
 
     if (!order.isNewRow && prev) {
-      const isChanged =
-        prev.customerName !== order.customerName || prev.phone !== order.phone ||
-        prev.streetAddress !== order.streetAddress || prev.district !== order.district ||
-        prev.thana !== order.thana || prev.size !== order.size || prev.total !== order.total ||
-        prev.items !== order.items || prev.status !== newStatus || prev.staffName !== assignedStaff ||
-        prev.trackingCode !== order.trackingCode || prev.consignmentId !== order.consignmentId || prev.customNote !== order.customNote;
-
-      if (!isChanged && !overrideStatus && !isCourierPush) {
-        setMessage({ text: `Order #${order.invoice} -এ কোনো পরিবর্তন করা হয়নি।`, type: 'success' });
-        return;
-      }
+      const isChanged = prev.customerName !== order.customerName || prev.phone !== order.phone || prev.streetAddress !== order.streetAddress || prev.district !== order.district || prev.thana !== order.thana || prev.size !== order.size || prev.total !== order.total || prev.items !== order.items || prev.status !== newStatus || prev.staffName !== assignedStaff || prev.trackingCode !== order.trackingCode || prev.consignmentId !== order.consignmentId || prev.customNote !== order.customNote;
+      if (!isChanged && !overrideStatus && !isCourierPush) { setMessage({ text: `Order #${order.invoice} -এ কোনো পরিবর্তন করা হয়নি।`, type: 'success' }); return; }
     }
 
-    setUpdatingId(order.id);
-    setMessage(null);
-
+    setUpdatingId(order.id); setMessage(null);
     try {
       const res = await fetch('/api/orders/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storeId: order.storeId, orderId: order.isNewRow ? undefined : order.id,
-          status: newStatus, staffName: assignedStaff, customerName: order.customerName,
-          phone: order.phone, streetAddress: order.streetAddress, district: order.district,
-          thana: order.thana, size: order.size, items: order.items, total: order.total || '0',
-          trackingCode: order.trackingCode, consignmentId: order.consignmentId,
-          courierStatus: order.courierStatus, customNote: order.customNote, dateSent: order.dateSent,
-        }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId: order.storeId, orderId: order.isNewRow ? undefined : order.id, status: newStatus, staffName: assignedStaff, customerName: order.customerName, phone: order.phone, streetAddress: order.streetAddress, district: order.district, thana: order.thana, size: order.size, items: order.items, total: order.total || '0', trackingCode: order.trackingCode, consignmentId: order.consignmentId, courierStatus: order.courierStatus, customNote: order.customNote, dateSent: order.dateSent }),
       });
-
       const result = await res.json();
       if (res.ok) {
-        const returnedId = result.order?.id || order.id;
-        const finalInvoice = String(returnedId);
+        const returnedId = result.order?.id || order.id; const finalInvoice = String(returnedId);
         const updatedOrder: Order = { ...order, id: returnedId, invoice: finalInvoice, status: newStatus, staffName: assignedStaff, isNewRow: false };
-        setOrders((prevOrders) => prevOrders.map((o) => (o.id === order.id ? updatedOrder : o)));
-        setInitialOrders((prevInit) => ({ ...prevInit, [`${order.storeId}-${returnedId}`]: JSON.parse(JSON.stringify(updatedOrder)) }));
+        setOrders(prevOrders => prevOrders.map(o => (o.id === order.id ? updatedOrder : o)));
+        setInitialOrders(prevInit => ({ ...prevInit, [`${order.storeId}-${returnedId}`]: JSON.parse(JSON.stringify(updatedOrder)) }));
         setMessage({ text: `Order #${finalInvoice} সফলভাবে সেভ করা হয়েছে!`, type: 'success' });
         
         if (!isCourierPush) {
@@ -402,20 +248,12 @@ export default function Dashboard() {
   };
 
   const handleDeleteOrder = async (order: Order) => {
-    if (order.isNewRow) { setOrders((prev) => prev.filter((o) => o.id !== order.id)); return; }
+    if (order.isNewRow) { setOrders(prev => prev.filter(o => o.id !== order.id)); return; }
     if (!confirm(`সতর্কবার্তা! আপনি কি Order #${order.invoice} মুছে ফেলতে চান?`)) return;
-
-    setUpdatingId(order.id);
-    setMessage(null);
+    setUpdatingId(order.id); setMessage(null);
     try {
-      const res = await fetch('/api/orders/update', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId: order.storeId, orderId: order.id, action: 'delete' }),
-      });
-      if (res.ok) {
-        setOrders((prev) => prev.filter((o) => !(o.id === order.id && o.storeId === order.storeId)));
-        setMessage({ text: `Order #${order.invoice} মুছে ফেলা হয়েছে!`, type: 'success' });
-      }
+      const res = await fetch('/api/orders/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storeId: order.storeId, orderId: order.id, action: 'delete' }) });
+      if (res.ok) { setOrders(prev => prev.filter(o => !(o.id === order.id && o.storeId === order.storeId))); setMessage({ text: `Order #${order.invoice} মুছে ফেলা হয়েছে!`, type: 'success' }); }
     } catch (err: any) { setMessage({ text: err.message || 'Network error', type: 'error' }); } 
     finally { setUpdatingId(null); }
   };
@@ -423,28 +261,15 @@ export default function Dashboard() {
   const handleSendToSteadfast = async (order: Order) => {
     if (order.isNewRow) { alert('আগে সেভ করুন, এরপর কুরিয়ারে পাঠান।'); return; }
     if (!confirm(`অর্ডার #${order.invoice} স্টেডফাস্টে পাঠাতে চান?`)) return;
-
-    setSendingId(order.id);
-    setMessage(null);
+    setSendingId(order.id); setMessage(null);
     const assignedStaff = order.staffName || currentUser;
-
     try {
       const addressParts = [order.streetAddress, order.thana ? `Thana: ${order.thana}` : '', order.district ? `District: ${order.district}` : ''].filter(Boolean);
-      const res = await fetch('/api/courier/steadfast', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invoice: order.invoice, recipient_name: order.customerName, recipient_phone: order.phone, recipient_address: addressParts.join(', '), cod_amount: order.total, note: order.customNote ? order.customNote.trim() : '' }),
-      });
+      const res = await fetch('/api/courier/steadfast', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ invoice: order.invoice, recipient_name: order.customerName, recipient_phone: order.phone, recipient_address: addressParts.join(', '), cod_amount: order.total, note: order.customNote ? order.customNote.trim() : '' }) });
       const result = await res.json();
       if (res.ok && result.data) {
-        const consignment = result.data.consignment || result.data;
-        const tracking = consignment.tracking_code || 'Sent';
-        const cid = consignment.consignment_id || '';
-        const initialStatus = consignment.status || 'in_review';
-        const currentTimestamp = new Date().toISOString();
-
-        setOrders((prev) => prev.map((o) => o.id === order.id && o.storeId === order.storeId ? { ...o, trackingCode: tracking, consignmentId: cid, courierStatus: initialStatus, staffName: assignedStaff, dateSent: currentTimestamp } : o));
-        
-        // 🚀 কুরিয়ারে পাঠালেই অটোমেটিক 'pending' (Pending payment) স্ট্যাটাস হয়ে যাবে
+        const consignment = result.data.consignment || result.data; const tracking = consignment.tracking_code || 'Sent'; const cid = consignment.consignment_id || ''; const initialStatus = consignment.status || 'in_review'; const currentTimestamp = new Date().toISOString();
+        setOrders(prev => prev.map(o => o.id === order.id && o.storeId === order.storeId ? { ...o, trackingCode: tracking, consignmentId: cid, courierStatus: initialStatus, staffName: assignedStaff, dateSent: currentTimestamp } : o));
         handleSaveOrder({ ...order, trackingCode: tracking, consignmentId: cid, courierStatus: initialStatus, dateSent: currentTimestamp }, 'pending', true);
         setMessage({ text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`, type: 'success' });
       } else setMessage({ text: result.error || 'কুরিয়ারে পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
@@ -454,22 +279,17 @@ export default function Dashboard() {
 
   const handleCheckCourierStatus = async (order: Order) => {
     if (!order.trackingCode && !order.consignmentId) return;
-    setTrackingId(order.id);
-    setMessage(null);
+    setTrackingId(order.id); setMessage(null);
     try {
       const queryParam = order.consignmentId ? `consignment_id=${order.consignmentId}` : `tracking_code=${order.trackingCode}`;
       const res = await fetch(`/api/courier/track?${queryParam}`);
       const result = await res.json();
       if (res.ok && result.data) {
         const liveStatus = result.data.delivery_status || result.data.status || 'unknown';
-        setOrders((prev) => prev.map((o) => (o.id === order.id && o.storeId === order.storeId ? { ...o, courierStatus: liveStatus } : o)));
-
-        // 🚀 ডেলিভারি হলে অটো 'completed', রিটার্ন হলে অটো 'cancelled'
-        let newWooStatus = order.status;
-        const s = liveStatus.toLowerCase();
+        setOrders(prev => prev.map(o => (o.id === order.id && o.storeId === order.storeId ? { ...o, courierStatus: liveStatus } : o)));
+        let newWooStatus = order.status; const s = liveStatus.toLowerCase();
         if (s === 'delivered' || s === 'partial_delivered') newWooStatus = 'completed';
         else if (s === 'cancelled' || s === 'returned' || s === 'return' || s === 'cancelled_approval_pending') newWooStatus = 'cancelled';
-
         await handleSaveOrder({ ...order, courierStatus: liveStatus }, newWooStatus, true);
         setMessage({ text: `Order #${order.invoice} স্ট্যাটাস: ${liveStatus.toUpperCase()}`, type: 'success' });
       }
@@ -490,29 +310,13 @@ export default function Dashboard() {
     if (order.isNewRow) return true;
     const matchesStore = selectedStore === 'all' || order.storeName.toLowerCase().includes(selectedStore.toLowerCase());
     const matchesStatus = selectedStatus === 'all' || order.status.toLowerCase() === selectedStatus.toLowerCase();
-    const matchesSearch =
-      order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || order.phone.includes(searchTerm) ||
-      order.invoice.toLowerCase().includes(searchTerm.toLowerCase()) || (order.staffName && order.staffName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (order.district && order.district.toLowerCase().includes(searchTerm.toLowerCase())) || (order.trackingCode && order.trackingCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (order.consignmentId && String(order.consignmentId).includes(searchTerm));
+    const matchesSearch = order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || order.phone.includes(searchTerm) || order.invoice.toLowerCase().includes(searchTerm.toLowerCase()) || (order.staffName && order.staffName.toLowerCase().includes(searchTerm.toLowerCase())) || (order.district && order.district.toLowerCase().includes(searchTerm.toLowerCase())) || (order.trackingCode && order.trackingCode.toLowerCase().includes(searchTerm.toLowerCase())) || (order.consignmentId && String(order.consignmentId).includes(searchTerm));
     return matchesStore && matchesStatus && matchesSearch;
   });
 
-  const formatOrderDate = (dateStr: string) => {
-    try { return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Dhaka' }); } 
-    catch { return dateStr; }
-  };
-
-  const formatOrderTime = (dateStr: string) => {
-    try { return new Date(dateStr).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' }); } 
-    catch { return ''; }
-  };
-
-  const isTodayOrder = (dateStr: string) => {
-    if (!dateStr) return false;
-    try { return new Date().toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka' }) === new Date(dateStr).toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka' }); } 
-    catch { return false; }
-  };
+  const formatOrderDate = (dateStr: string) => { try { return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Dhaka' }); } catch { return dateStr; } };
+  const formatOrderTime = (dateStr: string) => { try { return new Date(dateStr).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' }); } catch { return ''; } };
+  const isTodayOrder = (dateStr: string) => { if (!dateStr) return false; try { return new Date().toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka' }) === new Date(dateStr).toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka' }); } catch { return false; } };
 
   const getStatusColor = (status: string) => {
     const s = status.toLowerCase();
@@ -524,12 +328,10 @@ export default function Dashboard() {
     return 'bg-slate-200 text-slate-800 border-slate-400';
   };
 
-  // 🚀 স্টেডফাস্ট পেন্ডিং পার্সেল কাউন্টারের লজিক
-  const steadfastPendingCount = orders.filter((o) => {
+  const steadfastPendingCount = orders.filter(o => {
     if (!o.trackingCode && !o.consignmentId) return false;
     if (!o.courierStatus) return true;
-    const s = o.courierStatus.toLowerCase();
-    return !['delivered', 'partial_delivered', 'cancelled', 'returned', 'return', 'cancelled_approval_pending'].includes(s);
+    return !['delivered', 'partial_delivered', 'cancelled', 'returned', 'return', 'cancelled_approval_pending'].includes(o.courierStatus.toLowerCase());
   }).length;
 
   return (
@@ -540,44 +342,28 @@ export default function Dashboard() {
             <div className="flex items-center gap-3 w-full lg:w-auto justify-center lg:justify-start">
               {hasLogoImg ? (
                 <div onClick={() => (window.location.href = '/')} className="flex items-center gap-3.5 cursor-pointer select-none transition hover:opacity-90">
-                  <div className="w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center p-1.5 shadow-sm border border-slate-800 shrink-0">
-                    <img src="/logo.png" alt="Black Rock Logo" className="w-full h-full object-contain" onError={() => setHasLogoImg(false)} />
-                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center p-1.5 shadow-sm border border-slate-800 shrink-0"><img src="/logo.png" alt="Black Rock Logo" className="w-full h-full object-contain" onError={() => setHasLogoImg(false)} /></div>
                 </div>
               ) : (
-                <div className="w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center text-white shadow-sm border border-slate-700 shrink-0">
-                  <Layers className="w-6 h-6 text-amber-400" />
-                </div>
+                <div className="w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center text-white shadow-sm border border-slate-700 shrink-0"><Layers className="w-6 h-6 text-amber-400" /></div>
               )}
               <div>
                 <h1 className="text-lg md:text-xl lg:text-2xl font-black tracking-wider text-slate-950 uppercase flex items-center gap-2">BLACK ROCK CORPORATION</h1>
-                <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 mt-0.5">
-                  <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span>Enterprise Multi-Store & Courier Logistics Portal</span>
-                </div>
+                <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 mt-0.5"><span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span>Enterprise Multi-Store & Courier Logistics Portal</span></div>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-center lg:justify-end">
               <div className="flex flex-col justify-center items-center bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-xl h-[78px] min-w-[150px] shadow-2xs">
-                <User className="w-5 h-5 text-slate-700 mb-1" />
-                <div className="text-xs font-black text-slate-900 leading-tight text-center">{currentUser}</div>
+                <User className="w-5 h-5 text-slate-700 mb-1" /><div className="text-xs font-black text-slate-900 leading-tight text-center">{currentUser}</div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <button onClick={() => fetchOrders(false)} className="w-32 md:w-36 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition border border-slate-300 cursor-pointer active:scale-95 shadow-2xs">
-                  <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${loading ? 'animate-spin' : ''}`} /> Refresh Orders
-                </button>
-                <button onClick={handleLogout} className="w-32 md:w-36 h-[36px] flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-xs transition border border-rose-200 cursor-pointer active:scale-95 shadow-2xs">
-                  <LogOut className="w-3.5 h-3.5" /> লগআউট
-                </button>
+                <button onClick={() => fetchOrders(false)} className="w-32 md:w-36 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition border border-slate-300 cursor-pointer active:scale-95 shadow-2xs"><RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${loading ? 'animate-spin' : ''}`} /> Refresh Orders</button>
+                <button onClick={handleLogout} className="w-32 md:w-36 h-[36px] flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-xs transition border border-rose-200 cursor-pointer active:scale-95 shadow-2xs"><LogOut className="w-3.5 h-3.5" /> লগআউট</button>
               </div>
               <div className="flex flex-col gap-1.5">
-                <button onClick={() => handleSendCourierReport(false)} disabled={reporting} className="w-44 md:w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg font-bold text-xs transition cursor-pointer border border-slate-800 disabled:opacity-50 shadow-2xs">
-                  <BarChart2 className={`w-3.5 h-3.5 text-amber-400 ${reporting ? 'animate-spin' : ''}`} /> {reporting ? 'রিপোর্টিং...' : 'কুরিয়ার অডিট রিপোর্ট'}
-                </button>
-                <button onClick={handleAddNewBlankRow} className="w-44 md:w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition cursor-pointer border border-slate-300 active:scale-95 shadow-2xs">
-                  <Plus className="w-3.5 h-3.5 text-emerald-600 font-black" /> + নতুন অর্ডার যোগ করুন
-                </button>
+                <button onClick={() => handleSendCourierReport(false)} disabled={reporting} className="w-44 md:w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg font-bold text-xs transition cursor-pointer border border-slate-800 disabled:opacity-50 shadow-2xs"><BarChart2 className={`w-3.5 h-3.5 text-amber-400 ${reporting ? 'animate-spin' : ''}`} /> {reporting ? 'রিপোর্টিং...' : 'কুরিয়ার অডিট রিপোর্ট'}</button>
+                <button onClick={handleAddNewBlankRow} className="w-44 md:w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition cursor-pointer border border-slate-300 active:scale-95 shadow-2xs"><Plus className="w-3.5 h-3.5 text-emerald-600 font-black" /> + নতুন অর্ডার যোগ করুন</button>
               </div>
               <div className="flex flex-col gap-1.5 h-[78px] justify-between">
                 <AdminInventoryPanel existingItems={PRODUCT_VARIATIONS} />
@@ -592,14 +378,8 @@ export default function Dashboard() {
               <button onClick={() => setSelectedStore('all')} className={`px-3 md:px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${selectedStore === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>All Stores</button>
               <button onClick={() => setSelectedStore('Ruhama Wear')} className={`px-3 md:px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${selectedStore === 'Ruhama Wear' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>Ruhama Wear</button>
               <button onClick={() => setSelectedStore('Aastha Naturals BD')} className={`px-3 md:px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${selectedStore === 'Aastha Naturals BD' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>Aastha Naturals BD</button>
-              
-              {/* 🚀 কুরিয়ার পেন্ডিং কাউন্টার ব্যাজ */}
-              <div className="flex items-center gap-1.5 ml-2 px-3 py-1.5 bg-blue-100 border border-blue-300 text-blue-900 rounded-lg shadow-2xs font-bold text-xs whitespace-nowrap">
-                <Package className="w-4 h-4 text-blue-600 shrink-0" />
-                <span>Steadfast Pending: <span className="font-black text-sm">{steadfastPendingCount}</span></span>
-              </div>
+              <div className="flex items-center gap-1.5 ml-2 px-3 py-1.5 bg-blue-100 border border-blue-300 text-blue-900 rounded-lg shadow-2xs font-bold text-xs whitespace-nowrap"><Package className="w-4 h-4 text-blue-600 shrink-0" /><span>Steadfast Pending: <span className="font-black text-sm">{steadfastPendingCount}</span></span></div>
             </div>
-            
             <div className="flex flex-col sm:flex-row gap-2.5 w-full lg:w-auto items-center">
               <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="w-full sm:w-auto border border-slate-300 rounded-lg px-3 py-2 text-xs bg-white text-slate-900 font-bold focus:outline-none focus:border-slate-900 cursor-pointer">
                 <option value="all">All Statuses (সব অর্ডার)</option>
@@ -614,10 +394,7 @@ export default function Dashboard() {
         </div>
 
         {message && (
-          <div className={`p-3.5 mb-4 rounded-xl flex items-center gap-2.5 shadow-sm font-bold text-xs mt-4 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-900 border border-emerald-300' : 'bg-rose-50 text-rose-900 border border-rose-300'}`}>
-            {message.type === 'success' ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />}
-            <span>{message.text}</span>
-          </div>
+          <div className={`p-3.5 mb-4 rounded-xl flex items-center gap-2.5 shadow-sm font-bold text-xs mt-4 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-900 border border-emerald-300' : 'bg-rose-50 text-rose-900 border border-rose-300'}`}><CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" /><span>{message.text}</span></div>
         )}
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-300 mt-4 w-full">
@@ -628,224 +405,143 @@ export default function Dashboard() {
           ) : (
             <>
               <style dangerouslySetInnerHTML={{ __html: `.slim-scroll::-webkit-scrollbar { height: 6px; width: 6px; } .slim-scroll::-webkit-scrollbar-track { background: #f1f5f9; } .slim-scroll::-webkit-scrollbar-thumb { background-color: #94a3b8; border-radius: 3px; } .slim-scroll::-webkit-scrollbar-thumb:hover { background-color: #64748b; }` }} />
-              <div ref={topScrollRef} onScroll={handleTopScroll} className="sticky top-0 z-30 overflow-x-auto slim-scroll bg-slate-100 border-b border-slate-300 h-3.5 shadow-xs w-full">
-                <div className="min-w-[1900px] h-full"></div>
-              </div>
+              <div ref={topScrollRef} onScroll={handleTopScroll} className="sticky top-0 z-30 overflow-x-auto slim-scroll bg-slate-100 border-b border-slate-300 h-3.5 shadow-xs w-full"><div className="min-w-[1900px] h-full"></div></div>
               <div ref={tableScrollRef} onScroll={handleTableScroll} className="overflow-x-auto slim-scroll relative w-full">
                 <table className="w-full text-left border-collapse min-w-[1900px]">
                   <thead className="sticky top-[14px] z-30 bg-slate-900 text-white shadow-md">
                     <tr className="text-[11px] uppercase font-bold tracking-wider">
-                      <th className="p-3.5 w-36 border-r border-slate-800">Invoice / Store</th>
-                      <th className="p-3.5 w-60 border-r border-slate-800">Customer Name (নাম)</th>
-                      <th className="p-3.5 w-40 border-r border-slate-800">Date & Time</th>
-                      <th className="p-3.5 w-80 border-r border-slate-800">Phone, Call & Staff</th>
-                      <th className="p-3.5 w-[440px] border-r border-slate-800">Address & Thana/District</th>
-                      <th className="p-3.5 w-[440px] border-r border-slate-800">Items, COD & Size</th>
-                      <th className="p-3.5 w-80 text-center border-r border-slate-800">Status & Save</th>
-                      <th className="p-3.5 w-80 text-center">Steadfast Push & Live Status</th>
+                      <th className="p-3.5 w-36 border-r border-slate-800">Invoice / Store</th><th className="p-3.5 w-60 border-r border-slate-800">Customer Name (নাম)</th>
+                      <th className="p-3.5 w-40 border-r border-slate-800">Date & Time</th><th className="p-3.5 w-80 border-r border-slate-800">Phone, Call & Staff</th>
+                      <th className="p-3.5 w-[440px] border-r border-slate-800">Address & Thana/District</th><th className="p-3.5 w-[440px] border-r border-slate-800">Items, COD & Size</th>
+                      <th className="p-3.5 w-80 text-center border-r border-slate-800">Status & Save</th><th className="p-3.5 w-80 text-center">Steadfast Push & Live Status</th>
                     </tr>
                   </thead>
                   <tbody className="text-xs">
                     {filteredOrders.map((order, index) => {
                       const cleanPhone = order.phone ? order.phone.replace(/[^0-9]/g, '') : '';
                       const phoneInfo = phoneOrderData[cleanPhone];
-                      const isDuplicate = phoneInfo && phoneInfo.count > 1;
-                      const isRecent = phoneInfo && phoneInfo.recentOrders.length > 1;
-                      const selectedDistrictObj = BANGLADESH_DISTRICTS.find((d) => d.district === order.district);
-                      const availableThanas = selectedDistrictObj ? selectedDistrictObj.thanas : [];
+                      const isDuplicate = phoneInfo && phoneInfo.count > 1; const isRecent = phoneInfo && phoneInfo.recentOrders.length > 1;
+                      const availableThanas = BANGLADESH_DISTRICTS.find(d => d.district === order.district)?.thanas || [];
                       
                       const isToday = isTodayOrder(order.dateCreated);
                       let rowBgClass = order.isNewRow ? 'bg-emerald-50 border-2 border-emerald-500' : isRecent ? 'bg-rose-50 hover:bg-rose-100/70' : isDuplicate ? 'bg-amber-50 hover:bg-amber-100/70' : isToday ? 'bg-emerald-50/60 hover:bg-emerald-100/60 border-l-4 border-l-emerald-500' : 'bg-amber-50/40 hover:bg-amber-100/50 border-l-4 border-l-amber-400';
-                      const currentItemList = order.items ? order.items.split(',').map((s) => s.trim()).filter(Boolean) : [];
+                      const currentItemList = order.items ? order.items.split(',').map(s => s.trim()).filter(Boolean) : [];
 
-                      // 🚀 ডেট সেপারেটর লজিক (প্রতিদিনের প্রথম অর্ডারে ডেট হেডার দেখাবে)
+                      // 🚀 ডেট সেপারেটর এবং কালার-কোডেড অর্ডার কাউন্টার লজিক
                       const currentOrderDate = formatOrderDate(order.dateCreated);
                       const prevOrderDate = index > 0 && !order.isNewRow && !filteredOrders[index - 1].isNewRow ? formatOrderDate(filteredOrders[index - 1].dateCreated) : null;
                       const showDateSeparator = !order.isNewRow && currentOrderDate !== prevOrderDate;
+
+                      let dateTotal = 0, dateDelivered = 0, dateRed = 0;
+                      if (showDateSeparator) {
+                        const dailyOrders = filteredOrders.filter(o => !o.isNewRow && formatOrderDate(o.dateCreated) === currentOrderDate);
+                        dateTotal = dailyOrders.length;
+                        dailyOrders.forEach(o => {
+                          const cs = (o.courierStatus || '').toLowerCase(); const ws = (o.status || '').toLowerCase();
+                          if (ws === 'completed' || cs === 'delivered') {
+                            dateDelivered++;
+                          } else if (['cancelled', 'failed'].includes(ws) || ['cancelled', 'returned', 'return', 'cancelled_approval_pending', 'partial_delivered'].includes(cs)) {
+                            dateRed++;
+                          }
+                        });
+                      }
 
                       return (
                         <React.Fragment key={`${order.storeId}-${order.id}`}>
                           {showDateSeparator && (
                             <tr>
                               <td colSpan={8} className="bg-slate-800 text-amber-400 font-black text-sm text-center py-2.5 border-y-4 border-slate-950 shadow-inner">
-                                📅 {currentOrderDate} এর অর্ডারসমূহ
+                                <div className="flex items-center justify-center gap-2">
+                                  <span>📅 {currentOrderDate} এর অর্ডারসমূহ</span>
+                                  <span className="text-slate-300 font-bold bg-slate-700/50 px-2 py-0.5 rounded-full text-xs tracking-wider flex items-center gap-1.5 border border-slate-600">
+                                    মোট: {dateTotal} 
+                                    {dateDelivered > 0 && <span className="text-emerald-400 ml-1">✅ {dateDelivered}</span>}
+                                    {dateRed > 0 && <span className="text-rose-400 ml-1">❌ {dateRed}</span>}
+                                  </span>
+                                </div>
                               </td>
                             </tr>
                           )}
                           <tr className={`transition-colors border-b border-slate-200 ${rowBgClass}`}>
                             <td className="p-3 align-top font-bold border-r border-slate-200 space-y-1.5">
-                              <div className="w-full h-[32px] flex items-center justify-center font-mono text-xs font-black text-slate-950 bg-slate-100 border border-slate-300 rounded shadow-2xs">
-                                {order.isNewRow ? 'NEW' : `#${order.invoice}`}
-                              </div>
+                              <div className="w-full h-[32px] flex items-center justify-center font-mono text-xs font-black text-slate-950 bg-slate-100 border border-slate-300 rounded shadow-2xs">{order.isNewRow ? 'NEW' : `#${order.invoice}`}</div>
                               {order.isNewRow ? (
-                                <select value={order.storeId} onChange={(e) => handleFieldChange(order.id, order.storeId, 'storeId', e.target.value)} className="w-full h-[32px] text-[11px] text-slate-900 bg-white font-bold px-2 rounded cursor-pointer border border-slate-300 shadow-2xs">
-                                  <option value="store1">Ruhama Wear</option>
-                                  <option value="store2">Aastha Naturals BD</option>
-                                </select>
+                                <select value={order.storeId} onChange={e => handleFieldChange(order.id, order.storeId, 'storeId', e.target.value)} className="w-full h-[32px] text-[11px] text-slate-900 bg-white font-bold px-2 rounded cursor-pointer border border-slate-300 shadow-2xs"><option value="store1">Ruhama Wear</option><option value="store2">Aastha Naturals BD</option></select>
                               ) : (
-                                <div className="w-full h-[32px] flex items-center justify-center text-[11px] text-slate-700 bg-white border border-slate-200 font-bold px-2 rounded shadow-2xs">
-                                  {order.storeName}
-                                </div>
+                                <div className="w-full h-[32px] flex items-center justify-center text-[11px] text-slate-700 bg-white border border-slate-200 font-bold px-2 rounded shadow-2xs">{order.storeName}</div>
                               )}
                             </td>
 
-                            <td className="p-3 align-top border-r border-slate-200">
-                              <textarea rows={4} value={order.customerName} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customerName', e.target.value)} placeholder="কাস্টমারের নাম..." className="w-full font-black text-sm text-slate-950 bg-transparent focus:bg-white border border-transparent focus:border-slate-300 rounded p-1 transition resize-none outline-none leading-snug whitespace-normal break-words placeholder:text-slate-400 placeholder:text-xs" />
-                            </td>
+                            <td className="p-3 align-top border-r border-slate-200"><textarea rows={4} value={order.customerName} onChange={e => handleFieldChange(order.id, order.storeId, 'customerName', e.target.value)} placeholder="কাস্টমারের নাম..." className="w-full font-black text-sm text-slate-950 bg-transparent focus:bg-white border border-transparent focus:border-slate-300 rounded p-1 transition resize-none outline-none leading-snug whitespace-normal break-words placeholder:text-slate-400 placeholder:text-xs" /></td>
 
                             <td className="p-3 align-top text-slate-700 font-bold border-r border-slate-200 space-y-1.5">
-                              <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
-                                <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                <span className="font-bold text-slate-900">{formatOrderTime(order.dateCreated)}</span>
-                              </div>
-                              <div className={`w-full h-[32px] flex items-center gap-1.5 border px-2.5 rounded shadow-2xs text-[11px] ${isToday ? 'bg-emerald-100 border-emerald-400 text-emerald-950 font-black' : 'bg-amber-100 border-amber-300 text-amber-950 font-black'}`}>
-                                <Calendar className="w-3.5 h-3.5 shrink-0" />
-                                <span>{currentOrderDate}</span>
-                              </div>
+                              <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]"><Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" /><span className="font-bold text-slate-900">{formatOrderTime(order.dateCreated)}</span></div>
+                              <div className={`w-full h-[32px] flex items-center gap-1.5 border px-2.5 rounded shadow-2xs text-[11px] ${isToday ? 'bg-emerald-100 border-emerald-400 text-emerald-950 font-black' : 'bg-amber-100 border-amber-300 text-amber-950 font-black'}`}><Calendar className="w-3.5 h-3.5 shrink-0" /><span>{currentOrderDate}</span></div>
                             </td>
 
                             <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                              <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                                <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                <input type="text" value={order.phone} placeholder="01XXXXXXXXX" onChange={(e) => handleFieldChange(order.id, order.storeId, 'phone', e.target.value)} className={`w-full text-xs font-mono font-black bg-transparent outline-none tracking-wide ${isRecent ? 'text-red-700' : isDuplicate ? 'text-amber-900' : 'text-slate-950'}`} />
-                              </div>
+                              <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs"><Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" /><input type="text" value={order.phone} placeholder="01XXXXXXXXX" onChange={e => handleFieldChange(order.id, order.storeId, 'phone', e.target.value)} className={`w-full text-xs font-mono font-black bg-transparent outline-none tracking-wide ${isRecent ? 'text-red-700' : isDuplicate ? 'text-amber-900' : 'text-slate-950'}`} /></div>
                               {isRecent ? (
-                                <div className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold">
-                                  <AlertTriangle className="w-3 h-3 shrink-0 text-red-600" />
-                                  <span>রিসেন্ট ডুপ্লিকেট ({phoneInfo.recentOrders.length}টি)</span>
-                                </div>
+                                <div className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold"><AlertTriangle className="w-3 h-3 shrink-0 text-red-600" /><span>রিসেন্ট ডুপ্লিকেট ({phoneInfo.recentOrders.length}টি)</span></div>
                               ) : isDuplicate ? (
-                                <div className="flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold">
-                                  <AlertTriangle className="w-3 h-3 shrink-0 text-amber-600" />
-                                  <span>মোট অর্ডার: {phoneInfo.count}টি</span>
-                                </div>
+                                <div className="flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold"><AlertTriangle className="w-3 h-3 shrink-0 text-amber-600" /><span>মোট অর্ডার: {phoneInfo.count}টি</span></div>
                               ) : null}
-                              <button onClick={() => { const newCallState = !order.callDone; handleFieldChange(order.id, order.storeId, 'callDone', newCallState); if (!order.staffName) { handleFieldChange(order.id, order.storeId, 'staffName', currentUser); } }} className={`w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold rounded transition border cursor-pointer shadow-2xs ${order.callDone ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'}`}>
-                                <PhoneCall className="w-3.5 h-3.5" /> {order.callDone ? 'কল সম্পন্ন হয়েছে' : 'কল দিন'}
-                              </button>
-                              <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                                <UserCheck className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                <select value={order.staffName || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'staffName', e.target.value)} className="w-full text-xs font-bold bg-transparent text-slate-900 cursor-pointer outline-none">
-                                  <option value="">স্টাফ নির্বাচন করুন</option>
-                                  {STAFF_MEMBERS.map((staff) => <option key={staff} value={staff}>{staff}</option>)}
-                                </select>
-                              </div>
+                              <button onClick={() => { const newCallState = !order.callDone; handleFieldChange(order.id, order.storeId, 'callDone', newCallState); if (!order.staffName) { handleFieldChange(order.id, order.storeId, 'staffName', currentUser); } }} className={`w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold rounded transition border cursor-pointer shadow-2xs ${order.callDone ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'}`}><PhoneCall className="w-3.5 h-3.5" /> {order.callDone ? 'কল সম্পন্ন হয়েছে' : 'কল দিন'}</button>
+                              <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs"><UserCheck className="w-3.5 h-3.5 text-slate-500 shrink-0" /><select value={order.staffName || ''} onChange={e => handleFieldChange(order.id, order.storeId, 'staffName', e.target.value)} className="w-full text-xs font-bold bg-transparent text-slate-900 cursor-pointer outline-none"><option value="">স্টাফ নির্বাচন করুন</option>{STAFF_MEMBERS.map(staff => <option key={staff} value={staff}>{staff}</option>)}</select></div>
                             </td>
 
                             <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                              <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs">
-                                <MapPin className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
-                                <textarea rows={3} value={order.streetAddress} onChange={(e) => handleFieldChange(order.id, order.storeId, 'streetAddress', e.target.value)} placeholder="বিস্তারিত ঠিকানা..." className="w-full text-xs font-bold text-slate-900 bg-transparent resize-y leading-snug outline-none min-h-[58px]" />
-                              </div>
+                              <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs"><MapPin className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" /><textarea rows={3} value={order.streetAddress} onChange={e => handleFieldChange(order.id, order.storeId, 'streetAddress', e.target.value)} placeholder="বিস্তারিত ঠিকানা..." className="w-full text-xs font-bold text-slate-900 bg-transparent resize-y leading-snug outline-none min-h-[58px]" /></div>
                               <div className="grid grid-cols-2 gap-1.5">
-                                <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
-                                  <select value={order.thana || ''} disabled={!order.district} onChange={(e) => handleFieldChange(order.id, order.storeId, 'thana', e.target.value)} className="w-full text-[11px] bg-transparent text-slate-900 font-bold disabled:text-slate-400 cursor-pointer outline-none">
-                                    <option value="">থানা বাছুন</option>
-                                    {availableThanas.map((thana) => <option key={thana} value={thana}>{thana}</option>)}
-                                  </select>
-                                </div>
-                                <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
-                                  <select value={order.district || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'district', e.target.value)} className="w-full text-[11px] bg-transparent text-slate-900 font-bold cursor-pointer outline-none">
-                                    <option value="">জেলা বাছুন</option>
-                                    {BANGLADESH_DISTRICTS.map((d) => <option key={d.district} value={d.district}>{d.district}</option>)}
-                                  </select>
-                                </div>
+                                <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs"><select value={order.thana || ''} disabled={!order.district} onChange={e => handleFieldChange(order.id, order.storeId, 'thana', e.target.value)} className="w-full text-[11px] bg-transparent text-slate-900 font-bold disabled:text-slate-400 cursor-pointer outline-none"><option value="">থানা বাছুন</option>{availableThanas.map(thana => <option key={thana} value={thana}>{thana}</option>)}</select></div>
+                                <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs"><select value={order.district || ''} onChange={e => handleFieldChange(order.id, order.storeId, 'district', e.target.value)} className="w-full text-[11px] bg-transparent text-slate-900 font-bold cursor-pointer outline-none"><option value="">জেলা বাছুন</option>{BANGLADESH_DISTRICTS.map(d => <option key={d.district} value={d.district}>{d.district}</option>)}</select></div>
                               </div>
                             </td>
 
                             <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
                               <div className="bg-white border border-slate-300 rounded p-1.5 shadow-2xs space-y-1.5">
-                                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 px-1">
-                                  <span>সিলেক্টেড আইটেমসমূহ: </span>
-                                  <span className="text-emerald-700 font-mono">{currentItemList.length} পিস</span>
-                                </div>
+                                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 px-1"><span>সিলেক্টেড আইটেমসমূহ: </span><span className="text-emerald-700 font-mono">{currentItemList.length} পিস</span></div>
                                 <div className="flex flex-wrap gap-1 min-h-[32px] p-1 bg-slate-50 border border-slate-200 rounded">
-                                  {currentItemList.length === 0 ? (
-                                    <span className="text-[11px] text-slate-400 italic px-1"> কোনো আইটেম সিলেক্ট করা হয়নি</span>
-                                  ) : (
-                                    currentItemList.map((item, idx) => (
-                                      <span key={idx} className="inline-flex items-center gap-1 bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-2xs">
-                                        {item}
-                                        <button type="button" onClick={() => handleRemoveItem(order.id, order.storeId, idx)} className="text-rose-400 hover:text-rose-300 font-black cursor-pointer" title="আইটেমটি বাদ দিন">X</button>
-                                      </span>
-                                    ))
-                                  )}
+                                  {currentItemList.length === 0 ? <span className="text-[11px] text-slate-400 italic px-1"> কোনো আইটেম সিলেক্ট করা হয়নি</span> : currentItemList.map((item, idx) => (
+                                    <span key={idx} className="inline-flex items-center gap-1 bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-2xs">{item}<button type="button" onClick={() => handleRemoveItem(order.id, order.storeId, idx)} className="text-rose-400 hover:text-rose-300 font-black cursor-pointer" title="আইটেমটি বাদ দিন">X</button></span>
+                                  ))}
                                 </div>
-                                <select onChange={(e) => { if (e.target.value) { handleAddItem(order.id, order.storeId, e.target.value); e.target.value = ''; } }} className="w-full h-[32px] text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded px-2 cursor-pointer outline-none shadow-2xs">
-                                  <option value="">+ ড্রপডাউন থেকে আইটেম যোগ করুন...</option>
-                                  {PRODUCT_VARIATIONS.map((prod) => <option key={prod} value={prod}>{prod}</option>)}
-                                </select>
+                                <select onChange={e => { if (e.target.value) { handleAddItem(order.id, order.storeId, e.target.value); e.target.value = ''; } }} className="w-full h-[32px] text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded px-2 cursor-pointer outline-none shadow-2xs"><option value="">+ ড্রপডাউন থেকে আইটেম যোগ করুন...</option>{PRODUCT_VARIATIONS.map(prod => <option key={prod} value={prod}>{prod}</option>)}</select>
                               </div>
                               <div className="grid grid-cols-2 gap-1.5">
-                                <div className="h-[34px] flex items-center gap-1.5 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                                  <span className="text-xs font-black text-slate-700">COD: </span>
-                                  <input type="number" value={order.total} onFocus={(e) => e.target.select()} onChange={(e) => handleFieldChange(order.id, order.storeId, 'total', e.target.value)} placeholder="৳" className="w-full text-xs font-black text-emerald-800 bg-transparent outline-none" />
-                                </div>
-                                <div className="h-[34px] flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded px-2.5 shadow-2xs">
-                                  <Shirt className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                                  <span className="text-[11px] font-black text-slate-600">সাইজ: </span>
-                                  <input type="text" value={order.size || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'size', e.target.value.toUpperCase())} placeholder="XL" className="w-full text-xs font-black text-slate-950 uppercase text-center bg-white border border-slate-200 rounded py-0.5 outline-none" />
-                                </div>
+                                <div className="h-[34px] flex items-center gap-1.5 bg-white border border-slate-300 rounded px-2.5 shadow-2xs"><span className="text-xs font-black text-slate-700">COD: </span><input type="number" value={order.total} onFocus={e => e.target.select()} onChange={e => handleFieldChange(order.id, order.storeId, 'total', e.target.value)} placeholder="৳" className="w-full text-xs font-black text-emerald-800 bg-transparent outline-none" /></div>
+                                <div className="h-[34px] flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded px-2.5 shadow-2xs"><Shirt className="w-3.5 h-3.5 text-slate-600 shrink-0" /><span className="text-[11px] font-black text-slate-600">সাইজ: </span><input type="text" value={order.size || ''} onChange={e => handleFieldChange(order.id, order.storeId, 'size', e.target.value.toUpperCase())} placeholder="XL" className="w-full text-xs font-black text-slate-950 uppercase text-center bg-white border border-slate-200 rounded py-0.5 outline-none" /></div>
                               </div>
                             </td>
 
                             <td className="p-3 align-top text-center space-y-1.5 border-r border-slate-200">
-                              {/* 🚀 স্ট্যাটাস লক (সম্পূর্ণ অটোমেটিক) */}
-                              <select value={order.status} disabled={true} className={`w-full h-[34px] text-xs font-bold border rounded px-2.5 text-center shadow-2xs opacity-80 cursor-not-allowed ${getStatusColor(order.status)}`}>
-                                {WOO_STATUSES.map((st) => <option key={st.value} value={st.value} className="bg-white text-slate-900">{st.label}</option>)}
-                              </select>
-                              
-                              <button onClick={() => handleSaveOrder(order)} disabled={updatingId === order.id} className="w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded transition cursor-pointer disabled:opacity-50 shadow-2xs mt-1.5">
-                                <Save className={`w-3.5 h-3.5 ${updatingId === order.id ? 'animate-spin' : ''}`} />
-                                {updatingId === order.id ? 'সেভ হচ্ছে...' : 'তথ্য সেভ করুন (Save)'}
-                              </button>
-                              
-                              <div className="pt-1.5">
-                                <button onClick={() => handleDeleteOrder(order)} disabled={updatingId === order.id} title="ডিলিট" className="h-[30px] w-full flex items-center justify-center gap-1 text-[11px] font-bold text-slate-700 hover:text-red-700 bg-slate-50 hover:bg-red-50 border border-slate-200 rounded cursor-pointer shadow-2xs">
-                                  <Trash2 className="w-3 h-3" /> ডিলিট করুন (Delete)
-                                </button>
-                              </div>
+                              <select value={order.status} disabled={true} className={`w-full h-[34px] text-xs font-bold border rounded px-2.5 text-center shadow-2xs opacity-80 cursor-not-allowed ${getStatusColor(order.status)}`}>{WOO_STATUSES.map(st => <option key={st.value} value={st.value} className="bg-white text-slate-900">{st.label}</option>)}</select>
+                              <button onClick={() => handleSaveOrder(order)} disabled={updatingId === order.id} className="w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded transition cursor-pointer disabled:opacity-50 shadow-2xs mt-1.5"><Save className={`w-3.5 h-3.5 ${updatingId === order.id ? 'animate-spin' : ''}`} />{updatingId === order.id ? 'সেভ হচ্ছে...' : 'তথ্য সেভ করুন (Save)'}</button>
+                              <div className="pt-1.5"><button onClick={() => handleDeleteOrder(order)} disabled={updatingId === order.id} title="ডিলিট" className="h-[30px] w-full flex items-center justify-center gap-1 text-[11px] font-bold text-slate-700 hover:text-red-700 bg-slate-50 hover:bg-red-50 border border-slate-200 rounded cursor-pointer shadow-2xs"><Trash2 className="w-3 h-3" /> ডিলিট করুন (Delete)</button></div>
                             </td>
 
                             <td className="p-3 align-top space-y-1.5">
                               {!order.trackingCode && !order.consignmentId && (
                                 <>
-                                  <div className="w-full h-[34px] flex items-center bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                                    <input type="text" value={order.customNote || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customNote', e.target.value)} placeholder="কুরিয়ার স্পেশাল নোট / কল রিমার্ক..." className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 bg-transparent outline-none" />
-                                  </div>
-                                  <button onClick={() => handleSendToSteadfast(order)} disabled={sendingId === order.id} className="w-full h-[34px] flex items-center justify-center gap-1.5 rounded text-xs font-bold transition cursor-pointer shadow-2xs bg-slate-800 hover:bg-slate-900 text-white">
-                                    <Send className="w-3.5 h-3.5" />
-                                    {sendingId === order.id ? 'Sending to Steadfast...' : 'Send to Steadfast'}
-                                  </button>
+                                  <div className="w-full h-[34px] flex items-center bg-white border border-slate-300 rounded px-2.5 shadow-2xs"><input type="text" value={order.customNote || ''} onChange={e => handleFieldChange(order.id, order.storeId, 'customNote', e.target.value)} placeholder="কুরিয়ার স্পেশাল নোট / কল রিমার্ক..." className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 bg-transparent outline-none" /></div>
+                                  <button onClick={() => handleSendToSteadfast(order)} disabled={sendingId === order.id} className="w-full h-[34px] flex items-center justify-center gap-1.5 rounded text-xs font-bold transition cursor-pointer shadow-2xs bg-slate-800 hover:bg-slate-900 text-white"><Send className="w-3.5 h-3.5" />{sendingId === order.id ? 'Sending to Steadfast...' : 'Send to Steadfast'}</button>
                                 </>
                               )}
-
                               {(order.trackingCode || order.consignmentId) && (
                                 (() => {
                                   const style = getCourierBoxStyle(order.courierStatus);
                                   return (
                                     <div className={`border rounded-lg p-2.5 space-y-1.5 text-left shadow-2xs transition-all ${style.box}`}>
                                       <div className="text-[11px] font-bold space-y-1">
-                                        <div className="flex justify-between items-center border-b pb-1 border-slate-200">
-                                          <span className="text-slate-600">ইনভয়েস:</span>
-                                          <span className="font-mono text-slate-950 font-black">#{order.invoice}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center border-b pb-1 border-slate-200">
-                                          <span className="text-slate-600">সিআইডি (CID):</span>
-                                          <span className="font-mono text-slate-950 font-black">{order.consignmentId || order.trackingCode}</span>
-                                        </div>
+                                        <div className="flex justify-between items-center border-b pb-1 border-slate-200"><span className="text-slate-600">ইনভয়েস:</span><span className="font-mono text-slate-950 font-black">#{order.invoice}</span></div>
+                                        <div className="flex justify-between items-center border-b pb-1 border-slate-200"><span className="text-slate-600">সিআইডি (CID):</span><span className="font-mono text-slate-950 font-black">{order.consignmentId || order.trackingCode}</span></div>
                                         <div><span className="text-slate-600">নাম:</span> <span className="font-black text-slate-950">{order.customerName || 'N/A'}</span></div>
                                         <div><span className="text-slate-600">মোবাইল:</span> <code className="font-mono font-black text-slate-950">{order.phone || 'N/A'}</code></div>
                                         <div><span className="text-slate-600">আইটেম:</span> <span className="text-slate-950">{order.items || 'N/A'} {order.size ? `[সাইজ: ${order.size}]` : ''}</span></div>
                                         {order.customNote && <div className="bg-white/90 border border-slate-300 rounded p-1 text-[11px] font-bold text-slate-900 mt-1"><span className="text-rose-700">নোট/রিমার্ক:</span> {order.customNote}</div>}
                                       </div>
-                                      <div className={`w-full py-1 px-1.5 rounded text-center text-[10px] font-black uppercase tracking-wider text-white shadow-xs ${style.badge}`}>
-                                        {order.courierStatus ? order.courierStatus.replace(/_/g, ' ') : 'IN REVIEW'}
-                                      </div>
-                                      <button onClick={() => handleCheckCourierStatus(order)} disabled={trackingId === order.id} className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-800 bg-white hover:bg-slate-100 py-1.5 px-2 rounded w-full border border-slate-300 transition cursor-pointer shadow-2xs">
-                                        <RotateCw className={`w-3 h-3 ${trackingId === order.id ? 'animate-spin' : ''}`} />
-                                        {trackingId === order.id ? 'চেক হচ্ছে...' : 'লাইভ স্ট্যাটাস চেক'}
-                                      </button>
+                                      <div className={`w-full py-1 px-1.5 rounded text-center text-[10px] font-black uppercase tracking-wider text-white shadow-xs ${style.badge}`}>{order.courierStatus ? order.courierStatus.replace(/_/g, ' ') : 'IN REVIEW'}</div>
+                                      <button onClick={() => handleCheckCourierStatus(order)} disabled={trackingId === order.id} className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-800 bg-white hover:bg-slate-100 py-1.5 px-2 rounded w-full border border-slate-300 transition cursor-pointer shadow-2xs"><RotateCw className={`w-3 h-3 ${trackingId === order.id ? 'animate-spin' : ''}`} />{trackingId === order.id ? 'চেক হচ্ছে...' : 'লাইভ স্ট্যাটাস চেক'}</button>
                                     </div>
                                   );
                                 })()
