@@ -28,11 +28,7 @@ export async function POST(req: Request) {
     // ১. ডাটাবেজ এবং WooCommerce রিয়েল-টাইম অটো-আপডেট লজিক
     // =======================================================
     try {
-      // লোকাল ডাটাবেজ থেকে ইনভয়েস দিয়ে অর্ডার খুঁজে বের করা
-      const orderRows: any = await query(
-        `SELECT * FROM orders WHERE invoice = ? OR consignment_id = ? LIMIT 1`,
-        [invoice, consignmentId]
-      );
+      const orderRows: any = await query(`SELECT * FROM orders WHERE invoice = ? OR consignment_id = ? LIMIT 1`, [invoice, consignmentId]);
 
       if (orderRows && orderRows.length > 0) {
         const dbOrder = orderRows[0];
@@ -43,59 +39,36 @@ export async function POST(req: Request) {
         address = dbOrder.address || address;
         items = dbOrder.items || items;
 
-        // স্টেডফাস্টের লাইভ স্ট্যাটাস অনুযায়ী ড্যাশবোর্ডের স্ট্যাটাস কী হবে তা নির্ধারণ
         let newWooStatus = '';
         if (status === 'delivered' || status === 'partial_delivered') newWooStatus = 'completed';
         else if (status === 'cancelled' || status === 'returned' || status === 'return' || status === 'cancelled_approval_pending') newWooStatus = 'cancelled';
 
-        // স্টোর অনুযায়ী WooCommerce ক্রেডেনশিয়াল সেটআপ
-        let url = '';
-        let key = '';
-        let secret = '';
+        let url = ''; let key = ''; let secret = '';
         const sId = String(storeId || '').toLowerCase();
         
         if (sId.includes('aastha') || sId === 'store2' || sId === '2') {
-          url = process.env.STORE2_URL || 'https://aasthanaturalsbd.com';
-          key = process.env.STORE2_KEY || '';
-          secret = process.env.STORE2_SECRET || '';
+          url = process.env.STORE2_URL || 'https://aasthanaturalsbd.com'; key = process.env.STORE2_KEY || ''; secret = process.env.STORE2_SECRET || '';
         } else {
-          url = process.env.STORE1_URL || 'https://ruhamawear.com';
-          key = process.env.STORE1_KEY || '';
-          secret = process.env.STORE1_SECRET || '';
+          url = process.env.STORE1_URL || 'https://ruhamawear.com'; key = process.env.STORE1_KEY || ''; secret = process.env.STORE1_SECRET || '';
         }
 
         if (url && key && secret) {
           const cleanUrl = url.replace(/\/$/, '');
           const authHeader = 'Basic ' + Buffer.from(`${key}:${secret}`).toString('base64');
+          const updatePayload: any = { meta_data: [{ key: 'courierStatus', value: status }] };
+          if (newWooStatus) updatePayload.status = newWooStatus;
 
-          const updatePayload: any = { 
-            meta_data: [{ key: 'courierStatus', value: status }] 
-          };
-          if (newWooStatus) {
-            updatePayload.status = newWooStatus;
-          }
-
-          // WooCommerce ওয়েবসাইটে পুশ করা
           await fetch(`${cleanUrl}/wp-json/wc/v3/orders/${orderId}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: authHeader,
-            },
-            body: JSON.stringify(updatePayload),
+            method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: authHeader }, body: JSON.stringify(updatePayload),
           });
         }
 
-        // ড্যাশবোর্ডের ডাটাবেজে স্ট্যাটাস আপডেট করা (যাতে রিলোড দিলে পুরোনোটা না আসে)
         if (newWooStatus) {
-           await query(
-             `UPDATE orders SET status = ? WHERE id = ?`,
-             [newWooStatus, orderId]
-           );
+           await query(`UPDATE orders SET status = ? WHERE id = ?`, [newWooStatus, orderId]);
         }
 
         // =======================================================
-        // 🚀 META CONVERSIONS API (CAPI) - GENUINE PURCHASE TRIGGER
+        // 🚀 META CONVERSIONS API (CAPI)
         // =======================================================
         if (newWooStatus === 'completed') {
             const PIXEL_ID = '1407475261571485';
@@ -103,149 +76,74 @@ export async function POST(req: Request) {
             
             const orderTotal = parseFloat(dbOrder.total || '0');
             const orderPhone = dbOrder.phone || '';
+            const hashData = (data: string) => { if (!data) return ''; return crypto.createHash('sha256').update(data.replace(/[^0-9]/g, '')).digest('hex'); };
 
-            const hashData = (data: string) => {
-                if (!data) return '';
-                return crypto.createHash('sha256').update(data.replace(/[^0-9]/g, '')).digest('hex');
-            };
+            const capiPayload = { data: [{ event_name: 'Purchase', event_time: Math.floor(Date.now() / 1000), action_source: 'website', event_id: orderId.toString(), user_data: { ph: orderPhone ? [hashData(orderPhone)] : [] }, custom_data: { currency: 'BDT', value: orderTotal } }] };
 
-            const capiPayload = {
-                data: [
-                    {
-                        event_name: 'Purchase',
-                        event_time: Math.floor(Date.now() / 1000),
-                        action_source: 'website',
-                        event_id: orderId.toString(),
-                        user_data: {
-                            ph: orderPhone ? [hashData(orderPhone)] : []
-                        },
-                        custom_data: {
-                            currency: 'BDT',
-                            value: orderTotal
-                        }
-                    }
-                ]
-            };
-
-            try {
-                await fetch(`https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(capiPayload)
-                });
-                console.log(`CAPI Purchase Event Sent for Order #${invoice}`);
-            } catch (capiErr) {
-                console.error("CAPI Sending Error:", capiErr);
-            }
+            try { await fetch(`https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(capiPayload) }); } 
+            catch (capiErr) {}
         }
       }
-    } catch (dbErr) {
-      console.error("Webhook DB Sync Error:", dbErr);
-    }
+    } catch (dbErr) {}
 
     // =======================================================
-    // ২. টেলিগ্রাম নোটিফিকেশন লজিক (আপনার আগের কোড অনুযায়ী)
+    // ২. ডেলিভারি অ্যালার্ট এবং একই দিনের পেন্ডিং স্ট্যাটাস
     // =======================================================
     if (status === 'delivered') {
       try {
-        const dashRes = await fetch('https://app.ruhamar.com/api/orders');
+        const orderRows: any = await query(`SELECT * FROM orders WHERE invoice = ? OR consignment_id = ? LIMIT 1`, [invoice, consignmentId]);
         
-        if (dashRes.ok) {
-          const dashData = await dashRes.json();
-          if (dashData && Array.isArray(dashData.orders)) {
-            const matchedOrder = dashData.orders.find((o: any) => 
-              String(o.invoice) === String(invoice) || String(o.consignmentId) === String(consignmentId)
-            );
+        if (orderRows && orderRows.length > 0) {
+          const dbOrder = orderRows[0];
+          
+          const sentDateObj = new Date(dbOrder.dateSent || dbOrder.dateCreated || new Date());
+          const orderDateStr = sentDateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Dhaka' });
+          const delvDateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Dhaka' });
+          const queryDateStr = sentDateObj.toISOString().split('T')[0];
 
-            if (matchedOrder) {
-              if (matchedOrder.dateCreated) {
-                const d = new Date(matchedOrder.dateCreated);
-                orderDate = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear().toString().slice(-2)}`;
-                const todayStr = d.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' });
+          // একই তারিখে পাঠানো অন্যান্য পার্সেলের স্ট্যাটাস চেক করা
+          const sameDayRows: any = await query(`SELECT status, courierStatus, invoice FROM orders WHERE DATE(dateSent) = ? OR DATE(dateCreated) = ?`, [queryDateStr, queryDateStr]);
+          
+          let sameDayTotal = 0; let sameDayPending = 0; let sameDayDelivered = 0; let sameDayReturned = 0;
+          const pendingList: string[] = [];
 
-                const pendingOrders = dashData.orders.filter((o: any) => {
-                  if (!o.dateCreated) return false;
-                  const oDate = new Date(o.dateCreated).toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' });
-                  const oStatus = (o.courierStatus || '').toLowerCase();
-                  
-                  const isPending = (o.trackingCode || o.consignmentId) && 
-                                    o.status !== 'completed' && 
-                                    o.status !== 'cancelled' &&
-                                    oStatus !== 'delivered' &&
-                                    oStatus !== 'returned' &&
-                                    oStatus !== 'cancelled' &&
-                                    oStatus !== 'return';
-                  return oDate === todayStr && isPending && String(o.invoice) !== String(invoice);
-                });
-                
-                if (pendingOrders.length > 0) {
-                  pendingText = `আপনার ${orderDate} তারিখের আরও <b>${pendingOrders.length}টি</b> পার্সেল পেন্ডিং আছে:\n\n`;
-                  pendingOrders.forEach((pO: any, index: number) => {
-                    const pName = pO.customerName || 'N/A';
-                    const pAddrParts = [
-                      pO.streetAddress || pO.address || '', 
-                      pO.thana ? `Thana: ${pO.thana}` : '', 
-                      pO.district ? `District: ${pO.district}` : ''
-                    ].filter(Boolean);
-                    const pAddress = pAddrParts.join(', ') || 'N/A';
-                    let pItems = pO.items || 'N/A';
-                    if (pO.size) pItems += ` [সাইজ: ${pO.size}]`;
-                    const pCid = pO.consignmentId || pO.trackingCode || 'N/A';
-                    
-                    pendingText += `⚠️ <b>পেন্ডিং পার্সেল ${index + 1}:</b>\n`;
-                    pendingText += `🧾 <b>ইনভয়েস / CID:</b> #${pO.invoice} / <code>${pCid}</code>\n`;
-                    pendingText += `📅 <b>তারিখ:</b> ${orderDate}\n`;
-                    pendingText += `👤 <b>নাম:</b> ${pName}\n`;
-                    pendingText += `📍 <b>ঠিকানা:</b> ${pAddress}\n`;
-                    pendingText += `📦 <b>আইটেম:</b> ${pItems}\n`;
-                    if (index < pendingOrders.length - 1) pendingText += `-----------------------\n`;
-                  });
-                } else {
-                  pendingText = `আপনার ${orderDate} তারিখের আর কোন পার্সেল পেন্ডিং নাই।`;
-                }
+          if (Array.isArray(sameDayRows)) {
+            sameDayTotal = sameDayRows.length;
+            sameDayRows.forEach(r => {
+              const cs = (r.courierStatus || '').toLowerCase();
+              if (cs === 'delivered' || cs === 'partial_delivered') sameDayDelivered++;
+              else if (['cancelled', 'returned', 'return', 'cancelled_approval_pending'].includes(cs)) sameDayReturned++;
+              else {
+                sameDayPending++;
+                if (String(r.invoice) !== String(invoice)) pendingList.push(`#${r.invoice}`);
               }
-            }
+            });
           }
+
+          const fullAddress = `${dbOrder.address || ''}, ${dbOrder.thana || ''}, ${dbOrder.district || ''}`.replace(/,\s*,/g, ',').trim();
+          
+          tgMessage = `🎉 <b>DELIVERY COMPLETED</b> 🎉\n`;
+          tgMessage += `-----------------------------------\n`;
+          tgMessage += `🧾 <b>ইনভয়েস: #${dbOrder.invoice}</b>\n`;
+          tgMessage += `🔖 <b>CID:</b> <code>${consignmentId || trackingCode}</code>\n`;
+          tgMessage += `📅 [পাঠানো: ${orderDateStr} / ডেলিভারি: ${delvDateStr}]\n\n`;
+          
+          tgMessage += `👤 <b>কাস্টমার:</b> ${dbOrder.customer_name || customerName}\n`;
+          tgMessage += `📱 <b>মোবাইল:</b> <code>${dbOrder.phone || 'N/A'}</code>\n`;
+          tgMessage += `📍 <b>ঠিকানা:</b> ${fullAddress || address}\n`;
+          tgMessage += `📦 <b>আইটেম:</b> ${dbOrder.items} ${dbOrder.size ? `[সাইজ: ${dbOrder.size}]` : ''}\n`;
+          tgMessage += `💰 <b>COD:</b> ৳${dbOrder.total}\n`;
+          tgMessage += `-----------------------------------\n`;
+
+          if (sameDayPending > 0) {
+            tgMessage += `⚠️ <b>নজর দিন:</b> ${orderDateStr} তারিখে পাঠানো মোট ${sameDayTotal} টি পার্সেলের মধ্যে এখনো <b>${sameDayPending} টি পার্সেল পেন্ডিং</b> আছে।\n`;
+            if (pendingList.length > 0) tgMessage += `<i>(পেন্ডিং ইনভয়েস: ${pendingList.join(', ')})</i>\n`;
+          } else {
+            tgMessage += `✅ <b>দুর্দান্ত!</b> ${orderDateStr} তারিখে পাঠানো সকল পার্সেলের ফয়সালা হয়ে গেছে (কোনো পেন্ডিং নেই)।\n`;
+          }
+          tgMessage += `📊 <i>সামারি: মোট: ${sameDayTotal} | ডেলিভারি: ${sameDayDelivered} | রিটার্ন: ${sameDayReturned} | পেন্ডিং: ${sameDayPending}</i>`;
         }
-      } catch (err) {
-        console.error("Dashboard Fetch Error inside Webhook:", err);
-      }
-
-      if (customerName === 'সম্মানিত কাস্টমার' && consignmentId) {
-        try {
-          const apiKey = process.env.STEADFAST_API_KEY || 'n5wjg5pat2seuxiiz1mmw7evsl1ehzuw';
-          const secretKey = process.env.STEADFAST_SECRET_KEY || 'jv5elbxxof0qxlshgnf2mpwv';
-          const stRes = await fetch(`https://portal.packzy.com/api/v1/status_by_cid/${consignmentId}`, {
-            headers: { 'Api-Key': apiKey, 'Secret-Key': secretKey }
-          });
-          const stData = await stRes.json();
-          if (stData && stData.delivery_status) {
-            customerName = stData.delivery_status.recipient_name || customerName;
-            address = stData.delivery_status.recipient_address || address;
-            if (stData.delivery_status.created_at && orderDate === 'N/A') {
-              const cDate = new Date(stData.delivery_status.created_at);
-              orderDate = `${cDate.getDate()}/${cDate.getMonth() + 1}/${cDate.getFullYear().toString().slice(-2)}`;
-            }
-          }
-        } catch (e) {}
-      }
-
-      const today = new Date();
-      const deliveryDate = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear().toString().slice(-2)}`;
-
-      if (!pendingText) {
-         pendingText = `আপনার ${orderDate} তারিখের আর কোন পার্সেল পেন্ডিং নাই।`;
-      }
-
-      tgMessage = 
-        `✅ <b>আজকে ডেলিভারি হওয়া আপনার পার্সেল সম্পূর্ণভাবে ডেলিভারি হয়েছে।</b>\n\n` +
-        `🧾 <b>ইনভয়েস / CID:</b> #${invoice} / <code>${consignmentId}</code>\n` +
-        `📅 <b>তারিখ:</b> ${orderDate} = ${deliveryDate}\n\n` +
-        `👤 <b>নাম:</b> ${customerName}\n` +
-        `📍 <b>ঠিকানা:</b> ${address}\n` +
-        `📦 <b>আইটেম:</b> ${items}\n\n` +
-        `⏳ <b>পেন্ডিং আপডেট:</b>\n${pendingText}`;
-
+      } catch (err) {}
     } 
     else if (status === 'cancelled' || status === 'partial_delivered') {
       tgMessage = `❌ <b>পার্সেল রিটার্ন / আংশিক ডেলিভারি!</b>\n` +
@@ -269,17 +167,12 @@ export async function POST(req: Request) {
       await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: groupCourier,
-          text: tgMessage,
-          parse_mode: 'HTML',
-        }),
+        body: JSON.stringify({ chat_id: groupCourier, text: tgMessage, parse_mode: 'HTML' }),
       });
     }
 
     return NextResponse.json({ success: true, received: true });
   } catch (error: any) {
-    console.error('Steadfast Webhook Error:', error);
     return NextResponse.json({ success: false, warning: error.message }, { status: 200 });
   }
 }

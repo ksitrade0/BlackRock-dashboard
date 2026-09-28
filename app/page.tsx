@@ -114,44 +114,107 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
+  // 🚀 UPDATE: Courier Audit Report Layout (Strict Format)
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
-    if (!isAutomatic) setMessage({ text: 'রিপোর্ট তৈরি করা হচ্ছে...', type: 'success' });
+    if (!isAutomatic) setMessage({ text: 'স্টেডফাস্ট থেকে রিয়েল-টাইম ডেটা এনে রিপোর্ট তৈরি করা হচ্ছে...', type: 'success' });
     const updatedOrders = [...orders];
+    
     try {
+      // ১. লাইভ ট্র্যাকিং আপডেট
       for (let o of updatedOrders) {
-        if (o.consignmentId || o.trackingCode) {
+        if (o.trackingCode || o.consignmentId) {
           try {
             const queryParam = o.consignmentId ? `consignment_id=${o.consignmentId}` : `tracking_code=${o.trackingCode}`;
             const tRes = await fetch(`/api/courier/track?${queryParam}`);
             const tResult = await tRes.json();
-            if (tResult.success && tResult.data) o.courierStatus = tResult.data.delivery_status || tResult.data.status || o.courierStatus;
+            if (tResult.success && tResult.data) {
+                o.courierStatus = tResult.data.delivery_status || tResult.data.status || o.courierStatus;
+            }
           } catch (e) {}
         }
       }
       setOrders(updatedOrders);
-      const now = new Date(); const todayDate = now.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' });
+      
+      const now = new Date(); 
+      const todayDateStr = now.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' });
       const currentTime = now.toLocaleTimeString('en-BD', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: true });
-      const isToday = (dateString: string) => { if (!dateString) return false; try { return new Date(dateString).toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' }) === todayDate; } catch { return false; } };
+      
+      const isToday = (dateString: string) => { 
+        if (!dateString) return false; 
+        try { return new Date(dateString).toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' }) === todayDateStr; } 
+        catch { return false; } 
+      };
 
-      const sentToday = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && isToday(o.dateSent || o.dateCreated) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return');
-      const deliveredToday = updatedOrders.filter((o) => (o.status === 'completed' || o.courierStatus?.toLowerCase() === 'delivered') && isToday(o.dateCreated));
-      const pendingParcels = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return' && o.courierStatus?.toLowerCase() !== 'cancelled' && !isToday(o.dateSent || o.dateCreated));
-      const returnedToday = updatedOrders.filter((o) => (o.courierStatus?.toLowerCase() === 'cancelled' || o.courierStatus?.toLowerCase() === 'returned' || o.courierStatus?.toLowerCase() === 'return' || o.courierStatus?.toLowerCase() === 'cancelled_approval_pending') && isToday(o.dateCreated));
+      const formatDateOnly = (dateString: string) => {
+        if (!dateString) return 'N/A';
+        try { return new Date(dateString).toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka', day: '2-digit', month: 'short', year: 'numeric' }); }
+        catch { return 'N/A'; }
+      };
+
+      // ২. ডেটা ফিল্টারিং
+      const sentToday = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && isToday(o.dateSent || o.dateCreated));
+      const deliveredToday = updatedOrders.filter((o) => ((o.courierStatus || '').toLowerCase() === 'delivered' || (o.courierStatus || '').toLowerCase() === 'partial_delivered') && isToday(new Date().toISOString()));
+      const returnedToday = updatedOrders.filter((o) => ['cancelled', 'returned', 'return', 'cancelled_approval_pending'].includes((o.courierStatus || '').toLowerCase()) && isToday(new Date().toISOString()));
+
+      // পেন্ডিং ফিল্টারিং
+      const pendingParcels = updatedOrders.filter((o) => {
+        if (!o.trackingCode && !o.consignmentId) return false;
+        const s = (o.courierStatus || '').toLowerCase();
+        return !['delivered', 'partial_delivered', 'cancelled', 'returned', 'return', 'cancelled_approval_pending'].includes(s);
+      });
+
+      // সবচেয়ে পুরোনো পার্সেল আগে দেখানোর জন্য সর্টিং
+      pendingParcels.sort((a, b) => new Date(a.dateSent || a.dateCreated).getTime() - new Date(b.dateSent || b.dateCreated).getTime());
 
       let totalCollection = 0; deliveredToday.forEach((o) => { totalCollection += parseFloat(o.total || '0'); });
 
-      let msg = `<b>📊 কুরিয়ার অডিট রিপোর্ট</b>\nতারিখ: ${todayDate} | সময়: ${currentTime}\n\n`;
+      // ৩. মেসেজ বিল্ড করা (Strict Order)
+      let msg = `<b>📊 কুরিয়ার অডিট রিপোর্ট</b>\n`;
+      msg += `📅 তারিখ: ${todayDateStr} | ⏰ সময়: ${currentTime}\n\n`;
+
+      // আজকে পাঠানো পার্সেল
       msg += `📦 <b>আজকে পাঠানো পার্সেল: ${sentToday.length} টি</b>\n`;
-      sentToday.forEach((o, i) => { msg += `${i + 1}. #${o.invoice} / ${o.consignmentId || 'N/A'} | ${o.customerName || 'কাস্টমার'} | ৳ ${o.total}\n`; });
-      msg += `\n✅ <b>আজকে ডেলিভারি: ${deliveredToday.length} টি</b>\n`;
-      deliveredToday.forEach((o, i) => { msg += `${i + 1}. #${o.invoice} / ${o.consignmentId || 'N/A'} | ${o.customerName || 'কাস্টমার'} | ৳ ${o.total}\n`; });
-      msg += `\n⏳ <b>মোট পেন্ডিং: ${pendingParcels.length} টি</b>\n`;
-      pendingParcels.forEach((o, i) => { msg += `${i + 1}. #${o.invoice} / ${o.consignmentId || 'N/A'} | ৳ ${o.total}\n`; });
-      msg += `\n❌ <b>আজকে রিটার্ন: ${returnedToday.length} টি</b>\n`;
-      returnedToday.forEach((o, i) => { msg += `${i + 1}. #${o.invoice} / ${o.consignmentId || 'N/A'} | ৳ ${o.total}\n`; });
-      msg += `\n💰 <b>আজকের কালেকশন: ৳ ${totalCollection}</b>\n\n`;
-      msg += isAutomatic ? `<i>🤖 অটোমেটিক নাইট অডিট রিপোর্ট (রাত ১০টো স্টক)</i>` : `<i>রিপোর্টটি চেয়েছেন: ${currentUser}</i>`;
+      sentToday.forEach((o, i) => { 
+        msg += `${i + 1}. #${o.invoice} | CID: ${o.consignmentId || 'N/A'} | ${o.customerName} | ৳${o.total}\n`; 
+      });
+      msg += `\n`;
+
+      // আজকে ডেলিভারি
+      msg += `✅ <b>আজকে ডেলিভারি হয়েছে: ${deliveredToday.length} টি</b>\n`;
+      deliveredToday.forEach((o, i) => { 
+        const sentD = formatDateOnly(o.dateSent || o.dateCreated);
+        msg += `${i + 1}. #${o.invoice} | CID: ${o.consignmentId || 'N/A'} | [পাঠানো: ${sentD}] | ৳${o.total}\n`; 
+      });
+      msg += `\n`;
+
+      // পেন্ডিং পার্সেল লিস্ট
+      msg += `⏳ <b>মোট পেন্ডিং পার্সেল: ${pendingParcels.length} টি</b>\n`;
+      msg += `-----------------------------------\n`;
+      pendingParcels.forEach((o, i) => { 
+        const address = o.district ? `${o.thana ? o.thana+', ' : ''}${o.district}` : (o.streetAddress || 'N/A');
+        const sentD = formatDateOnly(o.dateSent || o.dateCreated);
+        const status = (o.courierStatus || 'IN REVIEW').toUpperCase().replace(/_/g, ' ');
+
+        msg += `<b>${i + 1}. ইনভয়েস: #${o.invoice}</b>\n`;
+        msg += `🔖 CID: <code>${o.consignmentId || o.trackingCode}</code>\n`;
+        msg += `📅 পাঠানো: ${sentD}\n`;
+        msg += `👤 নাম: ${o.customerName || 'N/A'}\n`;
+        msg += `📍 ঠিকানা: ${address}\n`;
+        msg += `📦 আইটেম: ${o.items || 'N/A'}\n`;
+        msg += `💰 COD: ৳${o.total} | 📌 স্ট্যাটাস: <b>${status}</b>\n\n`;
+      });
+
+      // আজকে রিটার্ন
+      msg += `❌ <b>আজকে রিটার্ন/ক্যান্সেল: ${returnedToday.length} টি</b>\n`;
+      returnedToday.forEach((o, i) => { 
+        msg += `${i + 1}. #${o.invoice} | CID: ${o.consignmentId || 'N/A'} | ${o.customerName} | ৳${o.total}\n`; 
+      });
+      msg += `\n`;
+
+      // ফুটার: কালেকশন
+      msg += `💵 <b>আজকের মোট কালেকশন: ৳ ${totalCollection}</b>\n\n`;
+      msg += isAutomatic ? `<i>🤖 অটোমেটিক নাইট অডিট রিপোর্ট</i>` : `<i>রিপোর্ট তৈরি করেছেন: ${currentUser}</i>`;
 
       const res = await fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: msg, type: 'courier' }) });
       if (res.ok && !isAutomatic) setMessage({ text: 'কুরিয়ার রিপোর্ট সফলভাবে পাঠানো হয়েছে!', type: 'success' });
@@ -427,7 +490,6 @@ export default function Dashboard() {
                       let rowBgClass = order.isNewRow ? 'bg-emerald-50 border-2 border-emerald-500' : isRecent ? 'bg-rose-50 hover:bg-rose-100/70' : isDuplicate ? 'bg-amber-50 hover:bg-amber-100/70' : isToday ? 'bg-emerald-50/60 hover:bg-emerald-100/60 border-l-4 border-l-emerald-500' : 'bg-amber-50/40 hover:bg-amber-100/50 border-l-4 border-l-amber-400';
                       const currentItemList = order.items ? order.items.split(',').map(s => s.trim()).filter(Boolean) : [];
 
-                      // 🚀 ডেট সেপারেটর এবং কালার-কোডেড অর্ডার কাউন্টার লজিক
                       const currentOrderDate = formatOrderDate(order.dateCreated);
                       const prevOrderDate = index > 0 && !order.isNewRow && !filteredOrders[index - 1].isNewRow ? formatOrderDate(filteredOrders[index - 1].dateCreated) : null;
                       const showDateSeparator = !order.isNewRow && currentOrderDate !== prevOrderDate;
