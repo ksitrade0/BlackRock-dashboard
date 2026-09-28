@@ -1,36 +1,15 @@
 //@ts-nocheck
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { BANGLADESH_DISTRICTS } from '@/lib/geoData';
 import StockBar from '@/app/component/StockBar';
 import AdminInventoryPanel from '@/app/component/AdminInventoryPanel';
 import {
-  Search,
-  RefreshCw,
-  Send,
-  CheckCircle,
-  AlertCircle,
-  Calendar,
-  LogOut,
-  Clock,
-  MapPin,
-  Phone,
-  UserCheck,
-  PhoneCall,
-  RotateCw,
-  AlertTriangle,
-  XCircle,
-  Trash2,
-  BookmarkCheck,
-  Package,
-  Layers,
-  Shirt,
-  User,
-  Save,
-  Plus,
-  BarChart2,
+  Search, RefreshCw, Send, CheckCircle, AlertCircle, Calendar, LogOut, Clock,
+  MapPin, Phone, UserCheck, PhoneCall, RotateCw, AlertTriangle, XCircle, Trash2,
+  BookmarkCheck, Package, Layers, Shirt, User, Save, Plus, BarChart2,
 } from 'lucide-react';
 
 interface Order {
@@ -128,9 +107,7 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: logText, type: targetType }),
       });
-    } catch (err) {
-      console.error('Telegram Log Error:', err);
-    }
+    } catch (err) {}
   };
 
   const handleLogout = async () => {
@@ -151,9 +128,6 @@ export default function Dashboard() {
       .catch(() => router.push('/login'));
   }, [router]);
 
-  // ==========================================
-  // আপডেট: সাইলেন্ট পোলিং লজিক (নিরাপদভাবে)
-  // ==========================================
   const fetchOrders = async (isSilent = false) => {
     if (!isSilent) {
       setLoading(true);
@@ -166,33 +140,21 @@ export default function Dashboard() {
       if (data && Array.isArray(data.orders)) {
         const mappedOrders: Order[] = data.orders.map((o: any) => ({
           ...o,
-          streetAddress: o.address || '',
-          district: o.district || '',
-          thana: o.thana || '',
-          size: o.size || '',
-          customNote: o.customNote || '',
-          staffName: o.staffName || '',
-          courierStatus: o.courierStatus || '',
-          dateSent: o.dateSent || '',
-          isNewRow: false,
+          streetAddress: o.address || '', district: o.district || '', thana: o.thana || '',
+          size: o.size || '', customNote: o.customNote || '', staffName: o.staffName || '',
+          courierStatus: o.courierStatus || '', dateSent: o.dateSent || '', isNewRow: false,
         }));
 
         setOrders((prevOrders) => {
           if (!isSilent) {
-            // প্রথমবার লোড হওয়ার সময় পুরো ডাটাবেজ তুলে আনবে
             const unsavedNewRows = prevOrders.filter((o) => o.isNewRow);
             return [...unsavedNewRows, ...mappedOrders];
           } else {
-            // ব্যাকগ্রাউন্ড অটো-রিফ্রেশের সময়: শুধু কুরিয়ার স্ট্যাটাস আপডেট করবে যাতে আপনার টাইপিং মুছে না যায়
             return prevOrders.map(prevOrder => {
               if (prevOrder.isNewRow) return prevOrder;
               const dbOrder = mappedOrders.find(m => m.id === prevOrder.id && m.storeId === prevOrder.storeId);
               if (dbOrder) {
-                return {
-                  ...prevOrder,
-                  courierStatus: dbOrder.courierStatus,
-                  status: dbOrder.status 
-                };
+                return { ...prevOrder, courierStatus: dbOrder.courierStatus, status: dbOrder.status };
               }
               return prevOrder;
             });
@@ -202,11 +164,8 @@ export default function Dashboard() {
         setInitialOrders((prevInit) => {
           const newInit = { ...prevInit };
           if (!isSilent) {
-            mappedOrders.forEach((item) => {
-              newInit[`${item.storeId}-${item.id}`] = JSON.parse(JSON.stringify(item));
-            });
+            mappedOrders.forEach((item) => { newInit[`${item.storeId}-${item.id}`] = JSON.parse(JSON.stringify(item)); });
           } else {
-             // সাইলেন্ট আপডেটেও initial data আপডেট করা হচ্ছে যাতে সেভ বাটনে কনফ্লিক্ট না হয়
              mappedOrders.forEach((dbOrder) => {
                 const key = `${dbOrder.storeId}-${dbOrder.id}`;
                 if (newInit[key]) {
@@ -221,7 +180,6 @@ export default function Dashboard() {
         if (!isSilent) setOrders([]);
       }
     } catch (err: any) {
-      console.error('Failed to load orders', err);
       if (!isSilent) {
         setMessage({ text: err.message || 'অর্ডার লোড করতে সমস্যা হয়েছে', type: 'error' });
         setOrders([]);
@@ -231,40 +189,19 @@ export default function Dashboard() {
     }
   };
 
-  // ==========================================
-  // অটো-রিফ্রেশ টাইমার: প্রতি ৬০ সেকেন্ডে চেক করবে
-  // ==========================================
   useEffect(() => {
-    fetchOrders(false); // প্রথমবার নরমাল লোড
-
-    const intervalId = setInterval(() => {
-      fetchOrders(true); // এরপর থেকে প্রতি ৬০ সেকেন্ডে সাইলেন্ট লোড
-    }, 60000);
-
-    return () => clearInterval(intervalId); // কম্পোনেন্ট আনমাউন্ট হলে টাইমার বন্ধ করবে
+    fetchOrders(false);
+    const intervalId = setInterval(() => { fetchOrders(true); }, 60000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleAddNewBlankRow = () => {
     const tempId = Date.now();
     const blankOrder: Order = {
-      id: tempId,
-      storeId: 'store1',
-      storeName: 'Ruhama Wear',
-      invoice: 'NEW',
-      customerName: '',
-      phone: '',
-      streetAddress: '',
-      district: 'Patuakhali',
-      thana: 'Patuakhali Sadar',
-      size: 'XL',
-      customNote: '',
-      total: '',
-      status: 'processing',
-      dateCreated: new Date().toISOString(),
-      items: '',
-      staffName: currentUser,
-      callDone: false,
-      isNewRow: true,
+      id: tempId, storeId: 'store1', storeName: 'Ruhama Wear', invoice: 'NEW', customerName: '', phone: '',
+      streetAddress: '', district: 'Patuakhali', thana: 'Patuakhali Sadar', size: 'XL', customNote: '',
+      total: '', status: 'on-hold', dateCreated: new Date().toISOString(), items: '', staffName: currentUser,
+      callDone: false, isNewRow: true,
     };
     setOrders((prev) => [blankOrder, ...prev]);
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
@@ -272,9 +209,7 @@ export default function Dashboard() {
 
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
-    if (!isAutomatic) {
-      setMessage({ text: 'স্টেডফাস্ট থেকে রিয়েল-টাইম ডেটা এনে কুরিয়ার অডিট রিপোর্ট তৈরি করা হচ্ছে...', type: 'success' });
-    }
+    if (!isAutomatic) setMessage({ text: 'রিপোর্ট তৈরি করা হচ্ছে...', type: 'success' });
     const updatedOrders = [...orders];
     try {
       for (let o of updatedOrders) {
@@ -283,12 +218,8 @@ export default function Dashboard() {
             const queryParam = o.consignmentId ? `consignment_id=${o.consignmentId}` : `tracking_code=${o.trackingCode}`;
             const tRes = await fetch(`/api/courier/track?${queryParam}`);
             const tResult = await tRes.json();
-            if (tResult.success && tResult.data) {
-              o.courierStatus = tResult.data.delivery_status || tResult.data.status || o.courierStatus;
-            }
-          } catch (e) {
-            console.error('Track fetch error for order:', o.invoice);
-          }
+            if (tResult.success && tResult.data) o.courierStatus = tResult.data.delivery_status || tResult.data.status || o.courierStatus;
+          } catch (e) {}
         }
       }
       setOrders(updatedOrders);
@@ -299,89 +230,42 @@ export default function Dashboard() {
       const isToday = (dateString: string) => {
         if (!dateString) return false;
         try {
-          const d = new Date(dateString);
-          return d.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' }) === todayDate;
-        } catch {
-          return false;
-        }
+          return new Date(dateString).toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' }) === todayDate;
+        } catch { return false; }
       };
 
       const sentToday = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && isToday(o.dateSent || o.dateCreated) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return');
       const deliveredToday = updatedOrders.filter((o) => (o.status === 'completed' || o.courierStatus?.toLowerCase() === 'delivered') && isToday(o.dateCreated));
-      
       const pendingParcels = updatedOrders.filter((o) => (o.trackingCode || o.consignmentId) && o.status !== 'completed' && o.status !== 'cancelled' && o.courierStatus?.toLowerCase() !== 'delivered' && o.courierStatus?.toLowerCase() !== 'returned' && o.courierStatus?.toLowerCase() !== 'return' && o.courierStatus?.toLowerCase() !== 'cancelled' && !isToday(o.dateSent || o.dateCreated));
-      
       const returnedToday = updatedOrders.filter((o) => (o.courierStatus?.toLowerCase() === 'cancelled' || o.courierStatus?.toLowerCase() === 'returned' || o.courierStatus?.toLowerCase() === 'return' || o.courierStatus?.toLowerCase() === 'cancelled_approval_pending') && isToday(o.dateCreated));
 
       let totalCollection = 0;
-      deliveredToday.forEach((o) => {
-        totalCollection += parseFloat(o.total || '0');
-      });
+      deliveredToday.forEach((o) => { totalCollection += parseFloat(o.total || '0'); });
 
-      let msg = `<b>📊 কুরিয়ার অডিট রিপোর্ট</b>\n`;
-      msg += `তারিখ: ${todayDate} | সময়: ${currentTime}\n\n`;
-
+      let msg = `<b>📊 কুরিয়ার অডিট রিপোর্ট</b>\nতারিখ: ${todayDate} | সময়: ${currentTime}\n\n`;
       msg += `📦 <b>আজকে পাঠানো পার্সেল: ${sentToday.length} টি</b>\n`;
       sentToday.forEach((o, i) => {
-        const cid = o.consignmentId || 'N/A';
-        const sentDate = o.dateSent ? new Date(o.dateSent).toLocaleDateString('en-GB') : (o.dateCreated ? new Date(o.dateCreated).toLocaleDateString('en-GB') : 'N/A');
-        const name = o.customerName || 'কাস্টমার';
-        const city = o.district || o.thana || 'ঠিকানা নাই';
-        const items = o.items || 'আইটেম নাই';
-        msg += `${i + 1}. #${o.invoice} / ${cid} [পাঠানোর তারিখ: ${sentDate}] | ${name} | ${city} | ${items} | ৳ ${o.total}\n`;
+        msg += `${i + 1}. #${o.invoice} / ${o.consignmentId || 'N/A'} | ${o.customerName || 'কাস্টমার'} | ৳ ${o.total}\n`;
       });
-      msg += `\n`;
-
-      msg += `✅ <b>আজকে ডেলিভারি হওয়া পার্সেল: ${deliveredToday.length} টি</b>\n`;
+      msg += `\n✅ <b>আজকে ডেলিভারি: ${deliveredToday.length} টি</b>\n`;
       deliveredToday.forEach((o, i) => {
-        const cid = o.consignmentId || 'N/A';
-        const sentDate = o.dateCreated ? new Date(o.dateCreated).toLocaleDateString('en-GB') : 'N/A';
-        const deliverDate = todayDate;
-        const name = o.customerName || 'কাস্টমার';
-        msg += `${i + 1}. #${o.invoice} / ${cid} | প্রেরণের তারিখ: ${sentDate} / ডেলিভারি তারিখ: ${deliverDate} - ${name} | ৳ ${o.total}\n`;
+        msg += `${i + 1}. #${o.invoice} / ${o.consignmentId || 'N/A'} | ${o.customerName || 'কাস্টমার'} | ৳ ${o.total}\n`;
       });
-      msg += `\n`;
-
-      msg += `⏳ <b>মোট পেন্ডিং পার্সেল: ${pendingParcels.length} টি</b>\n`;
+      msg += `\n⏳ <b>মোট পেন্ডিং: ${pendingParcels.length} টি</b>\n`;
       pendingParcels.forEach((o, i) => {
-        const cid = o.consignmentId || 'N/A';
-        const sentDate = o.dateSent ? new Date(o.dateSent).toLocaleDateString('en-GB') : (o.dateCreated ? new Date(o.dateCreated).toLocaleDateString('en-GB') : 'N/A');
-        const name = o.customerName || 'কাস্টমার';
-        const items = o.items || 'আইটেম নাই';
-        msg += `${i + 1}. #${o.invoice} / ${cid} [পাঠানোর তারিখ: ${sentDate}] - ${name} | ${items} | ৳ ${o.total}\n`;
+        msg += `${i + 1}. #${o.invoice} / ${o.consignmentId || 'N/A'} | ৳ ${o.total}\n`;
       });
-      msg += `\n`;
-
-      msg += `❌ <b>আজকে রিটার্ন হওয়া পার্সেল: ${returnedToday.length} টি</b>\n`;
+      msg += `\n❌ <b>আজকে রিটার্ন: ${returnedToday.length} টি</b>\n`;
       returnedToday.forEach((o, i) => {
-        const cid = o.consignmentId || 'N/A';
-        const sentDate = o.dateCreated ? new Date(o.dateCreated).toLocaleDateString('en-GB') : 'N/A';
-        const name = o.customerName || 'কাস্টমার';
-        msg += `${i + 1}. #${o.invoice} / ${cid} [পাঠানোর তারিখ: ${sentDate}] - ${name} | ৳ ${o.total}\n`;
+        msg += `${i + 1}. #${o.invoice} / ${o.consignmentId || 'N/A'} | ৳ ${o.total}\n`;
       });
-      msg += `\n`;
+      msg += `\n💰 <b>আজকের কালেকশন: ৳ ${totalCollection}</b>\n\n`;
+      msg += isAutomatic ? `<i>🤖 অটোমেটিক নাইট অডিট রিপোর্ট (রাত ১০টো স্টক)</i>` : `<i>রিপোর্টটি চেয়েছেন: ${currentUser}</i>`;
 
-      msg += `💰 <b>আজকের ডেলিভারি মোট কালেকশন: ৳ ${totalCollection}</b>\n\n`;
-      if (isAutomatic) {
-        msg += `<i>🤖 অটোমেটিক নাইট অডিট রিপোর্ট (রাত ১০টো স্টক)</i>`;
-      } else {
-        msg += `<i>রিপোর্টটি চেয়েছেন: ${currentUser}</i>`;
-      }
-
-      const res = await fetch('/api/telegram', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: msg, type: 'courier' }),
-      });
-
-      if (res.ok && !isAutomatic) {
-        setMessage({ text: 'স্টেডফাস্ট রিয়েল-টাইম ডেটাসহ কুরিয়ার রিপোর্ট সফলভাবে পাঠানো হয়েছে!', type: 'success' });
-      }
+      const res = await fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: msg, type: 'courier' }) });
+      if (res.ok && !isAutomatic) setMessage({ text: 'কুরিয়ার রিপোর্ট সফলভাবে পাঠানো হয়েছে!', type: 'success' });
     } catch (err: any) {
-      console.error('Courier Report Error:', err);
-      if (!isAutomatic) {
-        setMessage({ text: err.message || 'রিপোর্ট তৈরি করতে এরর হয়েছে', type: 'error' });
-      }
+      if (!isAutomatic) setMessage({ text: err.message || 'রিপোর্ট তৈরি করতে এরর হয়েছে', type: 'error' });
     } finally {
       setReporting(false);
     }
@@ -393,13 +277,11 @@ export default function Dashboard() {
       const hours = now.getHours();
       const minutes = now.getMinutes();
       const todayKey = 'courier_report_sent_' + now.toLocaleDateString();
-      const alreadySent = localStorage.getItem(todayKey);
-      if (hours === 22 && minutes <= 2 && !alreadySent) {
+      if (hours === 22 && minutes <= 2 && !localStorage.getItem(todayKey)) {
         localStorage.setItem(todayKey, 'true');
         handleSendCourierReport(true);
       }
     };
-
     const timerInterval = setInterval(checkTenPM, 60000);
     return () => clearInterval(timerInterval);
   }, [orders]);
@@ -412,8 +294,7 @@ export default function Dashboard() {
       if (cleanPhone.length >= 10) {
         if (!data[cleanPhone]) data[cleanPhone] = { count: 0, recentOrders: [] };
         data[cleanPhone].count += 1;
-        const orderTime = new Date(o.dateCreated).getTime();
-        if (now - orderTime <= 24 * 60 * 60 * 1000) {
+        if (now - new Date(o.dateCreated).getTime() <= 24 * 60 * 60 * 1000) {
           data[cleanPhone].recentOrders.push(o);
         }
       }
@@ -426,10 +307,7 @@ export default function Dashboard() {
       prev.map((order) => {
         if (order.id === orderId && order.storeId === storeId) {
           if (field === 'district') return { ...order, district: value, thana: '' };
-          if (field === 'storeId') {
-            const sName = value === 'store2' ? 'Aastha Naturals BD' : 'Ruhama Wear';
-            return { ...order, storeId: value, storeName: sName };
-          }
+          if (field === 'storeId') return { ...order, storeId: value, storeName: value === 'store2' ? 'Aastha Naturals BD' : 'Ruhama Wear' };
           return { ...order, [field]: value };
         }
         return order;
@@ -476,19 +354,11 @@ export default function Dashboard() {
 
     if (!order.isNewRow && prev) {
       const isChanged =
-        prev.customerName !== order.customerName ||
-        prev.phone !== order.phone ||
-        prev.streetAddress !== order.streetAddress ||
-        prev.district !== order.district ||
-        prev.thana !== order.thana ||
-        prev.size !== order.size ||
-        prev.total !== order.total ||
-        prev.items !== order.items ||
-        prev.status !== newStatus ||
-        prev.staffName !== assignedStaff ||
-        prev.trackingCode !== order.trackingCode ||
-        prev.consignmentId !== order.consignmentId ||
-        prev.customNote !== order.customNote;
+        prev.customerName !== order.customerName || prev.phone !== order.phone ||
+        prev.streetAddress !== order.streetAddress || prev.district !== order.district ||
+        prev.thana !== order.thana || prev.size !== order.size || prev.total !== order.total ||
+        prev.items !== order.items || prev.status !== newStatus || prev.staffName !== assignedStaff ||
+        prev.trackingCode !== order.trackingCode || prev.consignmentId !== order.consignmentId || prev.customNote !== order.customNote;
 
       if (!isChanged && !overrideStatus && !isCourierPush) {
         setMessage({ text: `Order #${order.invoice} -এ কোনো পরিবর্তন করা হয়নি।`, type: 'success' });
@@ -504,23 +374,12 @@ export default function Dashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          storeId: order.storeId,
-          orderId: order.isNewRow ? undefined : order.id,
-          status: newStatus,
-          staffName: assignedStaff,
-          customerName: order.customerName,
-          phone: order.phone,
-          streetAddress: order.streetAddress,
-          district: order.district,
-          thana: order.thana,
-          size: order.size,
-          items: order.items,
-          total: order.total || '0',
-          trackingCode: order.trackingCode,
-          consignmentId: order.consignmentId,
-          courierStatus: order.courierStatus,
-          customNote: order.customNote,
-          dateSent: order.dateSent,
+          storeId: order.storeId, orderId: order.isNewRow ? undefined : order.id,
+          status: newStatus, staffName: assignedStaff, customerName: order.customerName,
+          phone: order.phone, streetAddress: order.streetAddress, district: order.district,
+          thana: order.thana, size: order.size, items: order.items, total: order.total || '0',
+          trackingCode: order.trackingCode, consignmentId: order.consignmentId,
+          courierStatus: order.courierStatus, customNote: order.customNote, dateSent: order.dateSent,
         }),
       });
 
@@ -528,117 +387,52 @@ export default function Dashboard() {
       if (res.ok) {
         const returnedId = result.order?.id || order.id;
         const finalInvoice = String(returnedId);
-        const updatedOrder: Order = {
-          ...order,
-          id: returnedId,
-          invoice: finalInvoice,
-          status: newStatus,
-          staffName: assignedStaff,
-          isNewRow: false,
-        };
-
+        const updatedOrder: Order = { ...order, id: returnedId, invoice: finalInvoice, status: newStatus, staffName: assignedStaff, isNewRow: false };
         setOrders((prevOrders) => prevOrders.map((o) => (o.id === order.id ? updatedOrder : o)));
-        setInitialOrders((prevInit) => ({
-          ...prevInit,
-          [`${order.storeId}-${returnedId}`]: JSON.parse(JSON.stringify(updatedOrder)),
-        }));
-        setMessage({ text: `Order #${finalInvoice} সফলভাবে WooCommerce-এ সেভ করা হয়েছে!`, type: 'success' });
-
+        setInitialOrders((prevInit) => ({ ...prevInit, [`${order.storeId}-${returnedId}`]: JSON.parse(JSON.stringify(updatedOrder)) }));
+        setMessage({ text: `Order #${finalInvoice} সফলভাবে সেভ করা হয়েছে!`, type: 'success' });
+        
         if (!isCourierPush) {
-          const logMsg =
-            `<b>${order.isNewRow ? 'নতুন অর্ডার তৈরি ও কনফার্ম' : 'অর্ডার আপডেট ও সেভ'}</b>\n` +
-            `-----------------------\n` +
-            `🏬 <b>স্টোর:</b> ${order.storeName}\n` +
-            `🧾 <b>ইনভয়েস:</b> #${finalInvoice}\n` +
-            `👤 <b>কাস্টমার:</b> ${order.customerName} (<code>${order.phone}</code>)\n` +
-            `📍 <b>ঠিকানা:</b> ${order.streetAddress || ''}, ${order.thana ? order.thana + ', ' : ''}${order.district || ''}\n` +
-            `📦 <b>আইটেম/সাইজ:</b> ${order.items || 'N/A'} ${order.size ? `[সাইজ: ${order.size}]` : ''}\n` +
-            `💰 <b>টাকা:</b> ${order.total || '0'}\n` +
-            `📌 <b>স্ট্যাটাস:</b> <code>${newStatus.toUpperCase()}</code>\n\n` +
-            `✍️ <b>কনফার্ম করেছেন:</b> ${currentUser}`;
+          const logMsg = `<b>${order.isNewRow ? 'নতুন অর্ডার তৈরি' : 'অর্ডার আপডেট'}</b>\n-----------------------\n🏬 <b>স্টোর:</b> ${order.storeName}\n🧾 <b>ইনভয়েস:</b> #${finalInvoice}\n👤 <b>কাস্টমার:</b> ${order.customerName}\n📌 <b>স্ট্যাটাস:</b> <code>${newStatus.toUpperCase()}</code>\n✍️ <b>স্টাফ:</b> ${currentUser}`;
           sendActivityLog(logMsg, 'activity');
         }
-      } else {
-        setMessage({ text: result.error || 'সেভ করতে সমস্যা হয়েছে', type: 'error' });
-      }
-    } catch (err: any) {
-      setMessage({ text: err.message || 'Network error', type: 'error' });
-    } finally {
-      setUpdatingId(null);
-    }
+      } else setMessage({ text: result.error || 'সেভ করতে সমস্যা হয়েছে', type: 'error' });
+    } catch (err: any) { setMessage({ text: err.message || 'Network error', type: 'error' }); } 
+    finally { setUpdatingId(null); }
   };
 
   const handleDeleteOrder = async (order: Order) => {
-    if (order.isNewRow) {
-      setOrders((prev) => prev.filter((o) => o.id !== order.id));
-      return;
-    }
-    if (!confirm(`সতর্কবার্তা! আপনি কি Order #${order.invoice} স্থায়ীভাবে মুছে ফেলতে চান?`)) return;
+    if (order.isNewRow) { setOrders((prev) => prev.filter((o) => o.id !== order.id)); return; }
+    if (!confirm(`সতর্কবার্তা! আপনি কি Order #${order.invoice} মুছে ফেলতে চান?`)) return;
 
     setUpdatingId(order.id);
     setMessage(null);
     try {
       const res = await fetch('/api/orders/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storeId: order.storeId,
-          orderId: order.id,
-          action: 'delete',
-        }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId: order.storeId, orderId: order.id, action: 'delete' }),
       });
-      const result = await res.json();
       if (res.ok) {
         setOrders((prev) => prev.filter((o) => !(o.id === order.id && o.storeId === order.storeId)));
         setMessage({ text: `Order #${order.invoice} মুছে ফেলা হয়েছে!`, type: 'success' });
-        const logMsg =
-          `🗑️ <b>অর্ডার ডিলিট করা হয়েছে</b>\n` +
-          `-----------------------\n` +
-          `🏬 <b>স্টোর:</b> ${order.storeName}\n` +
-          `🧾 <b>ইনভয়েস:</b> #${order.invoice}\n` +
-          `👤 <b>কাস্টমার:</b> ${order.customerName}\n\n` +
-          `✍️ <b>ডিলিট করেছেন:</b> ${currentUser}`;
-        sendActivityLog(logMsg, 'activity');
-      } else {
-        setMessage({ text: result.error || 'ডিলিট করতে সমস্যা হয়েছে', type: 'error' });
       }
-    } catch (err: any) {
-      setMessage({ text: err.message || 'Network error', type: 'error' });
-    } finally {
-      setUpdatingId(null);
-    }
+    } catch (err: any) { setMessage({ text: err.message || 'Network error', type: 'error' }); } 
+    finally { setUpdatingId(null); }
   };
 
   const handleSendToSteadfast = async (order: Order) => {
-    if (order.isNewRow) {
-      alert('অনুগ্রহ করে আগে তথ্য সেভ (Save) করুন, এরপর কুরিয়ারে পাঠান।');
-      return;
-    }
-    if (!confirm(`আপনি কি অর্ডার #${order.invoice} স্টেডফাস্ট কুরিয়ারে পাঠাতে চান?`)) return;
+    if (order.isNewRow) { alert('আগে সেভ করুন, এরপর কুরিয়ারে পাঠান।'); return; }
+    if (!confirm(`অর্ডার #${order.invoice} স্টেডফাস্টে পাঠাতে চান?`)) return;
 
     setSendingId(order.id);
     setMessage(null);
     const assignedStaff = order.staffName || currentUser;
 
     try {
-      const addressParts = [
-        order.streetAddress,
-        order.thana ? `Thana: ${order.thana}` : '',
-        order.district ? `District: ${order.district}` : '',
-      ].filter(Boolean);
-      const fullAddress = addressParts.join(', ');
-
+      const addressParts = [order.streetAddress, order.thana ? `Thana: ${order.thana}` : '', order.district ? `District: ${order.district}` : ''].filter(Boolean);
       const res = await fetch('/api/courier/steadfast', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          invoice: order.invoice,
-          recipient_name: order.customerName,
-          recipient_phone: order.phone,
-          recipient_address: fullAddress,
-          cod_amount: order.total,
-          note: order.customNote ? order.customNote.trim() : '',
-        }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoice: order.invoice, recipient_name: order.customerName, recipient_phone: order.phone, recipient_address: addressParts.join(', '), cod_amount: order.total, note: order.customNote ? order.customNote.trim() : '' }),
       });
       const result = await res.json();
       if (res.ok && result.data) {
@@ -648,52 +442,14 @@ export default function Dashboard() {
         const initialStatus = consignment.status || 'in_review';
         const currentTimestamp = new Date().toISOString();
 
-        setOrders((prev) =>
-          prev.map((o) =>
-            o.id === order.id && o.storeId === order.storeId
-              ? {
-                  ...o,
-                  trackingCode: tracking,
-                  consignmentId: cid,
-                  courierStatus: initialStatus,
-                  staffName: assignedStaff,
-                  dateSent: currentTimestamp,
-                }
-              : o
-          )
-        );
-
-        handleSaveOrder({
-           ...order,
-           trackingCode: tracking,
-           consignmentId: cid,
-           courierStatus: initialStatus,
-           dateSent: currentTimestamp,
-        }, 'pending', true);
-
+        setOrders((prev) => prev.map((o) => o.id === order.id && o.storeId === order.storeId ? { ...o, trackingCode: tracking, consignmentId: cid, courierStatus: initialStatus, staffName: assignedStaff, dateSent: currentTimestamp } : o));
+        
+        // 🚀 কুরিয়ারে পাঠালেই অটোমেটিক 'pending' (Pending payment) স্ট্যাটাস হয়ে যাবে
+        handleSaveOrder({ ...order, trackingCode: tracking, consignmentId: cid, courierStatus: initialStatus, dateSent: currentTimestamp }, 'pending', true);
         setMessage({ text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`, type: 'success' });
-
-        const logMsg =
-          `🚚 <b>স্টেডফাস্ট কুরিয়ারে ডিসপ্যাচ করা হয়েছে</b>\n` +
-          `-----------------------\n` +
-          `🏬 <b>স্টোর:</b> ${order.storeName}\n` +
-          `🧾 <b>ইনভয়েস / CID:</b> #${order.invoice} / <code>${cid}</code>\n` +
-          `👤 <b>কাস্টমার:</b> ${order.customerName}\n` +
-          `📞 <b>মোবাইল:</b> <code>${order.phone}</code>\n` +
-          `📍 <b>ঠিকানা:</b> ${fullAddress}\n` +
-          `📦 <b>আইটেম:</b> ${order.items || 'N/A'} ${order.size ? `[সাইজ: ${order.size}]` : ''}\n` +
-          `💰 <b>COD:</b> ৳ ${order.total}\n` +
-          `📌 <b>CID:</b> <code>${cid}</code> | <b>Tracking:</b> <code>${tracking}</code>\n\n` +
-          `✍️ <b>ডিসপ্যাচ করেছেন:</b> ${currentUser}`;
-        sendActivityLog(logMsg, 'courier');
-      } else {
-        setMessage({ text: result.error || 'কুরিয়ারে পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
-      }
-    } catch (err: any) {
-      setMessage({ text: err.message || 'Network error', type: 'error' });
-    } finally {
-      setSendingId(null);
-    }
+      } else setMessage({ text: result.error || 'কুরিয়ারে পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
+    } catch (err: any) { setMessage({ text: err.message || 'Network error', type: 'error' }); } 
+    finally { setSendingId(null); }
   };
 
   const handleCheckCourierStatus = async (order: Order) => {
@@ -704,67 +460,30 @@ export default function Dashboard() {
       const queryParam = order.consignmentId ? `consignment_id=${order.consignmentId}` : `tracking_code=${order.trackingCode}`;
       const res = await fetch(`/api/courier/track?${queryParam}`);
       const result = await res.json();
-      
       if (res.ok && result.data) {
         const liveStatus = result.data.delivery_status || result.data.status || 'unknown';
-        
-        setOrders((prev) =>
-          prev.map((o) => (o.id === order.id && o.storeId === order.storeId ? { ...o, courierStatus: liveStatus } : o))
-        );
+        setOrders((prev) => prev.map((o) => (o.id === order.id && o.storeId === order.storeId ? { ...o, courierStatus: liveStatus } : o)));
 
+        // 🚀 ডেলিভারি হলে অটো 'completed', রিটার্ন হলে অটো 'cancelled'
         let newWooStatus = order.status;
         const s = liveStatus.toLowerCase();
         if (s === 'delivered' || s === 'partial_delivered') newWooStatus = 'completed';
         else if (s === 'cancelled' || s === 'returned' || s === 'return' || s === 'cancelled_approval_pending') newWooStatus = 'cancelled';
 
-        // ডাটাবেজে পার্মানেন্টলি সেভ করা
-        await handleSaveOrder(
-          { ...order, courierStatus: liveStatus }, 
-          newWooStatus, 
-          true 
-        );
-        
-        setMessage({ text: `Order #${order.invoice} স্ট্যাটাস: ${liveStatus.toUpperCase()} (সেভ হয়েছে)`, type: 'success' });
-      } else {
-        setMessage({ text: result.error || 'ট্র্যাকিং আপডেট পাওয়া যায়নি', type: 'error' });
+        await handleSaveOrder({ ...order, courierStatus: liveStatus }, newWooStatus, true);
+        setMessage({ text: `Order #${order.invoice} স্ট্যাটাস: ${liveStatus.toUpperCase()}`, type: 'success' });
       }
-    } catch (err: any) {
-      setMessage({ text: err.message || 'Tracking error', type: 'error' });
-    } finally {
-      setTrackingId(null);
-    }
+    } catch (err: any) { setMessage({ text: err.message || 'Tracking error', type: 'error' }); } 
+    finally { setTrackingId(null); }
   };
 
   const getCourierBoxStyle = (status: string) => {
     const s = (status || '').toLowerCase();
-    if (s === 'delivered') {
-      return {
-        box: 'bg-emerald-50 border-emerald-400 text-emerald-950',
-        badge: 'bg-emerald-600',
-      };
-    }
-    if (s === 'partial_delivered') {
-      return {
-        box: 'bg-teal-50 border-teal-400 text-teal-950',
-        badge: 'bg-teal-600',
-      };
-    }
-    if (s === 'cancelled' || s === 'cancelled_approval_pending' || s === 'returned' || s === 'return') {
-      return {
-        box: 'bg-rose-50 border-rose-400 text-rose-950',
-        badge: 'bg-rose-600',
-      };
-    }
-    if (s.includes('transit') || s.includes('hold')) {
-      return {
-        box: 'bg-blue-50 border-blue-400 text-blue-950',
-        badge: 'bg-blue-600',
-      };
-    }
-    return {
-      box: 'bg-amber-50 border-amber-400 text-amber-950',
-      badge: 'bg-amber-500',
-    };
+    if (s === 'delivered') return { box: 'bg-emerald-50 border-emerald-400 text-emerald-950', badge: 'bg-emerald-600' };
+    if (s === 'partial_delivered') return { box: 'bg-teal-50 border-teal-400 text-teal-950', badge: 'bg-teal-600' };
+    if (s === 'cancelled' || s === 'cancelled_approval_pending' || s === 'returned' || s === 'return') return { box: 'bg-rose-50 border-rose-400 text-rose-950', badge: 'bg-rose-600' };
+    if (s.includes('transit') || s.includes('hold')) return { box: 'bg-blue-50 border-blue-400 text-blue-950', badge: 'bg-blue-600' };
+    return { box: 'bg-amber-50 border-amber-400 text-amber-950', badge: 'bg-amber-500' };
   };
 
   const filteredOrders = orders.filter((order) => {
@@ -772,46 +491,27 @@ export default function Dashboard() {
     const matchesStore = selectedStore === 'all' || order.storeName.toLowerCase().includes(selectedStore.toLowerCase());
     const matchesStatus = selectedStatus === 'all' || order.status.toLowerCase() === selectedStatus.toLowerCase();
     const matchesSearch =
-      order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.phone.includes(searchTerm) ||
-      order.invoice.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (order.staffName && order.staffName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (order.district && order.district.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (order.thana && order.thana.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (order.size && order.size.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (order.trackingCode && order.trackingCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || order.phone.includes(searchTerm) ||
+      order.invoice.toLowerCase().includes(searchTerm.toLowerCase()) || (order.staffName && order.staffName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (order.district && order.district.toLowerCase().includes(searchTerm.toLowerCase())) || (order.trackingCode && order.trackingCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (order.consignmentId && String(order.consignmentId).includes(searchTerm));
     return matchesStore && matchesStatus && matchesSearch;
   });
 
   const formatOrderDate = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Dhaka' });
-    } catch {
-      return dateStr;
-    }
+    try { return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Dhaka' }); } 
+    catch { return dateStr; }
   };
 
   const formatOrderTime = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' });
-    } catch {
-      return '';
-    }
+    try { return new Date(dateStr).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' }); } 
+    catch { return ''; }
   };
 
   const isTodayOrder = (dateStr: string) => {
     if (!dateStr) return false;
-    try {
-      const d = new Date(dateStr);
-      const todayDateStr = new Date().toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka' });
-      const orderDateStr = d.toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka' });
-      return todayDateStr === orderDateStr;
-    } catch {
-      return false;
-    }
+    try { return new Date().toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka' }) === new Date(dateStr).toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka' }); } 
+    catch { return false; }
   };
 
   const getStatusColor = (status: string) => {
@@ -821,19 +521,25 @@ export default function Dashboard() {
     if (s === 'pending') return 'bg-blue-100 text-blue-900 border-blue-400';
     if (s === 'on-hold') return 'bg-purple-100 text-purple-900 border-purple-400 font-black';
     if (s === 'cancelled' || s === 'failed') return 'bg-rose-100 text-rose-900 border-rose-400';
-    if (s === 'main-order-accepted') return 'bg-indigo-100 text-indigo-900 border-indigo-400';
     return 'bg-slate-200 text-slate-800 border-slate-400';
   };
+
+  // 🚀 স্টেডফাস্ট পেন্ডিং পার্সেল কাউন্টারের লজিক
+  const steadfastPendingCount = orders.filter((o) => {
+    if (!o.trackingCode && !o.consignmentId) return false;
+    if (!o.courierStatus) return true;
+    const s = o.courierStatus.toLowerCase();
+    return !['delivered', 'partial_delivered', 'cancelled', 'returned', 'return', 'cancelled_approval_pending'].includes(s);
+  }).length;
 
   return (
     <div className="min-h-screen bg-slate-200/70 text-slate-900 p-2 md:p-3 font-sans w-full overflow-x-hidden">
       <div className="max-w-[1950px] mx-auto w-full">
-        {/* Header Area */}
         <div className="bg-slate-200/95 pb-2 pt-2 w-full">
           <div className="flex flex-col lg:flex-row justify-between items-center mb-2 gap-2 bg-white p-2 md:px-4 rounded-2xl shadow-sm border border-slate-300 w-full">
             <div className="flex items-center gap-3 w-full lg:w-auto justify-center lg:justify-start">
               {hasLogoImg ? (
-                <div onClick={() => (window.location.href = '/')} className="flex items-center gap-3.5 cursor-pointer select-none transition hover:opacity-90" title="Dashboard Reload">
+                <div onClick={() => (window.location.href = '/')} className="flex items-center gap-3.5 cursor-pointer select-none transition hover:opacity-90">
                   <div className="w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center p-1.5 shadow-sm border border-slate-800 shrink-0">
                     <img src="/logo.png" alt="Black Rock Logo" className="w-full h-full object-contain" onError={() => setHasLogoImg(false)} />
                   </div>
@@ -867,13 +573,12 @@ export default function Dashboard() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <button onClick={() => handleSendCourierReport(false)} disabled={reporting} className="w-44 md:w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg font-bold text-xs transition cursor-pointer border border-slate-800 disabled:opacity-50 shadow-2xs">
-                  <BarChart2 className={`w-3.5 h-3.5 text-amber-400 ${reporting ? 'animate-spin' : ''}`} /> {reporting ? 'রিপোর্ট যাচ্ছে...' : 'কুরিয়ার অডিট রিপোর্ট'}
+                  <BarChart2 className={`w-3.5 h-3.5 text-amber-400 ${reporting ? 'animate-spin' : ''}`} /> {reporting ? 'রিপোর্টিং...' : 'কুরিয়ার অডিট রিপোর্ট'}
                 </button>
                 <button onClick={handleAddNewBlankRow} className="w-44 md:w-48 h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-bold text-xs transition cursor-pointer border border-slate-300 active:scale-95 shadow-2xs">
                   <Plus className="w-3.5 h-3.5 text-emerald-600 font-black" /> + নতুন অর্ডার যোগ করুন
                 </button>
               </div>
-
               <div className="flex flex-col gap-1.5 h-[78px] justify-between">
                 <AdminInventoryPanel existingItems={PRODUCT_VARIATIONS} />
               </div>
@@ -883,17 +588,22 @@ export default function Dashboard() {
           <StockBar />
 
           <div className="flex flex-col lg:flex-row justify-between items-center gap-2 bg-white p-2 md:px-4 rounded-xl shadow-sm border border-slate-300 mt-2 w-full">
-            <div className="flex gap-2 overflow-x-auto w-full lg:w-auto pb-1 lg:pb-0 slim-scroll">
+            <div className="flex gap-2 overflow-x-auto items-center w-full lg:w-auto pb-1 lg:pb-0 slim-scroll">
               <button onClick={() => setSelectedStore('all')} className={`px-3 md:px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${selectedStore === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>All Stores</button>
               <button onClick={() => setSelectedStore('Ruhama Wear')} className={`px-3 md:px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${selectedStore === 'Ruhama Wear' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>Ruhama Wear</button>
               <button onClick={() => setSelectedStore('Aastha Naturals BD')} className={`px-3 md:px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition cursor-pointer ${selectedStore === 'Aastha Naturals BD' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>Aastha Naturals BD</button>
+              
+              {/* 🚀 কুরিয়ার পেন্ডিং কাউন্টার ব্যাজ */}
+              <div className="flex items-center gap-1.5 ml-2 px-3 py-1.5 bg-blue-100 border border-blue-300 text-blue-900 rounded-lg shadow-2xs font-bold text-xs whitespace-nowrap">
+                <Package className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>Steadfast Pending: <span className="font-black text-sm">{steadfastPendingCount}</span></span>
+              </div>
             </div>
+            
             <div className="flex flex-col sm:flex-row gap-2.5 w-full lg:w-auto items-center">
               <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="w-full sm:w-auto border border-slate-300 rounded-lg px-3 py-2 text-xs bg-white text-slate-900 font-bold focus:outline-none focus:border-slate-900 cursor-pointer">
                 <option value="all">All Statuses (সব অর্ডার)</option>
-                {WOO_STATUSES.map((st) => (
-                  <option key={st.value} value={st.value}>{st.label}</option>
-                ))}
+                {WOO_STATUSES.map((st) => <option key={st.value} value={st.value}>{st.label}</option>)}
               </select>
               <div className="relative w-full sm:w-72">
                 <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
@@ -910,7 +620,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Orders Table */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-300 mt-4 w-full">
           {loading ? (
             <div className="p-20 text-center text-slate-600 font-bold text-sm">অর্ডার লোড হচ্ছে...</div>
@@ -918,32 +627,12 @@ export default function Dashboard() {
             <div className="p-20 text-center text-slate-600 font-bold text-sm">কোনো অর্ডার পাওয়া যায়নি।</div>
           ) : (
             <>
-              <style dangerouslySetInnerHTML={{
-                __html: `
-                .slim-scroll::-webkit-scrollbar {
-                  height: 6px;
-                  width: 6px;
-                }
-                .slim-scroll::-webkit-scrollbar-track {
-                  background: #f1f5f9;
-                }
-                .slim-scroll::-webkit-scrollbar-thumb {
-                  background-color: #94a3b8;
-                  border-radius: 3px;
-                }
-                .slim-scroll::-webkit-scrollbar-thumb:hover {
-                  background-color: #64748b;
-                }
-                `
-              }} />
-
+              <style dangerouslySetInnerHTML={{ __html: `.slim-scroll::-webkit-scrollbar { height: 6px; width: 6px; } .slim-scroll::-webkit-scrollbar-track { background: #f1f5f9; } .slim-scroll::-webkit-scrollbar-thumb { background-color: #94a3b8; border-radius: 3px; } .slim-scroll::-webkit-scrollbar-thumb:hover { background-color: #64748b; }` }} />
               <div ref={topScrollRef} onScroll={handleTopScroll} className="sticky top-0 z-30 overflow-x-auto slim-scroll bg-slate-100 border-b border-slate-300 h-3.5 shadow-xs w-full">
                 <div className="min-w-[1900px] h-full"></div>
               </div>
-
               <div ref={tableScrollRef} onScroll={handleTableScroll} className="overflow-x-auto slim-scroll relative w-full">
                 <table className="w-full text-left border-collapse min-w-[1900px]">
-                  
                   <thead className="sticky top-[14px] z-30 bg-slate-900 text-white shadow-md">
                     <tr className="text-[11px] uppercase font-bold tracking-wider">
                       <th className="p-3.5 w-36 border-r border-slate-800">Invoice / Store</th>
@@ -956,7 +645,6 @@ export default function Dashboard() {
                       <th className="p-3.5 w-80 text-center">Steadfast Push & Live Status</th>
                     </tr>
                   </thead>
-                  
                   <tbody className="text-xs">
                     {filteredOrders.map((order, index) => {
                       const cleanPhone = order.phone ? order.phone.replace(/[^0-9]/g, '') : '';
@@ -967,226 +655,204 @@ export default function Dashboard() {
                       const availableThanas = selectedDistrictObj ? selectedDistrictObj.thanas : [];
                       
                       const isToday = isTodayOrder(order.dateCreated);
-                      
-                      let rowBgClass = order.isNewRow 
-                        ? 'bg-emerald-50 border-2 border-emerald-500' 
-                        : isRecent 
-                        ? 'bg-rose-50 hover:bg-rose-100/70' 
-                        : isDuplicate 
-                        ? 'bg-amber-50 hover:bg-amber-100/70' 
-                        : isToday 
-                        ? 'bg-emerald-50/60 hover:bg-emerald-100/60 border-l-4 border-l-emerald-500' 
-                        : 'bg-amber-50/40 hover:bg-amber-100/50 border-l-4 border-l-amber-400';
-
+                      let rowBgClass = order.isNewRow ? 'bg-emerald-50 border-2 border-emerald-500' : isRecent ? 'bg-rose-50 hover:bg-rose-100/70' : isDuplicate ? 'bg-amber-50 hover:bg-amber-100/70' : isToday ? 'bg-emerald-50/60 hover:bg-emerald-100/60 border-l-4 border-l-emerald-500' : 'bg-amber-50/40 hover:bg-amber-100/50 border-l-4 border-l-amber-400';
                       const currentItemList = order.items ? order.items.split(',').map((s) => s.trim()).filter(Boolean) : [];
 
+                      // 🚀 ডেট সেপারেটর লজিক (প্রতিদিনের প্রথম অর্ডারে ডেট হেডার দেখাবে)
+                      const currentOrderDate = formatOrderDate(order.dateCreated);
+                      const prevOrderDate = index > 0 && !order.isNewRow && !filteredOrders[index - 1].isNewRow ? formatOrderDate(filteredOrders[index - 1].dateCreated) : null;
+                      const showDateSeparator = !order.isNewRow && currentOrderDate !== prevOrderDate;
+
                       return (
-                        <tr key={`${order.storeId}-${order.id}`} className={`transition-colors border-b border-slate-200 ${rowBgClass}`}>
-                          <td className="p-3 align-top font-bold border-r border-slate-200 space-y-1.5">
-                            <div className="w-full h-[32px] flex items-center justify-center font-mono text-xs font-black text-slate-950 bg-slate-100 border border-slate-300 rounded shadow-2xs">
-                              {order.isNewRow ? 'NEW' : `#${order.invoice}`}
-                            </div>
-                            {order.isNewRow ? (
-                              <select value={order.storeId} onChange={(e) => handleFieldChange(order.id, order.storeId, 'storeId', e.target.value)} className="w-full h-[32px] text-[11px] text-slate-900 bg-white font-bold px-2 rounded cursor-pointer border border-slate-300 shadow-2xs">
-                                <option value="store1">Ruhama Wear</option>
-                                <option value="store2">Aastha Naturals BD</option>
-                              </select>
-                            ) : (
-                              <div className="w-full h-[32px] flex items-center justify-center text-[11px] text-slate-700 bg-white border border-slate-200 font-bold px-2 rounded shadow-2xs">
-                                {order.storeName}
+                        <React.Fragment key={`${order.storeId}-${order.id}`}>
+                          {showDateSeparator && (
+                            <tr>
+                              <td colSpan={8} className="bg-slate-800 text-amber-400 font-black text-sm text-center py-2.5 border-y-4 border-slate-950 shadow-inner">
+                                📅 {currentOrderDate} এর অর্ডারসমূহ
+                              </td>
+                            </tr>
+                          )}
+                          <tr className={`transition-colors border-b border-slate-200 ${rowBgClass}`}>
+                            <td className="p-3 align-top font-bold border-r border-slate-200 space-y-1.5">
+                              <div className="w-full h-[32px] flex items-center justify-center font-mono text-xs font-black text-slate-950 bg-slate-100 border border-slate-300 rounded shadow-2xs">
+                                {order.isNewRow ? 'NEW' : `#${order.invoice}`}
                               </div>
-                            )}
-                          </td>
-
-                          <td className="p-3 align-top border-r border-slate-200">
-                            <textarea rows={4} value={order.customerName} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customerName', e.target.value)} placeholder="কাস্টমারের নাম..." className="w-full font-black text-sm text-slate-950 bg-transparent focus:bg-white border border-transparent focus:border-slate-300 rounded p-1 transition resize-none outline-none leading-snug whitespace-normal break-words placeholder:text-slate-400 placeholder:text-xs" />
-                          </td>
-
-                          <td className="p-3 align-top text-slate-700 font-bold border-r border-slate-200 space-y-1.5">
-                            <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
-                              <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                              <span className="font-bold text-slate-900">{formatOrderTime(order.dateCreated)}</span>
-                            </div>
-                            <div className={`w-full h-[32px] flex items-center gap-1.5 border px-2.5 rounded shadow-2xs text-[11px] ${isToday ? 'bg-emerald-100 border-emerald-400 text-emerald-950 font-black' : 'bg-amber-100 border-amber-300 text-amber-950 font-black'}`}>
-                              <Calendar className="w-3.5 h-3.5 shrink-0" />
-                              <span>{formatOrderDate(order.dateCreated)}</span>
-                            </div>
-                          </td>
-
-                          <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                            <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                              <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                              <input type="text" value={order.phone} placeholder="01XXXXXXXXX" onChange={(e) => handleFieldChange(order.id, order.storeId, 'phone', e.target.value)} className={`w-full text-xs font-mono font-black bg-transparent outline-none tracking-wide ${isRecent ? 'text-red-700' : isDuplicate ? 'text-amber-900' : 'text-slate-950'}`} />
-                            </div>
-                            {isRecent ? (
-                              <div className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold">
-                                <AlertTriangle className="w-3 h-3 shrink-0 text-red-600" />
-                                <span>রিসেন্ট ডুপ্লিকেট ({phoneInfo.recentOrders.length}টি)</span>
-                              </div>
-                            ) : isDuplicate ? (
-                              <div className="flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold">
-                                <AlertTriangle className="w-3 h-3 shrink-0 text-amber-600" />
-                                <span>মোট অর্ডার: {phoneInfo.count}টি</span>
-                              </div>
-                            ) : null}
-                            <button onClick={() => { const newCallState = !order.callDone; handleFieldChange(order.id, order.storeId, 'callDone', newCallState); if (!order.staffName) { handleFieldChange(order.id, order.storeId, 'staffName', currentUser); } }} className={`w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold rounded transition border cursor-pointer shadow-2xs ${order.callDone ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'}`}>
-                              <PhoneCall className="w-3.5 h-3.5" /> {order.callDone ? 'কল সম্পন্ন হয়েছে' : 'কল দিন'}
-                            </button>
-                            <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                              <UserCheck className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                              <select value={order.staffName || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'staffName', e.target.value)} className="w-full text-xs font-bold bg-transparent text-slate-900 cursor-pointer outline-none">
-                                <option value="">স্টাফ নির্বাচন করুন</option>
-                                {STAFF_MEMBERS.map((staff) => (
-                                  <option key={staff} value={staff}>{staff}</option>
-                                ))}
-                              </select>
-                            </div>
-                          </td>
-
-                          <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                            <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs">
-                              <MapPin className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
-                              <textarea rows={3} value={order.streetAddress} onChange={(e) => handleFieldChange(order.id, order.storeId, 'streetAddress', e.target.value)} placeholder="বিস্তারিত ঠিকানা..." className="w-full text-xs font-bold text-slate-900 bg-transparent resize-y leading-snug outline-none min-h-[58px]" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-1.5">
-                              <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
-                                <select value={order.thana || ''} disabled={!order.district} onChange={(e) => handleFieldChange(order.id, order.storeId, 'thana', e.target.value)} className="w-full text-[11px] bg-transparent text-slate-900 font-bold disabled:text-slate-400 cursor-pointer outline-none">
-                                  <option value="">থানা বাছুন</option>
-                                  {availableThanas.map((thana) => (
-                                    <option key={thana} value={thana}>{thana}</option>
-                                  ))}
+                              {order.isNewRow ? (
+                                <select value={order.storeId} onChange={(e) => handleFieldChange(order.id, order.storeId, 'storeId', e.target.value)} className="w-full h-[32px] text-[11px] text-slate-900 bg-white font-bold px-2 rounded cursor-pointer border border-slate-300 shadow-2xs">
+                                  <option value="store1">Ruhama Wear</option>
+                                  <option value="store2">Aastha Naturals BD</option>
                                 </select>
-                              </div>
-                              <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
-                                <select value={order.district || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'district', e.target.value)} className="w-full text-[11px] bg-transparent text-slate-900 font-bold cursor-pointer outline-none">
-                                  <option value="">জেলা বাছুন</option>
-                                  {BANGLADESH_DISTRICTS.map((d) => (
-                                    <option key={d.district} value={d.district}>{d.district}</option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
-                            <div className="bg-white border border-slate-300 rounded p-1.5 shadow-2xs space-y-1.5">
-                              <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 px-1">
-                                <span>সিলেক্টেড আইটেমসমূহ: </span>
-                                <span className="text-emerald-700 font-mono">{currentItemList.length} পিস</span>
-                              </div>
-                              <div className="flex flex-wrap gap-1 min-h-[32px] p-1 bg-slate-50 border border-slate-200 rounded">
-                                {currentItemList.length === 0 ? (
-                                  <span className="text-[11px] text-slate-400 italic px-1"> কোনো আইটেম সিলেক্ট করা হয়নি</span>
-                                ) : (
-                                  currentItemList.map((item, idx) => (
-                                    <span key={idx} className="inline-flex items-center gap-1 bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-2xs">
-                                      {item}
-                                      <button type="button" onClick={() => handleRemoveItem(order.id, order.storeId, idx)} className="text-rose-400 hover:text-rose-300 font-black cursor-pointer" title="আইটেমটি বাদ দিন">X</button>
-                                    </span>
-                                  ))
-                                )}
-                              </div>
-                              <select onChange={(e) => { if (e.target.value) { handleAddItem(order.id, order.storeId, e.target.value); e.target.value = ''; } }} className="w-full h-[32px] text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded px-2 cursor-pointer outline-none shadow-2xs">
-                                <option value="">+ ড্রপডাউন থেকে আইটেম যোগ করুন...</option>
-                                {PRODUCT_VARIATIONS.map((prod) => (
-                                  <option key={prod} value={prod}>{prod}</option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="grid grid-cols-2 gap-1.5">
-                              <div className="h-[34px] flex items-center gap-1.5 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                                <span className="text-xs font-black text-slate-700">COD: </span>
-                                <input type="number" value={order.total} onFocus={(e) => e.target.select()} onChange={(e) => handleFieldChange(order.id, order.storeId, 'total', e.target.value)} placeholder="৳" className="w-full text-xs font-black text-emerald-800 bg-transparent outline-none" />
-                              </div>
-                              <div className="h-[34px] flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded px-2.5 shadow-2xs">
-                                <Shirt className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                                <span className="text-[11px] font-black text-slate-600">সাইজ: </span>
-                                <input type="text" value={order.size || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'size', e.target.value.toUpperCase())} placeholder="XL" className="w-full text-xs font-black text-slate-950 uppercase text-center bg-white border border-slate-200 rounded py-0.5 outline-none" />
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="p-3 align-top text-center space-y-1.5 border-r border-slate-200">
-                            <select value={order.status} disabled={updatingId === order.id} onChange={(e) => handleSaveOrder(order, e.target.value)} className={`w-full h-[34px] text-xs font-bold border rounded px-2.5 text-center cursor-pointer shadow-2xs ${getStatusColor(order.status)}`}>
-                              {WOO_STATUSES.map((st) => (
-                                <option key={st.value} value={st.value} className="bg-white text-slate-900">{st.label}</option>
-                              ))}
-                            </select>
-                            <button onClick={() => handleSaveOrder(order)} disabled={updatingId === order.id} className="w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded transition cursor-pointer disabled:opacity-50 shadow-2xs">
-                              <Save className={`w-3.5 h-3.5 ${updatingId === order.id ? 'animate-spin' : ''}`} />
-                              {updatingId === order.id ? 'সেভ হচ্ছে...' : 'তথ্য সেভ করুন (Save)'}
-                            </button>
-                            <div className="grid grid-cols-3 gap-1.5">
-                              <button onClick={() => handleSaveOrder(order, 'on-hold')} disabled={updatingId === order.id} title="রাখুন" className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-300 rounded cursor-pointer shadow-2xs">
-                                <BookmarkCheck className="w-3 h-3" /> রাখুন
-                              </button>
-                              <button onClick={() => handleSaveOrder(order, 'cancelled')} disabled={updatingId === order.id} title="বাতিল" className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-300 rounded cursor-pointer shadow-2xs">
-                                <XCircle className="w-3 h-3" /> বাতিল
-                              </button>
-                              <button onClick={() => handleDeleteOrder(order)} disabled={updatingId === order.id} title="ডিলিট" className="h-[30px] flex items-center justify-center gap-1 text-[11px] font-bold text-slate-700 hover:text-red-700 bg-slate-50 hover:bg-red-50 border border-slate-200 rounded cursor-pointer shadow-2xs">
-                                <Trash2 className="w-3 h-3" /> ডিলিট
-                              </button>
-                            </div>
-                          </td>
-
-                          <td className="p-3 align-top space-y-1.5">
-                            {!order.trackingCode && !order.consignmentId && (
-                              <>
-                                <div className="w-full h-[34px] flex items-center bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
-                                  <input type="text" value={order.customNote || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customNote', e.target.value)} placeholder="কুরিয়ার স্পেশাল নোট / কল রিমার্ক..." className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 bg-transparent outline-none" />
+                              ) : (
+                                <div className="w-full h-[32px] flex items-center justify-center text-[11px] text-slate-700 bg-white border border-slate-200 font-bold px-2 rounded shadow-2xs">
+                                  {order.storeName}
                                 </div>
+                              )}
+                            </td>
 
-                                <button onClick={() => handleSendToSteadfast(order)} disabled={sendingId === order.id} className="w-full h-[34px] flex items-center justify-center gap-1.5 rounded text-xs font-bold transition cursor-pointer shadow-2xs bg-slate-800 hover:bg-slate-900 text-white">
-                                  <Send className="w-3.5 h-3.5" />
-                                  {sendingId === order.id ? 'Sending to Steadfast...' : 'Send to Steadfast'}
+                            <td className="p-3 align-top border-r border-slate-200">
+                              <textarea rows={4} value={order.customerName} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customerName', e.target.value)} placeholder="কাস্টমারের নাম..." className="w-full font-black text-sm text-slate-950 bg-transparent focus:bg-white border border-transparent focus:border-slate-300 rounded p-1 transition resize-none outline-none leading-snug whitespace-normal break-words placeholder:text-slate-400 placeholder:text-xs" />
+                            </td>
+
+                            <td className="p-3 align-top text-slate-700 font-bold border-r border-slate-200 space-y-1.5">
+                              <div className="w-full h-[32px] flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 rounded shadow-2xs text-[11px]">
+                                <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                <span className="font-bold text-slate-900">{formatOrderTime(order.dateCreated)}</span>
+                              </div>
+                              <div className={`w-full h-[32px] flex items-center gap-1.5 border px-2.5 rounded shadow-2xs text-[11px] ${isToday ? 'bg-emerald-100 border-emerald-400 text-emerald-950 font-black' : 'bg-amber-100 border-amber-300 text-amber-950 font-black'}`}>
+                                <Calendar className="w-3.5 h-3.5 shrink-0" />
+                                <span>{currentOrderDate}</span>
+                              </div>
+                            </td>
+
+                            <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
+                              <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
+                                <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                <input type="text" value={order.phone} placeholder="01XXXXXXXXX" onChange={(e) => handleFieldChange(order.id, order.storeId, 'phone', e.target.value)} className={`w-full text-xs font-mono font-black bg-transparent outline-none tracking-wide ${isRecent ? 'text-red-700' : isDuplicate ? 'text-amber-900' : 'text-slate-950'}`} />
+                              </div>
+                              {isRecent ? (
+                                <div className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold">
+                                  <AlertTriangle className="w-3 h-3 shrink-0 text-red-600" />
+                                  <span>রিসেন্ট ডুপ্লিকেট ({phoneInfo.recentOrders.length}টি)</span>
+                                </div>
+                              ) : isDuplicate ? (
+                                <div className="flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold">
+                                  <AlertTriangle className="w-3 h-3 shrink-0 text-amber-600" />
+                                  <span>মোট অর্ডার: {phoneInfo.count}টি</span>
+                                </div>
+                              ) : null}
+                              <button onClick={() => { const newCallState = !order.callDone; handleFieldChange(order.id, order.storeId, 'callDone', newCallState); if (!order.staffName) { handleFieldChange(order.id, order.storeId, 'staffName', currentUser); } }} className={`w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold rounded transition border cursor-pointer shadow-2xs ${order.callDone ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'}`}>
+                                <PhoneCall className="w-3.5 h-3.5" /> {order.callDone ? 'কল সম্পন্ন হয়েছে' : 'কল দিন'}
+                              </button>
+                              <div className="w-full h-[34px] flex items-center gap-2 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
+                                <UserCheck className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                <select value={order.staffName || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'staffName', e.target.value)} className="w-full text-xs font-bold bg-transparent text-slate-900 cursor-pointer outline-none">
+                                  <option value="">স্টাফ নির্বাচন করুন</option>
+                                  {STAFF_MEMBERS.map((staff) => <option key={staff} value={staff}>{staff}</option>)}
+                                </select>
+                              </div>
+                            </td>
+
+                            <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
+                              <div className="flex items-start gap-1 bg-white border border-slate-300 rounded p-1.5 shadow-2xs">
+                                <MapPin className="w-3.5 h-3.5 text-slate-500 mt-1 shrink-0" />
+                                <textarea rows={3} value={order.streetAddress} onChange={(e) => handleFieldChange(order.id, order.storeId, 'streetAddress', e.target.value)} placeholder="বিস্তারিত ঠিকানা..." className="w-full text-xs font-bold text-slate-900 bg-transparent resize-y leading-snug outline-none min-h-[58px]" />
+                              </div>
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
+                                  <select value={order.thana || ''} disabled={!order.district} onChange={(e) => handleFieldChange(order.id, order.storeId, 'thana', e.target.value)} className="w-full text-[11px] bg-transparent text-slate-900 font-bold disabled:text-slate-400 cursor-pointer outline-none">
+                                    <option value="">থানা বাছুন</option>
+                                    {availableThanas.map((thana) => <option key={thana} value={thana}>{thana}</option>)}
+                                  </select>
+                                </div>
+                                <div className="h-[34px] flex items-center bg-white border border-slate-300 rounded px-2 shadow-2xs">
+                                  <select value={order.district || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'district', e.target.value)} className="w-full text-[11px] bg-transparent text-slate-900 font-bold cursor-pointer outline-none">
+                                    <option value="">জেলা বাছুন</option>
+                                    {BANGLADESH_DISTRICTS.map((d) => <option key={d.district} value={d.district}>{d.district}</option>)}
+                                  </select>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="p-3 align-top space-y-1.5 border-r border-slate-200">
+                              <div className="bg-white border border-slate-300 rounded p-1.5 shadow-2xs space-y-1.5">
+                                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 px-1">
+                                  <span>সিলেক্টেড আইটেমসমূহ: </span>
+                                  <span className="text-emerald-700 font-mono">{currentItemList.length} পিস</span>
+                                </div>
+                                <div className="flex flex-wrap gap-1 min-h-[32px] p-1 bg-slate-50 border border-slate-200 rounded">
+                                  {currentItemList.length === 0 ? (
+                                    <span className="text-[11px] text-slate-400 italic px-1"> কোনো আইটেম সিলেক্ট করা হয়নি</span>
+                                  ) : (
+                                    currentItemList.map((item, idx) => (
+                                      <span key={idx} className="inline-flex items-center gap-1 bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-2xs">
+                                        {item}
+                                        <button type="button" onClick={() => handleRemoveItem(order.id, order.storeId, idx)} className="text-rose-400 hover:text-rose-300 font-black cursor-pointer" title="আইটেমটি বাদ দিন">X</button>
+                                      </span>
+                                    ))
+                                  )}
+                                </div>
+                                <select onChange={(e) => { if (e.target.value) { handleAddItem(order.id, order.storeId, e.target.value); e.target.value = ''; } }} className="w-full h-[32px] text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded px-2 cursor-pointer outline-none shadow-2xs">
+                                  <option value="">+ ড্রপডাউন থেকে আইটেম যোগ করুন...</option>
+                                  {PRODUCT_VARIATIONS.map((prod) => <option key={prod} value={prod}>{prod}</option>)}
+                                </select>
+                              </div>
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <div className="h-[34px] flex items-center gap-1.5 bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
+                                  <span className="text-xs font-black text-slate-700">COD: </span>
+                                  <input type="number" value={order.total} onFocus={(e) => e.target.select()} onChange={(e) => handleFieldChange(order.id, order.storeId, 'total', e.target.value)} placeholder="৳" className="w-full text-xs font-black text-emerald-800 bg-transparent outline-none" />
+                                </div>
+                                <div className="h-[34px] flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded px-2.5 shadow-2xs">
+                                  <Shirt className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                                  <span className="text-[11px] font-black text-slate-600">সাইজ: </span>
+                                  <input type="text" value={order.size || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'size', e.target.value.toUpperCase())} placeholder="XL" className="w-full text-xs font-black text-slate-950 uppercase text-center bg-white border border-slate-200 rounded py-0.5 outline-none" />
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="p-3 align-top text-center space-y-1.5 border-r border-slate-200">
+                              {/* 🚀 স্ট্যাটাস লক (সম্পূর্ণ অটোমেটিক) */}
+                              <select value={order.status} disabled={true} className={`w-full h-[34px] text-xs font-bold border rounded px-2.5 text-center shadow-2xs opacity-80 cursor-not-allowed ${getStatusColor(order.status)}`}>
+                                {WOO_STATUSES.map((st) => <option key={st.value} value={st.value} className="bg-white text-slate-900">{st.label}</option>)}
+                              </select>
+                              
+                              <button onClick={() => handleSaveOrder(order)} disabled={updatingId === order.id} className="w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded transition cursor-pointer disabled:opacity-50 shadow-2xs mt-1.5">
+                                <Save className={`w-3.5 h-3.5 ${updatingId === order.id ? 'animate-spin' : ''}`} />
+                                {updatingId === order.id ? 'সেভ হচ্ছে...' : 'তথ্য সেভ করুন (Save)'}
+                              </button>
+                              
+                              <div className="pt-1.5">
+                                <button onClick={() => handleDeleteOrder(order)} disabled={updatingId === order.id} title="ডিলিট" className="h-[30px] w-full flex items-center justify-center gap-1 text-[11px] font-bold text-slate-700 hover:text-red-700 bg-slate-50 hover:bg-red-50 border border-slate-200 rounded cursor-pointer shadow-2xs">
+                                  <Trash2 className="w-3 h-3" /> ডিলিট করুন (Delete)
                                 </button>
-                              </>
-                            )}
+                              </div>
+                            </td>
 
-                            {(order.trackingCode || order.consignmentId) && (
-                              (() => {
-                                const style = getCourierBoxStyle(order.courierStatus);
-                                return (
-                                  <div className={`border rounded-lg p-2.5 space-y-1.5 text-left shadow-2xs transition-all ${style.box}`}>
-                                    <div className="text-[11px] font-bold space-y-1">
-                                      <div className="flex justify-between items-center border-b pb-1 border-slate-200">
-                                        <span className="text-slate-600">ইনভয়েস:</span>
-                                        <span className="font-mono text-slate-950 font-black">#{order.invoice}</span>
-                                      </div>
-                                      <div className="flex justify-between items-center border-b pb-1 border-slate-200">
-                                        <span className="text-slate-600">সিআইডি (CID):</span>
-                                        <span className="font-mono text-slate-950 font-black">{order.consignmentId || order.trackingCode}</span>
-                                      </div>
-                                      <div>
-                                        <span className="text-slate-600">নাম:</span> <span className="font-black text-slate-950">{order.customerName || 'N/A'}</span>
-                                      </div>
-                                      <div>
-                                        <span className="text-slate-600">মোবাইল:</span> <code className="font-mono font-black text-slate-950">{order.phone || 'N/A'}</code>
-                                      </div>
-                                      <div>
-                                        <span className="text-slate-600">আইটেম:</span> <span className="text-slate-950">{order.items || 'N/A'} {order.size ? `[সাইজ: ${order.size}]` : ''}</span>
-                                      </div>
-                                      {order.customNote && (
-                                        <div className="bg-white/90 border border-slate-300 rounded p-1 text-[11px] font-bold text-slate-900 mt-1">
-                                          <span className="text-rose-700">নোট/রিমার্ক:</span> {order.customNote}
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    <div className={`w-full py-1 px-1.5 rounded text-center text-[10px] font-black uppercase tracking-wider text-white shadow-xs ${style.badge}`}>
-                                      {order.courierStatus ? order.courierStatus.replace(/_/g, ' ') : 'IN REVIEW'}
-                                    </div>
-
-                                    <button onClick={() => handleCheckCourierStatus(order)} disabled={trackingId === order.id} className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-800 bg-white hover:bg-slate-100 py-1.5 px-2 rounded w-full border border-slate-300 transition cursor-pointer shadow-2xs">
-                                      <RotateCw className={`w-3 h-3 ${trackingId === order.id ? 'animate-spin' : ''}`} />
-                                      {trackingId === order.id ? 'চেক হচ্ছে...' : 'লাইভ স্ট্যাটাস চেক'}
-                                    </button>
+                            <td className="p-3 align-top space-y-1.5">
+                              {!order.trackingCode && !order.consignmentId && (
+                                <>
+                                  <div className="w-full h-[34px] flex items-center bg-white border border-slate-300 rounded px-2.5 shadow-2xs">
+                                    <input type="text" value={order.customNote || ''} onChange={(e) => handleFieldChange(order.id, order.storeId, 'customNote', e.target.value)} placeholder="কুরিয়ার স্পেশাল নোট / কল রিমার্ক..." className="w-full text-xs font-bold text-slate-900 placeholder:text-slate-400 bg-transparent outline-none" />
                                   </div>
-                                );
-                              })()
-                            )}
-                          </td>
-                        </tr>
+                                  <button onClick={() => handleSendToSteadfast(order)} disabled={sendingId === order.id} className="w-full h-[34px] flex items-center justify-center gap-1.5 rounded text-xs font-bold transition cursor-pointer shadow-2xs bg-slate-800 hover:bg-slate-900 text-white">
+                                    <Send className="w-3.5 h-3.5" />
+                                    {sendingId === order.id ? 'Sending to Steadfast...' : 'Send to Steadfast'}
+                                  </button>
+                                </>
+                              )}
+
+                              {(order.trackingCode || order.consignmentId) && (
+                                (() => {
+                                  const style = getCourierBoxStyle(order.courierStatus);
+                                  return (
+                                    <div className={`border rounded-lg p-2.5 space-y-1.5 text-left shadow-2xs transition-all ${style.box}`}>
+                                      <div className="text-[11px] font-bold space-y-1">
+                                        <div className="flex justify-between items-center border-b pb-1 border-slate-200">
+                                          <span className="text-slate-600">ইনভয়েস:</span>
+                                          <span className="font-mono text-slate-950 font-black">#{order.invoice}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center border-b pb-1 border-slate-200">
+                                          <span className="text-slate-600">সিআইডি (CID):</span>
+                                          <span className="font-mono text-slate-950 font-black">{order.consignmentId || order.trackingCode}</span>
+                                        </div>
+                                        <div><span className="text-slate-600">নাম:</span> <span className="font-black text-slate-950">{order.customerName || 'N/A'}</span></div>
+                                        <div><span className="text-slate-600">মোবাইল:</span> <code className="font-mono font-black text-slate-950">{order.phone || 'N/A'}</code></div>
+                                        <div><span className="text-slate-600">আইটেম:</span> <span className="text-slate-950">{order.items || 'N/A'} {order.size ? `[সাইজ: ${order.size}]` : ''}</span></div>
+                                        {order.customNote && <div className="bg-white/90 border border-slate-300 rounded p-1 text-[11px] font-bold text-slate-900 mt-1"><span className="text-rose-700">নোট/রিমার্ক:</span> {order.customNote}</div>}
+                                      </div>
+                                      <div className={`w-full py-1 px-1.5 rounded text-center text-[10px] font-black uppercase tracking-wider text-white shadow-xs ${style.badge}`}>
+                                        {order.courierStatus ? order.courierStatus.replace(/_/g, ' ') : 'IN REVIEW'}
+                                      </div>
+                                      <button onClick={() => handleCheckCourierStatus(order)} disabled={trackingId === order.id} className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-800 bg-white hover:bg-slate-100 py-1.5 px-2 rounded w-full border border-slate-300 transition cursor-pointer shadow-2xs">
+                                        <RotateCw className={`w-3 h-3 ${trackingId === order.id ? 'animate-spin' : ''}`} />
+                                        {trackingId === order.id ? 'চেক হচ্ছে...' : 'লাইভ স্ট্যাটাস চেক'}
+                                      </button>
+                                    </div>
+                                  );
+                                })()
+                              )}
+                            </td>
+                          </tr>
+                        </React.Fragment>
                       );
                     })}
                   </tbody>
