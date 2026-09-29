@@ -71,10 +71,16 @@ export default function LoginPage() {
       {/* Login Card */}
       <div className="relative bg-[#111622]/85 backdrop-blur-xl border border-blue-500/30 rounded-3xl shadow-2xl p-8 md:p-10 w-full max-w-md">
         
-        {/* Portal Branding with Bold Black Rock Corporation & English Greetings */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white font-black text-xl mb-3 shadow-lg shadow-blue-500/30">
-            BR
+        {/* Portal Branding with Real Logo & Bold Typography */}
+        <div className="text-center mb-8 flex flex-col items-center">
+          
+          {/* আসল লোগো ইমেজ */}
+          <div className="w-16 h-16 mb-3 flex items-center justify-center overflow-hidden rounded-2xl bg-black border border-slate-800 shadow-md">
+            <img 
+              src="/logo.jpg" 
+              alt="Black Rock Corporation Logo" 
+              className="w-full h-full object-contain"
+            />
           </div>
           
           <h3 className="text-xs font-black tracking-[0.25em] text-blue-400 uppercase mb-1">
