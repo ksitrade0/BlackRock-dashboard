@@ -137,6 +137,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     } catch (err) { alert('❌ বাল্ক ডিলিট করতে সমস্যা হয়েছে!'); }
   };
 
+  // সম্পূর্ণ ও নিখুঁত আইটেম ব্রেকডাউন প্রসেসিং
   const groupedStatement = useMemo(() => {
     let filtered = statementData;
     if (statementFilterType === 'day' && statementDateVal) {
@@ -146,7 +147,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     } else if (statementFilterType === 'year' && statementDateVal) {
       filtered = statementData.filter(row => row.date && new Date(row.date).getFullYear().toString() === statementDateVal);
     } else if (statementFilterType === 'selected_item') {
-      // সিলেক্টেড আইটেম ফিল্টার লজিক
+      // সিলেক্টেড আইটেম ফিল্টার
     }
 
     const groups: any[] = []; const map = new Map();
@@ -158,21 +159,32 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         ext.quantity += Number(row.quantity); 
         ext.total += Number(row.total); 
         ext.rawIds.push(row.id);
-        if(row.buyingPrice) ext.breakdown.push({ name: row.itemName, qty: row.quantity, price: row.buyingPrice });
+        ext.breakdown.push({ name: row.itemName, qty: row.quantity, price: row.buyingPrice || 0 });
       } else { 
-        map.set(key, { ...row, itemNames: [row.itemName], quantity: Number(row.quantity), total: Number(row.total), rawIds: [row.id], breakdown: [{ name: row.itemName, qty: row.quantity, price: row.buyingPrice || 0 }] }); 
+        map.set(key, { 
+          ...row, 
+          itemNames: [row.itemName], 
+          quantity: Number(row.quantity), 
+          total: Number(row.total), 
+          rawIds: [row.id], 
+          breakdown: [{ name: row.itemName, qty: row.quantity, price: row.buyingPrice || 0 }] 
+        }); 
       }
     });
     map.forEach(val => { val.itemName = val.itemNames.join(' / '); groups.push(val); });
     return groups;
   }, [statementData, statementFilterType, statementDateVal]);
 
-  const triggerStockPrint = () => {
-    const printContent = document.getElementById('print-statement');
+  // শুধু বাম পাশের চেকবক্স থেকে সিলেক্ট করা রেকর্ডগুলো প্রিন্ট করার ফাংশন (সিলেক্টেড প্রিন্ট)
+  const triggerSelectedStockPrint = () => {
+    if (selectedRowIds.length === 0) {
+      return alert('প্রিন্ট করার জন্য বাম পাশ থেকে অন্তত একটি রেকর্ড সিলেক্ট করুন।');
+    }
+    const printContent = document.getElementById('print-selected-statement');
     if (!printContent) return;
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-      printWindow.document.write(`<html><head><title>Stock Statement & Ledger</title><style>body{font-family:sans-serif;padding:20px} table{width:100%;border-collapse:collapse;margin-top:15px} th,td{border:1px solid #333;padding:8px;font-size:12px} th{background:#f1f5f9;text-align:left}</style></head><body>${printContent.outerHTML}<script>setTimeout(()=>{window.print();window.close();},500);</script></body></html>`);
+      printWindow.document.write(`<html><head><title>Selected Stock Statement Report</title><style>body{font-family:sans-serif;padding:20px} table{width:100%;border-collapse:collapse;margin-top:15px} th,td{border:1px solid #333;padding:8px;font-size:12px} th{background:#f1f5f9;text-align:left}</style></head><body>${printContent.outerHTML}<script>setTimeout(()=>{window.print();window.close();},500);</script></body></html>`);
       printWindow.document.close();
     } else alert('পপ-আপ ব্লকার চালু আছে!');
   };
@@ -224,7 +236,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   const totalExpense = filteredExpenses.reduce((sum, row) => sum + Number(row.amount || 0), 0);
 
   const getWeekNumber = (d: Date) => { const d2 = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const dayNum = d2.getUTCDay() || 7; d2.setUTCDate(d2.getUTCDate() + 4 - dayNum); const yearStart = new Date(Date.UTC(d2.getUTCFullYear(), 0, 1)); return Math.ceil((((d2.getTime() - yearStart.getTime()) / 86400000) + 1) / 7); };
-  const formatWeek = (dateStr: string) => { if(!dateStr) return 'N/A'; const d = new Date(dateStr); return `Week ${getWeekNumber(d)} (${d.toLocaleString('en-GB', { month: 'short' })})`; };
+  const formatWeek = (dateStr: string) => {if(!dateStr) return 'N/A'; const d = new Date(dateStr); return `Week ${getWeekNumber(d)} (${d.toLocaleString('en-GB', { month: 'short' })})`; };
   const toggleSelectRow = (id: string) => { setSelectedRowIds(selectedRowIds.includes(id) ? selectedRowIds.filter(i => i !== id) : [...selectedRowIds, id]); };
   const toggleSelectAll = () => { setSelectedRowIds(selectedRowIds.length === groupedStatement.length ? [] : groupedStatement.map(r => r.id)); };
 
@@ -239,7 +251,8 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     setPrintModalTarget(null);
   };
 
-  const finalPrintTotalStock = groupedStatement.reduce((sum, row) => sum + Number(row.total || 0), 0);
+  const selectedPrintStockList = groupedStatement.filter(r => selectedRowIds.includes(r.id));
+  const finalPrintTotalStock = selectedPrintStockList.reduce((sum, row) => sum + Number(row.total || 0), 0);
   const finalPrintTotalExp = filteredExpenses.reduce((sum, row) => sum + Number(row.amount || 0), 0);
 
   if (!mounted) return null;
@@ -373,8 +386,9 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
                   <div className="flex gap-2">
                     {isSuperAdmin && <button onClick={handleBulkDeleteStatement} className="bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"><Trash2 className="w-4 h-4"/> সিলেক্টেড ডিলিট</button>}
-                    <button onClick={triggerStockPrint} className="bg-slate-900 hover:bg-black text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
-                      <Printer className="w-4 h-4 text-amber-400"/> প্রিন্ট করুন
+                    {/* শুধুমাত্র বাম পাশ থেকে টিক মার্ক করা রেকর্ডসমূহ প্রিন্ট করার বাটন */}
+                    <button onClick={triggerSelectedStockPrint} className="bg-slate-900 hover:bg-black text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
+                      <Printer className="w-4 h-4 text-amber-400"/> সিলেক্টেড প্রিন্ট করুন
                     </button>
                   </div>
                 </div>
@@ -457,13 +471,14 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                   </table>
                 </div>
 
-                <div id="print-statement" className="hidden p-6 bg-white text-black swadhinota-font">
-                   <h2 className="text-xl font-black text-center border-b-2 border-black pb-2 mb-4">Stock Statement & Ledger Report</h2>
-                   <p className="text-xs font-bold mb-2">Filter Type: {statementFilterType.toUpperCase()} {statementDateVal ? `(${statementDateVal})` : ''} | Total Value: ৳ {finalPrintTotalStock}</p>
+                {/* শুধুমাত্র সিলেক্ট করা রেকর্ডসমূহ এবং সেগুলোর সম্পূর্ণ আইটেমভিত্তিক ব্যাখ্যাসহ প্রিন্ট টেমপ্লেট */}
+                <div id="print-selected-statement" className="hidden p-6 bg-white text-black swadhinota-font">
+                   <h2 className="text-xl font-black text-center border-b-2 border-black pb-2 mb-4">Selected Stock Statement & Ledger Report</h2>
+                   <p className="text-xs font-bold mb-2">Selected Records Count: {selectedPrintStockList.length} | Total Value: ৳ {finalPrintTotalStock}</p>
                    <table className="w-full border-collapse border border-black text-xs">
-                     <thead><tr className="bg-gray-100"><th>Date</th><th>Week/Month</th><th>Type</th><th>Reference</th><th>Items & Detailed Breakdown</th><th>Qty</th><th>Total (৳)</th></tr></thead>
+                     <thead><tr className="bg-gray-150"><th>Date</th><th>Week/Month</th><th>Type</th><th>Reference</th><th>Items & Detailed Breakdown</th><th>Qty</th><th>Total (৳)</th></tr></thead>
                      <tbody>
-                       {groupedStatement.map(r => (
+                       {selectedPrintStockList.map(r => (
                          <tr key={r.id}>
                            <td>{new Date(r.date).toLocaleString('en-GB')}</td>
                            <td>{formatWeek(r.date)}</td>
