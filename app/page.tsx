@@ -116,7 +116,7 @@ export default function Dashboard() {
 
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
-    if (!isAutomatic) setMessage({ text: 'স্টেডফাস্ট থেকে রিয়েল-টাইম ডেটা চেক করা হচ্ছে (অধিক পার্সেল থাকলে কিছুক্ষণ সময় লাগতে পারে)...', type: 'success' });
+    if (!isAutomatic) setMessage({ text: 'স্টেডফাস্ট থেকে রিয়ে-টাইম ডেটা চেক করা হচ্ছে (অধিক পার্সেল থাকলে কিছুক্ষণ সময় লাগতে পারে)...', type: 'success' });
     
     const updatedOrders = [...orders];
     
@@ -329,20 +329,19 @@ export default function Dashboard() {
         setMessage({ text: `Order #${finalInvoice} সফলভাবে সেভ করা হয়েছে!`, type: 'success' });
         
         if (!isCourierPush) {
-          // 🚀 UPDATE: আপনার কথামতো টেলিগ্রাম মেসেজে ফুল ডিটেইলস অ্যাড করা হয়েছে 
-          const addressParts = [order.streetAddress, order.thana, order.district].filter(Boolean);
+          const addressParts = [order.streetAddress, order.thana ? `Thana: ${order.thana}` : '', order.district ? `District: ${order.district}` : ''].filter(Boolean);
           const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'N/A';
           const itemsText = order.items || 'N/A';
           const sizeText = order.size ? `[সাইজ: ${order.size}]` : '';
 
           let logMsg = `<b>${order.isNewRow ? 'নতুন অর্ডার তৈরি' : 'অর্ডার আপডেট ও সেভ'}</b>\n-----------------------\n`;
-          logMsg += `🏬 <b>স্টোর:</b> ${order.storeName}\n`;
-          logMsg += `🧾 <b>ইনভয়েস:</b> #${finalInvoice}\n`;
+          logMsg += `🏢 <b>স্টোর:</b> ${order.storeName}\n`;
+          logMsg += `🧾 <b>ইনভয়েস:</b> #${finalInvoice}\n`;
           logMsg += `👤 <b>কাস্টমার:</b> ${order.customerName}\n`;
-          logMsg += `📱 <b>মোবাইল:</b> <code>${order.phone}</code>\n`;
+          logMsg += `📞 <b>মোবাইল:</b> <code>${order.phone}</code>\n`;
           logMsg += `📍 <b>ঠিকানা:</b> ${fullAddress}\n`;
           logMsg += `📦 <b>আইটেম:</b> ${itemsText} ${sizeText}\n`;
-          logMsg += `💰 <b>মোট:</b> ৳${order.total || 0}\n`;
+          logMsg += `💰 <b>মোট:</b> ৳ ${order.total || 0}\n`;
           logMsg += `📌 <b>স্ট্যাটাস:</b> <code>${newStatus.toUpperCase()}</code>\n`;
           logMsg += `✍️ <b>কনফার্ম করেছেন:</b> ${assignedStaff}`;
 
@@ -367,7 +366,6 @@ export default function Dashboard() {
   const handleSendToSteadfast = async (order: Order) => {
     if (order.isNewRow) { alert('আগে সেভ করুন, এরপর কুরিয়ারে পাঠান।'); return; }
     
-    // 🚀 UPDATE: ম্যানুয়াল অর্ডারে COD জিরো (0) থাকলে কুরিয়ারে যাওয়া আটকাতে সেফটি লক 
     if (!order.total || parseFloat(String(order.total)) <= 0) {
       alert('⚠️ সতর্কতা: এই অর্ডারের COD বা মোট দাম 0 টাকা দেখাচ্ছে! দয়া করে আগে সঠিক দাম বসিয়ে "তথ্য সেভ করুন" এ ক্লিক করুন, তারপর কুরিয়ারে পাঠান।');
       return;
@@ -385,6 +383,24 @@ export default function Dashboard() {
         setOrders(prev => prev.map(o => o.id === order.id && o.storeId === order.storeId ? { ...o, trackingCode: tracking, consignmentId: cid, courierStatus: initialStatus, staffName: assignedStaff, dateSent: currentTimestamp } : o));
         handleSaveOrder({ ...order, trackingCode: tracking, consignmentId: cid, courierStatus: initialStatus, dateSent: currentTimestamp }, 'pending', true);
         setMessage({ text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`, type: 'success' });
+
+        const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'N/A';
+        const itemsText = order.items || 'N/A';
+        const sizeText = order.size ? `[সাইজ: ${order.size}]` : '';
+
+        let dispatchMsg = `🚚 <b>স্টেডফাস্ট কুরিয়ারে ডিসপ্যাচ করা হয়েছে</b>\n-----------------------\n`;
+        dispatchMsg += `🏢 <b>স্টোর:</b> ${order.storeName}\n`;
+        dispatchMsg += `🧾 <b>ইনভয়েস / CID:</b> #${order.invoice} / ${cid}\n`;
+        dispatchMsg += `👤 <b>কাস্টমার:</b> ${order.customerName}\n`;
+        dispatchMsg += `📞 <b>মোবাইল:</b> <code>${order.phone}</code>\n`;
+        dispatchMsg += `📍 <b>ঠিকানা:</b> ${fullAddress}\n`;
+        dispatchMsg += `📦 <b>আইটেম:</b> ${itemsText} ${sizeText}\n`;
+        dispatchMsg += `💰 <b>COD:</b> ৳ ${order.total || '0.00'}\n`;
+        dispatchMsg += `📌 <b>CID:</b> ${cid} | Tracking: ${tracking}\n\n`;
+        dispatchMsg += `✍️ <b>ডিসপ্যাচ করেছেন:</b> ${assignedStaff}`;
+
+        sendActivityLog(dispatchMsg, 'courier');
+
       } else setMessage({ text: result.error || 'কুরিয়ারে পাঠাতে ব্যর্থ হয়েছে', type: 'error' });
     } catch (err: any) { setMessage({ text: err.message || 'Network error', type: 'error' }); } 
     finally { setSendingId(null); }
