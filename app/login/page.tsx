@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Google Style Captcha States
+  // Google Style Captcha States[cite: 20]
   const [isHuman, setIsHuman] = useState(false);
   const [verifyingCaptcha, setVerifyingCaptcha] = useState(false);
 
@@ -64,27 +64,35 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#07090e] flex items-center justify-center p-4 relative overflow-hidden">
       
-      {/* Background SpaceX Style Glow Effect */}
+      {/* Background SpaceX Style Glow Effect[cite: 20] */}
       <div className="absolute w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none -top-32 -left-32"></div>
       <div className="absolute w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none -bottom-32 -right-32"></div>
 
       {/* Login Card */}
-      <div className="relative bg-[#111622]/80 backdrop-blur-xl border border-slate-800 rounded-3xl shadow-2xl p-8 md:p-10 w-full max-w-md">
+      <div className="relative bg-[#111622]/85 backdrop-blur-xl border border-blue-500/30 rounded-3xl shadow-2xl p-8 md:p-10 w-full max-w-md">
         
-        {/* Portal Branding */}
+        {/* Portal Branding with Bold Black Rock Corporation & English Greetings */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white font-black text-xl mb-3 shadow-lg shadow-blue-500/30">
             BR
           </div>
+          
+          <h3 className="text-xs font-black tracking-[0.25em] text-blue-400 uppercase mb-1">
+            BLACK ROCK CORPORATION
+          </h3>
+          
           <h2 className="text-2xl font-black text-white tracking-widest uppercase">
             BLACK ROCK PORTAL
           </h2>
-          <p className="text-xs font-bold text-slate-400 mt-1.5 tracking-wide">
-            সিকিউরড এন্টারপ্রাইজ লজিস্টিকস ড্যাশবোর্ড
-          </p>
+
+          <div className="mt-2 inline-block px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
+            <p className="text-[11px] font-extrabold text-cyan-400 tracking-wider uppercase">
+              ASSALAMU ALAIKUM! WELCOME BACK
+            </p>
+          </div>
         </div>
 
-        {/* Error Alert */}
+        {/* Error Alert[cite: 20] */}
         {error && (
           <div className="p-3.5 mb-6 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/30 text-xs font-bold flex items-center gap-2.5 animate-in fade-in">
             <ShieldAlert className="w-4 h-4 shrink-0 text-rose-500" />
@@ -94,7 +102,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           
-          {/* Gmail Field */}
+          {/* Gmail Field[cite: 20] */}
           <div>
             <label className="text-xs font-black text-slate-300 block mb-2 tracking-wide uppercase">
               জিমেইল আইডি
@@ -112,7 +120,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Password Field */}
+          {/* Password Field[cite: 20] */}
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className="text-xs font-black text-slate-300 uppercase tracking-wide">
@@ -121,7 +129,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => alert('পাসওয়ার্ড রিসেট করতে অ্যাডমিনের সাথে যোগাযোগ করুন।')}
-                className="text-[11px] font-bold text-blue-400 hover:text-blue-300 transition-colors"
+                className="text-[11px] font-bold text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
               >
                 পাসওয়ার্ড ভুলে গেছেন?
               </button>
@@ -139,20 +147,20 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-3.5 text-slate-500 hover:text-slate-300 transition-colors"
+                className="absolute right-4 top-3.5 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          {/* Google Style Dark Captcha */}
+          {/* Google Style Dark Captcha[cite: 20] */}
           <div className="bg-[#1a2130] border border-slate-700/80 rounded-xl p-3.5 flex items-center justify-between shadow-sm mt-2">
             <div className="flex items-center gap-3 pl-1">
               <button
                 type="button"
                 onClick={handleCaptchaClick}
-                className={`w-6 h-6 bg-[#111622] border-2 rounded flex items-center justify-center transition-all ${
+                className={`w-6 h-6 bg-[#111622] border-2 rounded flex items-center justify-center transition-all cursor-pointer ${
                   isHuman ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-600 hover:border-slate-400'
                 }`}
               >
@@ -177,17 +185,17 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Submit Button */}
+          {/* Submit Button[cite: 20] */}
           <button
             type="submit"
             disabled={loading || !isHuman}
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white py-3.5 rounded-xl font-black text-sm transition-all shadow-lg shadow-blue-600/20 disabled:opacity-40 disabled:cursor-not-allowed mt-2 active:scale-[0.98]"
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white py-3.5 rounded-xl font-black text-sm transition-all shadow-lg shadow-blue-600/20 disabled:opacity-40 disabled:cursor-not-allowed mt-2 active:scale-[0.98] cursor-pointer"
           >
             {loading ? 'যাচাই করা হচ্ছে...' : 'প্যানেলে প্রবেশ করুন'}
           </button>
         </form>
 
-        {/* Footer Note */}
+        {/* Footer Note[cite: 20] */}
         <div className="text-center mt-8 pt-4 border-t border-slate-800/80">
           <p className="text-[11px] font-bold text-slate-500">
             Authorized Personnel Only • Black Rock Corporation
