@@ -114,7 +114,6 @@ export default function Dashboard() {
     setMessage({ text: 'একটি খালি নতুন রো যোগ করা হয়েছে। তথ্য লিখে সেভ করুন।', type: 'success' });
   };
 
-  // 🚀 UPDATE: Auto-Splitting (Chunking) for unlimited parcels
   const handleSendCourierReport = async (isAutomatic = false) => {
     setReporting(true);
     if (!isAutomatic) setMessage({ text: 'স্টেডফাস্ট থেকে রিয়েল-টাইম ডেটা চেক করা হচ্ছে (অধিক পার্সেল থাকলে কিছুক্ষণ সময় লাগতে পারে)...', type: 'success' });
@@ -122,7 +121,6 @@ export default function Dashboard() {
     const updatedOrders = [...orders];
     
     try {
-      // ব্যাচ প্রসেসিং: ১৫টি করে পার্সেল চেক করবে
       const parcelsToCheck = updatedOrders.filter(o => o.trackingCode || o.consignmentId);
       const batchSize = 15; 
       for (let i = 0; i < parcelsToCheck.length; i += batchSize) {
@@ -171,12 +169,10 @@ export default function Dashboard() {
 
       let totalCollection = 0; deliveredToday.forEach((o) => { totalCollection += parseFloat(o.total || '0'); });
 
-      // 🚀 Auto Chunking Logic (টেলিগ্রামের লিমিট এড়াতে মেসেজ ভাগ করা)
       let messages = [];
       let currentMsg = `<b>📊 কুরিয়ার অডিট রিপোর্ট</b>\n📅 তারিখ: ${todayDateStr} | ⏰ সময়: ${currentTime}\n\n`;
 
       const appendToMsg = (text) => {
-        // ৩০০০ অক্ষরের বেশি হলে নতুন মেসেজ তৈরি করবে
         if (currentMsg.length + text.length > 3000) {
             messages.push(currentMsg);
             currentMsg = text;
@@ -228,7 +224,6 @@ export default function Dashboard() {
          messages.push(currentMsg);
       }
 
-      // মেসেজগুলো এক এক করে টেলিগ্রামে পাঠানো
       for (let i = 0; i < messages.length; i++) {
         const partHeader = messages.length > 1 ? `<i>(Part ${i + 1}/${messages.length})</i>\n\n` : '';
         const finalMsg = partHeader + messages[i];
@@ -241,7 +236,6 @@ export default function Dashboard() {
         
         if (!res.ok) throw new Error('টেলিগ্রামে মেসেজ পাঠাতে সমস্যা হয়েছে');
         
-        // টেলিগ্রাম যেন ব্লক না করে তাই ১ সেকেন্ড বিরতি
         if (i < messages.length - 1) {
             await new Promise(r => setTimeout(r, 1000));
         }
@@ -335,7 +329,23 @@ export default function Dashboard() {
         setMessage({ text: `Order #${finalInvoice} সফলভাবে সেভ করা হয়েছে!`, type: 'success' });
         
         if (!isCourierPush) {
-          const logMsg = `<b>${order.isNewRow ? 'নতুন অর্ডার তৈরি' : 'অর্ডার আপডেট'}</b>\n-----------------------\n🏬 <b>স্টোর:</b> ${order.storeName}\n🧾 <b>ইনভয়েস:</b> #${finalInvoice}\n👤 <b>কাস্টমার:</b> ${order.customerName}\n📌 <b>স্ট্যাটাস:</b> <code>${newStatus.toUpperCase()}</code>\n✍️ <b>স্টাফ:</b> ${currentUser}`;
+          // 🚀 UPDATE: আপনার কথামতো টেলিগ্রাম মেসেজে ফুল ডিটেইলস অ্যাড করা হয়েছে 
+          const addressParts = [order.streetAddress, order.thana, order.district].filter(Boolean);
+          const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'N/A';
+          const itemsText = order.items || 'N/A';
+          const sizeText = order.size ? `[সাইজ: ${order.size}]` : '';
+
+          let logMsg = `<b>${order.isNewRow ? 'নতুন অর্ডার তৈরি' : 'অর্ডার আপডেট ও সেভ'}</b>\n-----------------------\n`;
+          logMsg += `🏬 <b>স্টোর:</b> ${order.storeName}\n`;
+          logMsg += `🧾 <b>ইনভয়েস:</b> #${finalInvoice}\n`;
+          logMsg += `👤 <b>কাস্টমার:</b> ${order.customerName}\n`;
+          logMsg += `📱 <b>মোবাইল:</b> <code>${order.phone}</code>\n`;
+          logMsg += `📍 <b>ঠিকানা:</b> ${fullAddress}\n`;
+          logMsg += `📦 <b>আইটেম:</b> ${itemsText} ${sizeText}\n`;
+          logMsg += `💰 <b>মোট:</b> ৳${order.total || 0}\n`;
+          logMsg += `📌 <b>স্ট্যাটাস:</b> <code>${newStatus.toUpperCase()}</code>\n`;
+          logMsg += `✍️ <b>কনফার্ম করেছেন:</b> ${assignedStaff}`;
+
           sendActivityLog(logMsg, 'activity');
         }
       } else setMessage({ text: result.error || 'সেভ করতে সমস্যা হয়েছে', type: 'error' });
@@ -356,6 +366,13 @@ export default function Dashboard() {
 
   const handleSendToSteadfast = async (order: Order) => {
     if (order.isNewRow) { alert('আগে সেভ করুন, এরপর কুরিয়ারে পাঠান।'); return; }
+    
+    // 🚀 UPDATE: ম্যানুয়াল অর্ডারে COD জিরো (0) থাকলে কুরিয়ারে যাওয়া আটকাতে সেফটি লক 
+    if (!order.total || parseFloat(String(order.total)) <= 0) {
+      alert('⚠️ সতর্কতা: এই অর্ডারের COD বা মোট দাম 0 টাকা দেখাচ্ছে! দয়া করে আগে সঠিক দাম বসিয়ে "তথ্য সেভ করুন" এ ক্লিক করুন, তারপর কুরিয়ারে পাঠান।');
+      return;
+    }
+
     if (!confirm(`অর্ডার #${order.invoice} স্টেডফাস্টে পাঠাতে চান?`)) return;
     setSendingId(order.id); setMessage(null);
     const assignedStaff = order.staffName || currentUser;
