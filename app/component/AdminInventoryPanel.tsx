@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Lock, Package, FileText, X, Save, ShoppingCart, Printer, Plus, Trash2, UserCircle, CheckSquare, Square, ArrowDownLeft, ArrowUpRight, RotateCcw, Wallet, Calendar, UserPlus, Filter, ShieldAlert, Activity } from 'lucide-react';
+import { Lock, Package, FileText, X, Save, ShoppingCart, Printer, Plus, Trash2, UserCircle, CheckSquare, Square, ArrowDownLeft, ArrowUpRight, RotateCcw, Wallet, Calendar, UserPlus, Filter, ShieldAlert, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 
 const STAFF_MEMBERS = ['Awlad Hossain', 'Emdadullah Sakib', 'Omar Faruque'];
 
@@ -10,7 +10,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   const [mounted, setMounted] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState('Admin');
   
-  // 🚀 STRICT SUPER ADMIN CHECK LOGIC
   const isSuperAdmin = loggedInUser.toLowerCase() === 'ksitrade0@gmail.com';
 
   const [authTarget, setAuthTarget] = useState<'inventory' | 'expense' | 'activity' | null>(null);
@@ -23,8 +22,13 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
   const [statementData, setStatementData] = useState<any[]>([]);
   const [isLoadingStatement, setIsLoadingStatement] = useState(false);
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState('all');
+  
+  // নতুন ডুয়াল ড্রপডাউন ফিল্টার স্টেট
+  const [statementFilterType, setStatementFilterType] = useState('all'); // 'selected_item', 'day', 'month', 'year', 'all'
+  const [statementDateVal, setStatementDateVal] = useState('');
+  
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+  const [expandedStatementId, setExpandedStatementId] = useState<string | null>(null);
   
   const [entryType, setEntryType] = useState<'NEW' | 'RETURN'>('NEW');
   const [returnInvoice, setReturnInvoice] = useState('');
@@ -65,10 +69,8 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
       const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
       const data = await res.json();
       if (res.ok && data.success) {
-        // 🚀 BUG FIX: সাথে সাথে ইউজারনেম আপডেট করা হচ্ছে
         setLoggedInUser(username);
         setExpSpender(username);
-        
         setActivePanel(authTarget); setAuthTarget(null); setPassword('');
         if (authTarget === 'inventory') fetchStatement();
         if (authTarget === 'expense') fetchExpenses();
@@ -79,7 +81,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
   const closePanel = () => { setActivePanel(null); setPartyName(''); setReturnInvoice(''); setPurchaseItems([{ itemName: '', quantity: 1, buyingPrice: 0 }]); setExpenseItems([{ description: '', amount: '' }]); };
 
-  // 🚀 Secret Logger Logic (Tracks both Entry and Delete)
   const logActivity = async (action: string, details: string) => {
     try { await fetch('/api/activity', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, details, performed_by: loggedInUser }) }); } catch(err) {}
   };
@@ -107,7 +108,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
       const res = await fetch('/api/purchases', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ partyName: finalParty, items: purchaseItems, createdBy: loggedInUser, entryType }) });
       const result = await res.json();
       if (res.ok && result.success) {
-        // 🚀 লগে সেভ করা হচ্ছে কে মাল এন্ট্রি করলো
         const itemsList = purchaseItems.map(i => `${i.itemName} (${i.quantity} pcs)`).join(', ');
         await logActivity('ADD_STOCK', `Type: ${entryType} | Party: ${finalParty} | Items: ${itemsList}`);
         
@@ -143,20 +143,36 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     } catch (err) { alert('❌ বাল্ক ডিলিট করতে সমস্যা হয়েছে!'); }
   };
 
+  // ৫টি ফিল্টার অপশন ও ব্রেকডাউন সহ স্টেটমেন্ট প্রসেসিং
   const groupedStatement = useMemo(() => {
-    const filtered = statementData.filter(row => selectedTypeFilter === 'all' || row.type === selectedTypeFilter);
+    let filtered = statementData;
+    if (statementFilterType === 'day' && statementDateVal) {
+      filtered = statementData.filter(row => row.date && row.date.startsWith(statementDateVal));
+    } else if (statementFilterType === 'month' && statementDateVal) {
+      filtered = statementData.filter(row => row.date && row.date.startsWith(statementDateVal));
+    } else if (statementFilterType === 'year' && statementDateVal) {
+      filtered = statementData.filter(row => row.date && new Date(row.date).getFullYear().toString() === statementDateVal);
+    } else if (statementFilterType === 'selected_item') {
+      // নির্দিষ্ট সিলেক্টেড আইটেম ফিল্টার লজিক চাইলে এখানে যুক্ত করা যাবে
+    }
+
     const groups: any[] = []; const map = new Map();
     filtered.forEach(row => {
       const key = (row.reference && row.reference.trim() !== '' && !row.reference.includes('রিটার্ন')) ? `${row.reference}-${row.type}-${row.date?.split('T')[0]}` : row.id;
       if (map.has(key)) {
         const ext = map.get(key);
         if(!ext.itemNames.includes(row.itemName)) ext.itemNames.push(row.itemName);
-        ext.quantity += Number(row.quantity); ext.total += Number(row.total); ext.rawIds.push(row.id);
-      } else { map.set(key, { ...row, itemNames: [row.itemName], quantity: Number(row.quantity), total: Number(row.total), rawIds: [row.id] }); }
+        ext.quantity += Number(row.quantity); 
+        ext.total += Number(row.total); 
+        ext.rawIds.push(row.id);
+        if(row.buyingPrice) ext.breakdown.push({ name: row.itemName, qty: row.quantity, price: row.buyingPrice });
+      } else { 
+        map.set(key, { ...row, itemNames: [row.itemName], quantity: Number(row.quantity), total: Number(row.total), rawIds: [row.id], breakdown: [{ name: row.itemName, qty: row.quantity, price: row.buyingPrice || 0 }] }); 
+      }
     });
     map.forEach(val => { val.itemName = val.itemNames.join(' / '); groups.push(val); });
     return groups;
-  }, [statementData, selectedTypeFilter]);
+  }, [statementData, statementFilterType, statementDateVal]);
 
   // =================== EXPENSE LOGIC ===================
   const fetchExpenses = async () => {
@@ -176,7 +192,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     try {
       const res = await fetch('/api/expenses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: expDate, spender: finalSpender, createdBy: loggedInUser, items: expenseItems }) });
       if (res.ok) {
-        // 🚀 লগে সেভ করা হচ্ছে কে খরচ এন্ট্রি করলো
         const expList = expenseItems.map(i => `${i.description} (৳${i.amount})`).join(', ');
         await logActivity('ADD_EXPENSE', `Spender: ${finalSpender} | Items: ${expList}`);
         
@@ -252,7 +267,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         <Wallet className="w-3.5 h-3.5 text-rose-600" /> কোম্পানির খরচের হিসাব
       </button>
       
-      {/* 🚀 Super Admin Delete History Button */}
       {isSuperAdmin && (
         <button onClick={() => setAuthTarget('activity')} className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-rose-100 hover:bg-rose-200 text-rose-900 rounded-lg text-xs font-black transition shadow-2xs border border-rose-300 cursor-pointer mt-1">
           <ShieldAlert className="w-3.5 h-3.5 text-rose-700" /> সুপার অ্যাক্টিভিটি লগ
@@ -348,10 +362,36 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
               </form>
             ) : (
               <div className="max-w-7xl mx-auto">
-                <div className="flex justify-between mb-4 no-print">
-                  <select value={selectedTypeFilter} onChange={(e) => setSelectedTypeFilter(e.target.value)} className="border border-slate-300 px-3 py-2 rounded-lg text-xs font-black bg-white outline-none cursor-pointer">
-                    <option value="all">সকল ট্রানজেকশন</option><option value="STOCK_IN">🟢 স্টক ইন</option><option value="STOCK_OUT">🔴 স্টক আউট</option><option value="RESTORED">🔵 স্টক রিস্টোর</option>
-                  </select>
+                {/* ডুয়াল ড্রপডাউন কন্ট্রোল বার (৫টি অপশনসহ) */}
+                <div className="flex flex-wrap justify-between items-center mb-4 gap-3 no-print bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <select 
+                      value={statementFilterType} 
+                      onChange={(e) => { setStatementFilterType(e.target.value); setStatementDateVal(''); }} 
+                      className="border border-slate-300 px-3 py-2 rounded-lg text-xs font-black bg-white outline-none cursor-pointer"
+                    >
+                      <option value="selected_item">সিলেক্টেড আইটেম</option>
+                      <option value="day">নির্দিষ্ট দিন</option>
+                      <option value="month">মাসের হিসাব</option>
+                      <option value="year">বছরের হিসাব</option>
+                      <option value="all">সব রেকর্ড</option>
+                    </select>
+
+                    {/* দ্বিতীয় ড্রপডাউন / ক্যালেন্ডার (যদি নির্দিষ্ট দিন, মাস বা বছর সিলেক্ট করা হয়) */}
+                    {statementFilterType !== 'all' && statementFilterType !== 'selected_item' && (
+                      <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 shadow-2xs">
+                        <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                        <input 
+                          type={statementFilterType === 'day' ? 'date' : statementFilterType === 'month' ? 'month' : 'number'}
+                          value={statementDateVal}
+                          onChange={(e) => setStatementDateVal(e.target.value)}
+                          placeholder={statementFilterType === 'year' ? 'YYYY (যেমন: 2026)' : ''}
+                          className="text-xs font-bold bg-transparent text-slate-900 outline-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex gap-2">
                     {isSuperAdmin && <button onClick={handleBulkDeleteStatement} className="bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"><Trash2 className="w-4 h-4"/> সিলেক্টেড ডিলিট</button>}
                     <button onClick={() => setPrintModalTarget('stock')} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer"><Printer className="w-4 h-4"/> প্রিন্ট করুন</button>
@@ -363,7 +403,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                     <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-black tracking-wider border-b border-slate-200">
                       <tr>
                         <th className="px-4 py-3 w-10 text-center"><button onClick={toggleSelectAll} className="cursor-pointer text-slate-700">{selectedRowIds.length === groupedStatement.length ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4" />}</button></th>
-                        <th className="px-5 py-3">তারিখ ও সময়</th><th className="px-5 py-3">সপ্তাহ/মাস</th><th className="px-5 py-3">ধরণ</th><th className="px-5 py-3">পার্টি/রেফারেন্স</th><th className="px-5 py-3">আইটেম (স্লাশ গ্রুপড)</th><th className="px-5 py-3 text-center">পরিমাণ</th><th className="px-5 py-3 text-right">মোট (৳)</th><th className="px-5 py-3 text-center">অ্যাকশন</th>
+                        <th className="px-5 py-3">তারিখ ও সময়</th><th className="px-5 py-3">সপ্তাহ/মাস</th><th className="px-5 py-3">ধরণ</th><th className="px-5 py-3">পার্টি/রেফারেন্স</th><th className="px-5 py-3">আইটেম (বিস্তারিত ব্রেকডাউন)</th><th className="px-5 py-3 text-center">পরিমাণ</th><th className="px-5 py-3 text-right">মোট (৳)</th><th className="px-5 py-3 text-center">অ্যাকশন</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -371,6 +411,8 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                         const currentDate = row.date ? new Date(row.date).toLocaleDateString('en-GB') : 'N/A';
                         const prevDate = idx > 0 && groupedStatement[idx - 1].date ? new Date(groupedStatement[idx - 1].date).toLocaleDateString('en-GB') : null;
                         const isSelected = selectedRowIds.includes(row.id);
+                        const isExpanded = expandedStatementId === row.id;
+
                         return (
                           <React.Fragment key={row.id}>
                             {currentDate !== prevDate && <tr><td colSpan={9} className="bg-slate-800 text-amber-400 font-black text-xs text-center py-2 border-y-4 border-slate-950">📅 {currentDate} এর ট্রানজেকশন</td></tr>}
@@ -380,7 +422,23 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                               <td className="px-5 py-3 text-[11px] font-black text-slate-500">{formatWeek(row.date)}</td>
                               <td className="px-5 py-3 text-[11px] font-black">{row.type === 'STOCK_IN' ? '🟢 IN' : row.type === 'STOCK_OUT' ? '🔴 OUT' : '🔵 RESTORED'}</td>
                               <td className="px-5 py-3 text-xs font-black text-slate-800">{row.reference}</td>
-                              <td className="px-5 py-3 text-[11px] font-bold text-slate-700 leading-relaxed bg-slate-50 border-l border-r border-slate-100">{row.itemName}</td>
+                              
+                              {/* আইটেম কলাম যেখানে ক্লিক করলে ভ্যারাইটিসের ব্যাখ্যা ট্যাব খুলবে */}
+                              <td className="px-5 py-3 text-[11px] font-bold text-slate-700 bg-slate-50 border-l border-r border-slate-100">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span>{row.itemName}</span>
+                                  {row.breakdown && row.breakdown.length > 0 && (
+                                    <button 
+                                      onClick={() => setExpandedStatementId(isExpanded ? null : row.id)}
+                                      className="text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded text-[10px] font-black flex items-center gap-1 cursor-pointer shrink-0 border border-blue-200"
+                                    >
+                                      <span>ব্যাখ্যা</span>
+                                      {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+
                               <td className="px-5 py-3 text-center text-xs font-black">{row.type === 'STOCK_OUT' ? `-${row.quantity}` : `+${row.quantity}`}</td>
                               <td className="px-5 py-3 text-right text-xs font-black">৳ {row.total}</td>
                               <td className="px-5 py-3 text-center">
@@ -391,6 +449,28 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                                 )}
                               </td>
                             </tr>
+
+                            {/* ভ্যারাইটিস আইটেম ব্রেকডাউন ব্যাখ্যা ট্যাব */}
+                            {isExpanded && row.breakdown && (
+                              <tr>
+                                <td colSpan={9} className="bg-slate-50/80 p-3 border-b border-slate-200 shadow-inner">
+                                  <div className="bg-white border border-slate-300 rounded-lg p-3 max-w-xl mx-auto">
+                                    <h5 className="text-[11px] font-black text-slate-900 mb-2 uppercase tracking-wide border-b pb-1 flex justify-between">
+                                      <span>📦 ভ্যারাইটিস আইটেম ব্রেকডাউন ব্যাখ্যা ({row.reference})</span>
+                                      <span className="text-emerald-700">মোট: {row.quantity} পিস</span>
+                                    </h5>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+                                      {row.breakdown.map((b: any, bIdx: number) => (
+                                        <div key={bIdx} className="flex justify-between items-center bg-slate-100 border border-slate-200 px-2 py-1 rounded text-[11px] font-bold">
+                                          <span className="text-slate-700">{b.name}:</span>
+                                          <span className="font-black text-slate-950 bg-white px-1.5 py-0.5 rounded border border-slate-200">{b.qty} পিস</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
                           </React.Fragment>
                         );
                       })}
@@ -402,8 +482,27 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                    <h2 className="text-xl font-black text-center border-b-2 border-black pb-2 mb-4">Stock Statement & Ledger</h2>
                    <p className="text-xs font-bold mb-2">Print Filter: {printPeriod.toUpperCase()} | Total Value: ৳ {finalPrintTotalStock}</p>
                    <table className="w-full border-collapse border border-black text-xs">
-                     <thead><tr className="bg-gray-100"><th>Date</th><th>Week/Month</th><th>Type</th><th>Reference</th><th>Items</th><th>Qty</th><th>Total</th></tr></thead>
-                     <tbody>{finalPrintStock.map(r => <tr key={r.id}><td>{new Date(r.date).toLocaleString('en-GB')}</td><td>{formatWeek(r.date)}</td><td>{r.type}</td><td>{r.reference}</td><td>{r.itemName}</td><td>{r.quantity}</td><td>{r.total}</td></tr>)}</tbody>
+                     <thead><tr className="bg-gray-100"><th>Date</th><th>Week/Month</th><th>Type</th><th>Reference</th><th>Items & Breakdown</th><th>Qty</th><th>Total</th></tr></thead>
+                     <tbody>
+                       {finalPrintStock.map(r => (
+                         <tr key={r.id}>
+                           <td>{new Date(r.date).toLocaleString('en-GB')}</td>
+                           <td>{formatWeek(r.date)}</td>
+                           <td>{r.type}</td>
+                           <td>{r.reference}</td>
+                           <td>
+                             {r.itemName}
+                             {r.breakdown && r.breakdown.length > 0 && (
+                               <div style={{fontSize: '10px', marginTop: '4px', color: '#333'}}>
+                                 {r.breakdown.map((bk: any, bi: number) => <span key={bi} style={{marginRight: '8px', display: 'inline-block'}}>• {bk.name}: <b>{bk.qty} pcs</b></span>)}
+                               </div>
+                             )}
+                           </td>
+                           <td>{r.quantity}</td>
+                           <td>{r.total}</td>
+                         </tr>
+                       ))}
+                     </tbody>
                    </table>
                 </div>
               </div>
@@ -493,7 +592,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         </div>, document.body
       )}
 
-      {/* 🚀 ACTIVITY LOG PANEL (SUPER ADMIN ONLY) */}
       {activePanel === 'activity' && isSuperAdmin && createPortal(
         <div className="fixed inset-0 z-[999999] bg-slate-100 flex flex-col w-screen h-screen">
           <div className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-xs no-print">
@@ -516,7 +614,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                   {activityLogs.filter(log => actFilter === 'all' || log.action.includes(actFilter)).length === 0 ? <tr><td colSpan={4} className="p-10 text-center font-bold text-slate-400">কোনো হিস্ট্রি নেই</td></tr> :
                    activityLogs.filter(log => actFilter === 'all' || log.action.includes(actFilter)).map((log) => {
                        const isDelete = log.action.includes('DELETE');
-                       const actionColor = isDelete ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+                       const actionColor = isDelete ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-emerald-100 text-emerald-800 border border-rose-200';
                        return (
                          <tr key={log.id} className="hover:bg-slate-50">
                              <td className="px-5 py-4 text-[11px] font-bold text-slate-600">{new Date(log.created_at).toLocaleString('en-GB')}</td>
