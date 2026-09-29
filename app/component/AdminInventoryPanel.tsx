@@ -48,12 +48,8 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [actFilter, setActFilter] = useState('all');
 
-  // Print Modal States (আলাদা ও স্পষ্ট লেবেলযুক্ত)
+  // Print Modal State (ড্রপডাউন সম্পূর্ণ বাদ দেওয়া হয়েছে)
   const [printModalTarget, setPrintModalTarget] = useState<'stock' | 'expense' | null>(null);
-  const [printPeriod, setPrintPeriod] = useState('all');
-  const [printDateVal, setPrintDateVal] = useState('');
-  const [printMonthVal, setPrintMonthVal] = useState('');
-  const [printYearVal, setPrintYearVal] = useState(new Date().getFullYear().toString());
 
   useEffect(() => { 
     setMounted(true); 
@@ -238,19 +234,8 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     setPrintModalTarget(null);
   };
 
-  const getFilteredPrintData = (dataArray: any[]) => {
-    if (printPeriod === 'all') return dataArray;
-    return dataArray.filter(row => {
-      const rowD = new Date(row.date);
-      if (printPeriod === 'daily') return row.date.startsWith(printDateVal);
-      if (printPeriod === 'monthly') return row.date.startsWith(printMonthVal);
-      if (printPeriod === 'yearly') return rowD.getFullYear().toString() === printYearVal;
-      return true;
-    });
-  };
-
-  const finalPrintStock = printModalTarget === 'stock' ? getFilteredPrintData(groupedStatement) : [];
-  const finalPrintExpense = printModalTarget === 'expense' ? getFilteredPrintData(filteredExpenses) : [];
+  const finalPrintStock = printModalTarget === 'stock' ? groupedStatement : [];
+  const finalPrintExpense = printModalTarget === 'expense' ? filteredExpenses : [];
   const finalPrintTotalStock = finalPrintStock.reduce((sum, row) => sum + Number(row.total || 0), 0);
   const finalPrintTotalExp = finalPrintExpense.reduce((sum, row) => sum + Number(row.amount || 0), 0);
 
@@ -293,23 +278,13 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         </div>, document.body
       )}
 
-      {/* প্রিন্ট মডালের ড্রপডাউন লেবেলগুলো সম্পূর্ণ আলাদা এবং স্পষ্ট করা হয়েছে যাতে মূল ফিল্টারের সাথে কোনো মিল না থাকে */}
+      {/* প্রিন্ট পপআপ থেকে সমস্ত অতিরিক্ত ড্রপডাউন অপশন সম্পূর্ণ বাদ দেওয়া হয়েছে */}
       {printModalTarget && createPortal(
         <div className="fixed inset-0 z-[9999999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl animate-in zoom-in-95">
-            <h3 className="text-xl font-black text-slate-900 mb-2 flex items-center gap-2"><Filter className="w-5 h-5 text-indigo-600"/> প্রিন্ট অপশন</h3>
-            <p className="text-xs font-bold text-slate-500 mb-6">আপনি কোন সময়ের রিপোর্ট প্রিন্ট করতে চান তা সিলেক্ট করুন।</p>
-            <div className="space-y-4 mb-6">
-              <select value={printPeriod} onChange={e=>setPrintPeriod(e.target.value)} className="w-full border border-slate-300 p-3 rounded-xl font-bold text-sm bg-slate-50 outline-none">
-                <option value="all">🖨️ প্রিন্ট: সকল রেকর্ড</option>
-                <option value="daily">🖨️ প্রিন্ট: নির্দিষ্ট দিনের হিসাব</option>
-                <option value="monthly">🖨️ প্রিন্ট: নির্দিষ্ট মাসের হিসাব</option>
-                <option value="yearly">🖨️ প্রিন্ট: নির্দিষ্ট বছরের হিসাব</option>
-              </select>
-              {printPeriod === 'daily' && <input type="date" value={printDateVal} onChange={e=>setPrintDateVal(e.target.value)} className="w-full border border-slate-300 p-3 rounded-xl font-bold" />}
-              {printPeriod === 'monthly' && <input type="month" value={printMonthVal} onChange={e=>setPrintMonthVal(e.target.value)} className="w-full border border-slate-300 p-3 rounded-xl font-bold" />}
-              {printPeriod === 'yearly' && <select value={printYearVal} onChange={e=>setPrintYearVal(e.target.value)} className="w-full border border-slate-300 p-3 rounded-xl font-bold"><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option></select>}
-            </div>
+          <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 text-center">
+            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4"><Printer className="w-6 h-6"/></div>
+            <h3 className="text-xl font-black text-slate-900 mb-2">রিপোর্ট প্রিন্ট করুন</h3>
+            <p className="text-xs font-bold text-slate-500 mb-6">আপনি কি বর্তমান ফিল্টার করা ডাটা বা রিপোর্টটি প্রিন্ট করতে চান?</p>
             <div className="flex gap-3">
               <button onClick={() => setPrintModalTarget(null)} className="w-full py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 cursor-pointer">বাতিল</button>
               <button onClick={triggerPrint} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg flex justify-center gap-2 cursor-pointer"><Printer className="w-4 h-4"/> প্রিন্ট করুন</button>
@@ -381,7 +356,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                       <option value="all">📂 সব রেকর্ড</option>
                     </select>
 
-                    {/* দ্বিতীয় ড্রপডাউন / ক্যালেন্ডার (নির্দিষ্ট দিন, মাস বা বছর সিলেক্ট করলে শো করবে) */}
                     {statementFilterType !== 'all' && statementFilterType !== 'selected_item' && (
                       <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 shadow-2xs">
                         <Calendar className="w-3.5 h-3.5 text-slate-500" />
@@ -398,7 +372,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
                   <div className="flex gap-2">
                     {isSuperAdmin && <button onClick={handleBulkDeleteStatement} className="bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"><Trash2 className="w-4 h-4"/> সিলেক্টেড ডিলিট</button>}
-                    <button onClick={() => setPrintModalTarget('stock')} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer"><Printer className="w-4 h-4"/> প্রিন্ট অপশন</button>
+                    <button onClick={() => setPrintModalTarget('stock')} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer"><Printer className="w-4 h-4"/> প্রিন্ট করুন</button>
                   </div>
                 </div>
                 
@@ -482,7 +456,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
                 <div id="print-statement" className="hidden p-6 bg-white text-black swadhinota-font">
                    <h2 className="text-xl font-black text-center border-b-2 border-black pb-2 mb-4">Stock Statement & Ledger</h2>
-                   <p className="text-xs font-bold mb-2">Print Filter: {printPeriod.toUpperCase()} | Total Value: ৳ {finalPrintTotalStock}</p>
+                   <p className="text-xs font-bold mb-2">Total Value: ৳ {finalPrintTotalStock}</p>
                    <table className="w-full border-collapse border border-black text-xs">
                      <thead><tr className="bg-gray-100"><th>Date</th><th>Week/Month</th><th>Type</th><th>Reference</th><th>Items & Breakdown</th><th>Qty</th><th>Total</th></tr></thead>
                      <tbody>
@@ -585,7 +559,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
             <div id="print-expenses" className="hidden p-6 bg-white text-black swadhinota-font">
               <h2 className="text-xl font-black text-center border-b-2 border-black pb-2 mb-4">Company Expense Ledger</h2>
-              <p className="text-xs font-bold mb-2">Print Filter: {printPeriod.toUpperCase()} | Total Value: ৳ {finalPrintTotalExp}</p>
+              <p className="text-xs font-bold mb-2">Total Value: ৳ {finalPrintTotalExp}</p>
               <table className="w-full border-collapse border border-black text-xs"><thead><tr className="bg-gray-100"><th>Date</th><th>Description</th><th>Spender</th><th>Entry By</th><th>Amount (৳)</th></tr></thead>
                 <tbody>{finalPrintExpense.map(r => <tr key={r.id}><td>{new Date(r.date).toLocaleDateString('en-GB')}</td><td>{r.description}</td><td>{r.spender}</td><td>{r.createdBy}</td><td style={{textAlign:'right', fontWeight:'bold'}}>{r.amount}</td></tr>)}</tbody>
               </table>
