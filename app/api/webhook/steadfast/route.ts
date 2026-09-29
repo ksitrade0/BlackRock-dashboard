@@ -17,21 +17,22 @@ export async function POST(req: Request) {
     const riderName = body.rider_name || body.deliveryman_name || '';
     const riderPhone = body.rider_phone || body.deliveryman_phone || '';
 
+    let storeName = 'Ruhama Wear';
     let customerName = 'সম্মানিত কাস্টমার';
+    let customerPhone = 'N/A';
     let address = 'ঠিকানা পাওয়া যায়নি';
-    let items = 'বিস্তারিত ড্যাশবোর্ডে দেখুন';
+    let items = 'বিস্তারিত ড্যাশবোর্ডে দেখুন ঠিক আছে';
+    let orderTotal = '0';
     let orderDate = 'N/A';
     let pendingText = '';
     let tgMessage = '';
 
-    // 🚀 INJECTED: HTML Error Guard (টেলিগ্রাম যেন স্পেশাল ক্যারেক্টারের জন্য মেসেজ রিজেক্ট না করে) 🚀
     const escapeHtml = (str: any) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     // =======================================================
     // ১. ডাটাবেজ এবং WooCommerce রিয়েল-টাইম অটো-আপডেট লজিক
     // =======================================================
     try {
-      // লোকাল ডাটাবেজ থেকে ইনভয়েস দিয়ে অর্ডার খুঁজে বের করা
       const orderRows: any = await query(
         `SELECT * FROM orders WHERE invoice = ? OR consignment_id = ? LIMIT 1`,
         [invoice, consignmentId]
@@ -43,15 +44,16 @@ export async function POST(req: Request) {
         const orderId = dbOrder.id;
 
         customerName = dbOrder.customer_name || customerName;
+        customerPhone = dbOrder.phone || customerPhone;
         address = dbOrder.address || address;
         items = dbOrder.items || items;
+        orderTotal = dbOrder.total || orderTotal;
+        storeName = String(storeId || '').toLowerCase().includes('aastha') ? 'Aastha Naturals BD' : 'Ruhama Wear';
 
-        // স্টেডফাস্টের লাইভ স্ট্যাটাস অনুযায়ী ড্যাশবোর্ডের স্ট্যাটাস কী হবে তা নির্ধারণ
         let newWooStatus = '';
         if (status === 'delivered' || status === 'partial_delivered') newWooStatus = 'completed';
         else if (status === 'cancelled' || status === 'returned' || status === 'return' || status === 'cancelled_approval_pending') newWooStatus = 'cancelled';
 
-        // স্টোর অনুযায়ী WooCommerce ক্রেডেনশিয়াল সেটআপ
         let url = '';
         let key = '';
         let secret = '';
@@ -78,7 +80,6 @@ export async function POST(req: Request) {
             updatePayload.status = newWooStatus;
           }
 
-          // WooCommerce ওয়েবসাইটে পুশ করা
           await fetch(`${cleanUrl}/wp-json/wc/v3/orders/${orderId}`, {
             method: 'PUT',
             headers: {
@@ -86,10 +87,9 @@ export async function POST(req: Request) {
               Authorization: authHeader,
             },
             body: JSON.stringify(updatePayload),
-          }).catch(() => {}); // 🚀 INJECTED: Error catch added to prevent crash
+          }).catch(() => {});
         }
 
-        // ড্যাশবোর্ডের ডাটাবেজে স্ট্যাটাস আপডেট করা (যাতে রিলোড দিলে পুরোনোটা না আসে)
         if (newWooStatus) {
            await query(
              `UPDATE orders SET status = ? WHERE id = ?`,
@@ -97,16 +97,11 @@ export async function POST(req: Request) {
            );
         }
 
-        // =======================================================
-        // 🚀 META CONVERSIONS API (CAPI) - GENUINE PURCHASE TRIGGER
-        // =======================================================
         if (newWooStatus === 'completed') {
             const PIXEL_ID = '1407475261571485';
             const ACCESS_TOKEN = 'EAAZBgIMx3nh0BSYfDyK54YtwjU7ejlxU0TrAc8tpakyOVPEatBs7kSOJKpnSlk06hoIZAaTxdfyUtOF7thgIUfifFAmvNQbUkEUpC2NakeRKZCSnlhCYPN5P4fXnn743W5xvOO9JohVloRjr2llm0Dh3k0fqp0ZByINexW9BbMh9VQgMP5kcZBG1oqDWuuQZDZD';
             
-            const orderTotal = parseFloat(dbOrder.total || '0');
-            const orderPhone = dbOrder.phone || '';
-
+            const numTotal = parseFloat(orderTotal || '0');
             const hashData = (data: string) => {
                 if (!data) return '';
                 return crypto.createHash('sha256').update(data.replace(/[^0-9]/g, '')).digest('hex');
@@ -120,11 +115,11 @@ export async function POST(req: Request) {
                         action_source: 'website',
                         event_id: orderId.toString(),
                         user_data: {
-                            ph: orderPhone ? [hashData(orderPhone)] : []
+                            ph: customerPhone ? [hashData(customerPhone)] : []
                         },
                         custom_data: {
                             currency: 'BDT',
-                            value: orderTotal
+                            value: numTotal
                         }
                     }
                 ]
@@ -136,22 +131,16 @@ export async function POST(req: Request) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(capiPayload)
                 });
-                console.log(`CAPI Purchase Event Sent for Order #${invoice}`);
-            } catch (capiErr) {
-                console.error("CAPI Sending Error:", capiErr);
-            }
+            } catch (capiErr) {}
         }
       }
-    } catch (dbErr) {
-      console.error("Webhook DB Sync Error:", dbErr);
-    }
+    } catch (dbErr) {}
 
     // =======================================================
-    // ২. টেলিগ্রাম নোটিফিকেশন লজিক (আপনার আগের কোড অনুযায়ী)
+    // ২. টেলিগ্রাম নোটিফিকেশন লজিক (আপনার চাহিদামতো সাজানো ফরম্যাট)
     // =======================================================
     if (status === 'delivered') {
       try {
-        // 🚀 INJECTED: টাইমআউট সেফটি এবং সঠিক লিংক (ruhamawear.com) 🚀
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000); 
         const dashRes = await fetch('https://app.ruhamawear.com/api/orders', { signal: controller.signal });
@@ -165,12 +154,19 @@ export async function POST(req: Request) {
             );
 
             if (matchedOrder) {
+              customerName = matchedOrder.customerName || customerName;
+              customerPhone = matchedOrder.phone || customerPhone;
+              const addrParts = [matchedOrder.streetAddress || matchedOrder.address, matchedOrder.thana ? `Thana: ${matchedOrder.thana}` : '', matchedOrder.district ? `District: ${matchedOrder.district}` : ''].filter(Boolean);
+              address = addrParts.join(', ') || address;
+              items = matchedOrder.items || items;
+              orderTotal = matchedOrder.total || orderTotal;
+              storeName = matchedOrder.storeName || storeName;
+
               if (matchedOrder.dateCreated) {
                 const d = new Date(matchedOrder.dateCreated);
                 orderDate = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear().toString().slice(-2)}`;
                 const todayStr = d.toLocaleDateString('en-BD', { timeZone: 'Asia/Dhaka' });
 
-                // 🚀 নতুন অ্যাড করা সামারি লজিক 🚀
                 let sameDayTotal = 0;
                 let sameDayDelivered = 0;
                 let sameDayReturned = 0;
@@ -191,7 +187,6 @@ export async function POST(req: Request) {
                     }
                   }
                 });
-                // ==========================
 
                 const pendingOrders = dashData.orders.filter((o: any) => {
                   if (!o.dateCreated) return false;
@@ -212,30 +207,28 @@ export async function POST(req: Request) {
                   pendingText = `আপনার ${orderDate} তারিখের আরও <b>${pendingOrders.length}টি</b> পার্সেল পেন্ডিং আছে:\n\n`;
                   pendingOrders.forEach((pO: any, index: number) => {
                     const pName = pO.customerName || 'N/A';
-                    const pAddrParts = [
-                      pO.streetAddress || pO.address || '', 
-                      pO.thana ? `Thana: ${pO.thana}` : '', 
-                      pO.district ? `District: ${pO.district}` : ''
-                    ].filter(Boolean);
+                    const pPhone = pO.phone || 'N/A';
+                    const pAddrParts = [pO.streetAddress || pO.address || '', pO.thana ? `Thana: ${pO.thana}` : '', pO.district ? `District: ${pO.district}` : ''].filter(Boolean);
                     const pAddress = pAddrParts.join(', ') || 'N/A';
-                    let pItems = pO.items || 'N/A';
-                    if (pO.size) pItems += ` [সাইজ: ${pO.size}]`;
+                    const pItems = pO.items || 'N/A';
+                    const pTotal = pO.total || '0';
                     const pCid = pO.consignmentId || pO.trackingCode || 'N/A';
                     
-                    // 🚀 INJECTED: HTML Error Guard (escapeHtml) 🚀
                     pendingText += `⚠️ <b>পেন্ডিং পার্সেল ${index + 1}:</b>\n`;
+                    pendingText += `🏬 <b>স্টোর:</b> ${escapeHtml(pO.storeName || 'Ruhama Wear')}\n`;
                     pendingText += `🧾 <b>ইনভয়েস / CID:</b> #${escapeHtml(pO.invoice)} / <code>${escapeHtml(pCid)}</code>\n`;
-                    pendingText += `📅 <b>তারিখ:</b> ${escapeHtml(orderDate)}\n`;
-                    pendingText += `👤 <b>নাম:</b> ${escapeHtml(pName)}\n`;
+                    pendingText += `👤 <b>কাস্টমার:</b> ${escapeHtml(pName)}\n`;
+                    pendingText += `📞 <b>মোবাইল:</b> <code>${escapeHtml(pPhone)}</code>\n`;
                     pendingText += `📍 <b>ঠিকানা:</b> ${escapeHtml(pAddress)}\n`;
                     pendingText += `📦 <b>আইটেম:</b> ${escapeHtml(pItems)}\n`;
+                    pendingText += `💰 <b>টাকা (COD):</b> ৳ ${escapeHtml(pTotal)}\n`;
+                    pendingText += `📌 <b>স্ট্যাটাস:</b> <code>PENDING</code>\n`;
                     if (index < pendingOrders.length - 1) pendingText += `-----------------------\n`;
                   });
                 } else {
                   pendingText = `আপনার ${orderDate} তারিখের আর কোন পার্সেল পেন্ডিং নাই।`;
                 }
 
-                // 🚀 সামারি টেক্সট এড করা 🚀
                 if (sameDayTotal > 0) {
                   pendingText += `\n\n📊 <i>সামারি (${orderDate}): মোট: ${sameDayTotal} | ডেলিভারি: ${sameDayDelivered} | রিটার্ন: ${sameDayReturned} | পেন্ডিং: ${sameDayPendingCount}</i>`;
                 }
@@ -243,9 +236,7 @@ export async function POST(req: Request) {
             }
           }
         }
-      } catch (err) {
-        console.error("Dashboard Fetch Error inside Webhook:", err);
-      }
+      } catch (err) {}
 
       if (customerName === 'সম্মানিত কাস্টমার' && consignmentId) {
         try {
@@ -258,51 +249,52 @@ export async function POST(req: Request) {
           if (stData && stData.delivery_status) {
             customerName = stData.delivery_status.recipient_name || customerName;
             address = stData.delivery_status.recipient_address || address;
-            if (stData.delivery_status.created_at && orderDate === 'N/A') {
-              const cDate = new Date(stData.delivery_status.created_at);
-              orderDate = `${cDate.getDate()}/${cDate.getMonth() + 1}/${cDate.getFullYear().toString().slice(-2)}`;
-            }
+            customerPhone = stData.delivery_status.recipient_phone || customerPhone;
           }
         } catch (e) {}
       }
 
-      const today = new Date();
-      const deliveryDate = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear().toString().slice(-2)}`;
-
-      if (!pendingText) {
-         pendingText = `আপনার ${orderDate} তারিখের আর কোন পার্সেল পেন্ডিং নাই।`;
-      }
-
-      // 🚀 INJECTED: HTML Error Guard (escapeHtml) 🚀
+      // আপনার কথামতো সাজানো ফুল ডিটেইলস ফরম্যাট (স্টোর, ইনভয়েস, কাস্টমার, মোবাইল, ঠিকানা, আইটেম, টাকা, স্ট্যাটাস)
       tgMessage = 
-        `✅ <b>আজকে ডেলিভারি হওয়া আপনার পার্সেল সম্পূর্ণভাবে ডেলিভারি হয়েছে।</b>\n\n` +
+        `✅ <b>পার্সেল সফলভাবে ডেলিভারি হয়েছে।</b>\n\n` +
+        `🏬 <b>স্টোর:</b> ${escapeHtml(storeName)}\n` +
         `🧾 <b>ইনভয়েস / CID:</b> #${escapeHtml(invoice)} / <code>${escapeHtml(consignmentId)}</code>\n` +
-        `📅 <b>তারিখ:</b> ${escapeHtml(orderDate)} = ${escapeHtml(deliveryDate)}\n\n` +
-        `👤 <b>নাম:</b> ${escapeHtml(customerName)}\n` +
+        `👤 <b>কাস্টমার:</b> ${escapeHtml(customerName)}\n` +
+        `📞 <b>মোবাইল:</b> <code>${escapeHtml(customerPhone)}</code>\n` +
         `📍 <b>ঠিকানা:</b> ${escapeHtml(address)}\n` +
-        `📦 <b>আইটেম:</b> ${escapeHtml(items)}\n\n` +
+        `📦 <b>আইটেম:</b> ${escapeHtml(items)}\n` +
+        `💰 <b>টাকা (COD):</b> ৳ ${escapeHtml(orderTotal)}\n` +
+        `📌 <b>স্ট্যাটাস:</b> <code>DELIVERED</code>\n\n` +
         `⏳ <b>পেন্ডিং আপডেট:</b>\n${pendingText}`;
 
     } 
     else if (status === 'cancelled' || status === 'partial_delivered') {
       tgMessage = `❌ <b>পার্সেল রিটার্ন / আংশিক ডেলিভারি!</b>\n` +
-        `• <b>ইনভয়েস:</b> #${escapeHtml(invoice)}\n` +
-        `• <b>স্ট্যাটাস:</b> <code>${escapeHtml(status.toUpperCase())}</code>\n` +
-        `• <b>CID:</b> <code>${escapeHtml(consignmentId)}</code>\n` +
+        `🏬 <b>স্টোর:</b> ${escapeHtml(storeName)}\n` +
+        `🧾 <b>ইনভয়েস / CID:</b> #${escapeHtml(invoice)} / <code>${escapeHtml(consignmentId)}</code>\n` +
+        `👤 <b>কাস্টমার:</b> ${escapeHtml(customerName)}\n` +
+        `📞 <b>মোবাইল:</b> <code>${escapeHtml(customerPhone)}</code>\n` +
+        `📍 <b>ঠিকানা:</b> ${escapeHtml(address)}\n` +
+        `📦 <b>আইটেম:</b> ${escapeHtml(items)}\n` +
+        `💰 <b>টাকা (COD):</b> ৳ ${escapeHtml(orderTotal)}\n` +
+        `📌 <b>স্ট্যাটাস:</b> <code>${escapeHtml(status.toUpperCase())}</code>\n` +
         `${note ? `• <b>কারণ / নোট:</b> <i>${escapeHtml(note)}</i>\n` : ''}`;
     } 
     else if (note || riderName) {
       tgMessage = `⚠️ <b>রাইডার আপডেট / বিশেষ নোট</b>\n` +
         `-----------------------\n` +
-        `• <b>ইনভয়েস:</b> #${escapeHtml(invoice)}\n` +
-        `• <b>বর্তমান অবস্থা:</b> <code>${escapeHtml(status.toUpperCase() || 'IN TRANSIT')}</code>\n` +
-        `• <b>CID:</b> <code>${escapeHtml(consignmentId)}</code>\n` +
+        `🏬 <b>স্টোর:</b> ${escapeHtml(storeName)}\n` +
+        `🧾 <b>ইনভয়েস / CID:</b> #${escapeHtml(invoice)} / <code>${escapeHtml(consignmentId)}</code>\n` +
+        `👤 <b>কাস্টমার:</b> ${escapeHtml(customerName)}\n` +
+        `📞 <b>মোবাইল:</b> <code>${escapeHtml(customerPhone)}</code>\n` +
+        `📍 <b>ঠিকানা:</b> ${escapeHtml(address)}\n` +
+        `📦 <b>আইটেম:</b> ${escapeHtml(items)}\n` +
+        `💰 <b>টাকা (COD):</b> ৳ ${escapeHtml(orderTotal)}\n` +
+        `📌 <b>স্ট্যাটাস:</b> <code>${escapeHtml(status.toUpperCase() || 'IN TRANSIT')}</code>\n` +
         `${riderName ? `• <b>রাইডার:</b> ${escapeHtml(riderName)} (${escapeHtml(riderPhone)})\n` : ''}` +
-        `• <b>রাইডারের নোট:</b> <b>${escapeHtml(note || 'কোনো নোট দেওয়া হয়নি')}</b>\n\n` +
-        `<i>জরুরি ফলোআপের জন্য প্রস্তুত থাকুন!</i>`;
+        `• <b>রাইডারের নোট:</b> <b>${escapeHtml(note || 'কোনো নোট দেওয়া হয়নি সংযোগ')}</b>`;
     }
 
-    // 🚀 INJECTED: টেলিগ্রাম মেসেজ লিমিট বাইপাস এবং স্প্লিট লজিক 🚀
     if (tgMessage) {
       const sendTelegram = async (textMsg: string) => {
         const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
@@ -314,7 +306,7 @@ export async function POST(req: Request) {
               headers: { 'Content-Type': 'application/json' }, 
               body: JSON.stringify({ chat_id: groupCourier, text: part, parse_mode: 'HTML' }) 
             });
-            await new Promise(r => setTimeout(r, 1000)); // ব্লক হওয়া ঠেকাতে ১ সেকেন্ড বিরতি
+            await new Promise(r => setTimeout(r, 1000));
           }
         } else {
           await fetch(url, { 
@@ -330,7 +322,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, received: true });
   } catch (error: any) {
-    console.error('Steadfast Webhook Error:', error);
     return NextResponse.json({ success: false, warning: error.message }, { status: 200 });
   }
 }
