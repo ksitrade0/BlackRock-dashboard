@@ -478,18 +478,18 @@ export default function Dashboard() {
       <div className="max-w-[1950px] mx-auto w-full">
         <div className="bg-slate-200/95 pb-2 pt-2 w-full">
           <div className="flex flex-col lg:flex-row justify-between items-center mb-2 gap-2 bg-white p-2 md:px-4 rounded-2xl shadow-sm border border-slate-300 w-full">
-            <div className="flex items-center gap-3.5 w-full lg:w-auto justify-center lg:justify-start">
-              {/* বড় আকারের লোগো ইমেজ */}
-              <div onClick={() => (window.location.href = '/')} className="w-16 h-16 rounded-xl bg-black flex items-center justify-center p-1 shadow-sm border border-slate-800 shrink-0 cursor-pointer overflow-hidden">
+            <div className="flex items-center gap-4 w-full lg:w-auto justify-center lg:justify-start">
+              {/* বড় আকারের লোগো ইমেজ (w-20 h-20) */}
+              <div onClick={() => (window.location.href = '/')} className="w-20 h-20 rounded-xl bg-black flex items-center justify-center p-1.5 shadow-md border border-slate-800 shrink-0 cursor-pointer overflow-hidden">
                 <img src="/logo.jpg" alt="Black Rock Corporation Logo" className="w-full h-full object-contain" onError={() => setHasLogoImg(false)} />
               </div>
               <div>
-                {/* Horizon ফন্ট দিয়ে প্রফেশনাল হেডার */}
-                <h1 style={{ fontFamily: "'Horizon', sans-serif", letterSpacing: '1px' }} className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-950 uppercase">
+                {/* Horizon ফন্ট দিয়ে দ্বিগুণ বড় (text-3xl md:text-4xl lg:text-5xl) প্রফেশনাল হেডার */}
+                <h1 style={{ fontFamily: "'Horizon', sans-serif", letterSpacing: '1.5px' }} className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-950 uppercase">
                   BLACK ROCK CORPORATION
                 </h1>
-                <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 mt-0.5">
-                  <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <div className="flex items-center gap-2 text-xs md:text-sm font-bold text-slate-500 mt-1">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span>Enterprise Multi-Store & Courier Logistics Portal</span>
                 </div>
               </div>
