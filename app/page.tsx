@@ -465,20 +465,26 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-200/70 text-slate-900 p-2 md:p-3 font-sans w-full overflow-x-hidden">
+      {/* ফন্ট লোড করার জন্য স্টাইল লিংক */}
+      <style dangerouslySetInnerHTML={{ __html: `@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap');` }} />
+      
       <div className="max-w-[1950px] mx-auto w-full">
         <div className="bg-slate-200/95 pb-2 pt-2 w-full">
           <div className="flex flex-col lg:flex-row justify-between items-center mb-2 gap-2 bg-white p-2 md:px-4 rounded-2xl shadow-sm border border-slate-300 w-full">
-            <div className="flex items-center gap-3 w-full lg:w-auto justify-center lg:justify-start">
-              {hasLogoImg ? (
-                <div onClick={() => (window.location.href = '/')} className="flex items-center gap-3.5 cursor-pointer select-none transition hover:opacity-90">
-                  <div className="w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center p-1.5 shadow-sm border border-slate-800 shrink-0"><img src="/logo.png" alt="Black Rock Logo" className="w-full h-full object-contain" onError={() => setHasLogoImg(false)} /></div>
-                </div>
-              ) : (
-                <div className="w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center text-white shadow-sm border border-slate-700 shrink-0"><Layers className="w-6 h-6 text-amber-400" /></div>
-              )}
+            <div className="flex items-center gap-3.5 w-full lg:w-auto justify-center lg:justify-start">
+              {/* বড় আকারের লোগো ইমেজ */}
+              <div onClick={() => (window.location.href = '/')} className="w-16 h-16 rounded-xl bg-black flex items-center justify-center p-1 shadow-sm border border-slate-800 shrink-0 cursor-pointer overflow-hidden">
+                <img src="/logo.jpg" alt="Black Rock Corporation Logo" className="w-full h-full object-contain" onError={() => setHasLogoImg(false)} />
+              </div>
               <div>
-                <h1 className="text-lg md:text-xl lg:text-2xl font-black tracking-wider text-slate-950 uppercase flex items-center gap-2">BLACK ROCK CORPORATION</h1>
-                <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 mt-0.5"><span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span>Enterprise Multi-Store & Courier Logistics Portal</span></div>
+                {/* Bold Condensed Sans-Serif (Oswald) ফন্ট দিয়ে প্রফেশনাল হেডার */}
+                <h1 style={{ fontFamily: "'Oswald', sans-serif", letterSpacing: '1px' }} className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-950 uppercase">
+                  BLACK ROCK CORPORATION
+                </h1>
+                <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 mt-0.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>Enterprise Multi-Store & Courier Logistics Portal</span>
+                </div>
               </div>
             </div>
 
