@@ -23,7 +23,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   const [statementData, setStatementData] = useState<any[]>([]);
   const [isLoadingStatement, setIsLoadingStatement] = useState(false);
   
-  // মূল ফিল্টার বার স্টেট (সিলেক্টেড আইটেম, নির্দিষ্ট দিন, মাস, বছর, সব রেকর্ড)
   const [statementFilterType, setStatementFilterType] = useState('all'); 
   const [statementDateVal, setStatementDateVal] = useState('');
   
@@ -48,7 +47,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [actFilter, setActFilter] = useState('all');
 
-  // Print Modal State for Expenses
   const [printModalTarget, setPrintModalTarget] = useState<'expense' | null>(null);
 
   useEffect(() => { 
@@ -139,7 +137,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     } catch (err) { alert('❌ বাল্ক ডিলিট করতে সমস্যা হয়েছে!'); }
   };
 
-  // ফিল্টার ও ভ্যারাইটিস আইটেম ব্রেকডাউন প্রসেসিং
   const groupedStatement = useMemo(() => {
     let filtered = statementData;
     if (statementFilterType === 'day' && statementDateVal) {
@@ -170,7 +167,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     return groups;
   }, [statementData, statementFilterType, statementDateVal]);
 
-  // সরাসরি প্রিন্ট করার ফাংশন (কোনো পপআপ ছাড়া)
   const triggerStockPrint = () => {
     const printContent = document.getElementById('print-statement');
     if (!printContent) return;
@@ -285,7 +281,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         </div>, document.body
       )}
 
-      {/* Expense Print Modal */}
       {printModalTarget === 'expense' && createPortal(
         <div className="fixed inset-0 z-[9999999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 text-center">
@@ -348,7 +343,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
               </form>
             ) : (
               <div className="max-w-7xl mx-auto">
-                {/* মূল টেবিলের ৫টি ড্রপডাউন ফিল্টার বার এবং প্রিন্ট বাটন পাশাপাশি */}
                 <div className="flex flex-wrap justify-between items-center mb-4 gap-3 no-print bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                   <div className="flex items-center gap-2.5">
                     <select 
@@ -379,7 +373,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
                   <div className="flex gap-2">
                     {isSuperAdmin && <button onClick={handleBulkDeleteStatement} className="bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"><Trash2 className="w-4 h-4"/> সিলেক্টেড ডিলিট</button>}
-                    {/* সরাসরি ফিল্টারকৃত ডাটা ও ব্যাখ্যাসহ প্রিন্ট করার বাটন */}
                     <button onClick={triggerStockPrint} className="bg-slate-900 hover:bg-black text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
                       <Printer className="w-4 h-4 text-amber-400"/> প্রিন্ট করুন
                     </button>
@@ -464,7 +457,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                   </table>
                 </div>
 
-                {/* প্রিন্ট টেমপ্লেট যেখানে ফিল্টার করা ডাটা এবং ভ্যারাইটিস আইটেমের সুনির্দিষ্ট ব্যাখ্যা (Breakdown) প্রিন্ট পেপারে আসবে */}
                 <div id="print-statement" className="hidden p-6 bg-white text-black swadhinota-font">
                    <h2 className="text-xl font-black text-center border-b-2 border-black pb-2 mb-4">Stock Statement & Ledger Report</h2>
                    <p className="text-xs font-bold mb-2">Filter Type: {statementFilterType.toUpperCase()} {statementDateVal ? `(${statementDateVal})` : ''} | Total Value: ৳ {finalPrintTotalStock}</p>
@@ -606,7 +598,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {activityLogs.filter(log => actFilter === 'all' || log.action.includes(actFilter)).length === 0 ? <tr><td colSpan={4} className="p-10 text-center font-bold text-slate-400">কোনো হিস্ট্রি নেই</td></tr> :
-                   activityLogs.filter(log => actFilter === 'all' || log.action.includes(log_idx => true)).map((log) => {
+                   activityLogs.filter(log => actFilter === 'all' || log.action.includes(actFilter)).map((log) => {
                        const isDelete = log.action.includes('DELETE');
                        const actionColor = isDelete ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-emerald-100 text-emerald-800 border border-rose-200';
                        return (
