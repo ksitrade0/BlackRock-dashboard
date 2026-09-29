@@ -23,8 +23,8 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   const [statementData, setStatementData] = useState<any[]>([]);
   const [isLoadingStatement, setIsLoadingStatement] = useState(false);
   
-  // নতুন ডুয়াল ড্রপডাউন ফিল্টার স্টেট
-  const [statementFilterType, setStatementFilterType] = useState('all'); // 'selected_item', 'day', 'month', 'year', 'all'
+  // মূল টেবিলের ৫টি ড্রপডাউন ফিল্টার স্টেট
+  const [statementFilterType, setStatementFilterType] = useState('all'); 
   const [statementDateVal, setStatementDateVal] = useState('');
   
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
@@ -48,7 +48,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [actFilter, setActFilter] = useState('all');
 
-  // Print Modal States
+  // Print Modal States (আলাদা ও স্পষ্ট লেবেলযুক্ত)
   const [printModalTarget, setPrintModalTarget] = useState<'stock' | 'expense' | null>(null);
   const [printPeriod, setPrintPeriod] = useState('all');
   const [printDateVal, setPrintDateVal] = useState('');
@@ -153,7 +153,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     } else if (statementFilterType === 'year' && statementDateVal) {
       filtered = statementData.filter(row => row.date && new Date(row.date).getFullYear().toString() === statementDateVal);
     } else if (statementFilterType === 'selected_item') {
-      // নির্দিষ্ট সিলেক্টেড আইটেম ফিল্টার লজিক চাইলে এখানে যুক্ত করা যাবে
+      // নির্দিষ্ট সিলেক্টেড আইটেম ফিল্টার
     }
 
     const groups: any[] = []; const map = new Map();
@@ -293,6 +293,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         </div>, document.body
       )}
 
+      {/* প্রিন্ট মডালের ড্রপডাউন লেবেলগুলো সম্পূর্ণ আলাদা এবং স্পষ্ট করা হয়েছে যাতে মূল ফিল্টারের সাথে কোনো মিল না থাকে */}
       {printModalTarget && createPortal(
         <div className="fixed inset-0 z-[9999999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl animate-in zoom-in-95">
@@ -300,7 +301,10 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
             <p className="text-xs font-bold text-slate-500 mb-6">আপনি কোন সময়ের রিপোর্ট প্রিন্ট করতে চান তা সিলেক্ট করুন।</p>
             <div className="space-y-4 mb-6">
               <select value={printPeriod} onChange={e=>setPrintPeriod(e.target.value)} className="w-full border border-slate-300 p-3 rounded-xl font-bold text-sm bg-slate-50 outline-none">
-                <option value="all">সব রেকর্ড প্রিন্ট করুন</option><option value="daily">নির্দিষ্ট দিনের হিসাব</option><option value="monthly">নির্দিষ্ট মাসের হিসাব</option><option value="yearly">নির্দিষ্ট বছরের হিসাব</option>
+                <option value="all">🖨️ প্রিন্ট: সকল রেকর্ড</option>
+                <option value="daily">🖨️ প্রিন্ট: নির্দিষ্ট দিনের হিসাব</option>
+                <option value="monthly">🖨️ প্রিন্ট: নির্দিষ্ট মাসের হিসাব</option>
+                <option value="yearly">🖨️ প্রিন্ট: নির্দিষ্ট বছরের হিসাব</option>
               </select>
               {printPeriod === 'daily' && <input type="date" value={printDateVal} onChange={e=>setPrintDateVal(e.target.value)} className="w-full border border-slate-300 p-3 rounded-xl font-bold" />}
               {printPeriod === 'monthly' && <input type="month" value={printMonthVal} onChange={e=>setPrintMonthVal(e.target.value)} className="w-full border border-slate-300 p-3 rounded-xl font-bold" />}
@@ -362,7 +366,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
               </form>
             ) : (
               <div className="max-w-7xl mx-auto">
-                {/* ডুয়াল ড্রপডাউন কন্ট্রোল বার (৫টি অপশনসহ) */}
+                {/* মূল টেবিলের ৫টি ড্রপডাউন ফিল্টার বার */}
                 <div className="flex flex-wrap justify-between items-center mb-4 gap-3 no-print bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                   <div className="flex items-center gap-2.5">
                     <select 
@@ -370,14 +374,14 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                       onChange={(e) => { setStatementFilterType(e.target.value); setStatementDateVal(''); }} 
                       className="border border-slate-300 px-3 py-2 rounded-lg text-xs font-black bg-white outline-none cursor-pointer"
                     >
-                      <option value="selected_item">সিলেক্টেড আইটেম</option>
-                      <option value="day">নির্দিষ্ট দিন</option>
-                      <option value="month">মাসের হিসাব</option>
-                      <option value="year">বছরের হিসাব</option>
-                      <option value="all">সব রেকর্ড</option>
+                      <option value="selected_item">🔍 সিলেক্টেড আইটেম</option>
+                      <option value="day">📅 নির্দিষ্ট দিন</option>
+                      <option value="month">📆 মাসের হিসাব</option>
+                      <option value="year">📊 বছরের হিসাব</option>
+                      <option value="all">📂 সব রেকর্ড</option>
                     </select>
 
-                    {/* দ্বিতীয় ড্রপডাউন / ক্যালেন্ডার (যদি নির্দিষ্ট দিন, মাস বা বছর সিলেক্ট করা হয়) */}
+                    {/* দ্বিতীয় ড্রপডাউন / ক্যালেন্ডার (নির্দিষ্ট দিন, মাস বা বছর সিলেক্ট করলে শো করবে) */}
                     {statementFilterType !== 'all' && statementFilterType !== 'selected_item' && (
                       <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 shadow-2xs">
                         <Calendar className="w-3.5 h-3.5 text-slate-500" />
@@ -394,7 +398,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
                   <div className="flex gap-2">
                     {isSuperAdmin && <button onClick={handleBulkDeleteStatement} className="bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"><Trash2 className="w-4 h-4"/> সিলেক্টেড ডিলিট</button>}
-                    <button onClick={() => setPrintModalTarget('stock')} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer"><Printer className="w-4 h-4"/> প্রিন্ট করুন</button>
+                    <button onClick={() => setPrintModalTarget('stock')} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer"><Printer className="w-4 h-4"/> প্রিন্ট অপশন</button>
                   </div>
                 </div>
                 
@@ -423,7 +427,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                               <td className="px-5 py-3 text-[11px] font-black">{row.type === 'STOCK_IN' ? '🟢 IN' : row.type === 'STOCK_OUT' ? '🔴 OUT' : '🔵 RESTORED'}</td>
                               <td className="px-5 py-3 text-xs font-black text-slate-800">{row.reference}</td>
                               
-                              {/* আইটেম কলাম যেখানে ক্লিক করলে ভ্যারাইটিসের ব্যাখ্যা ট্যাব খুলবে */}
                               <td className="px-5 py-3 text-[11px] font-bold text-slate-700 bg-slate-50 border-l border-r border-slate-100">
                                 <div className="flex items-center justify-between gap-2">
                                   <span>{row.itemName}</span>
@@ -450,7 +453,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                               </td>
                             </tr>
 
-                            {/* ভ্যারাইটিস আইটেম ব্রেকডাউন ব্যাখ্যা ট্যাব */}
                             {isExpanded && row.breakdown && (
                               <tr>
                                 <td colSpan={9} className="bg-slate-50/80 p-3 border-b border-slate-200 shadow-inner">
