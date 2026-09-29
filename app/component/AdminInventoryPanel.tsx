@@ -23,7 +23,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   const [statementData, setStatementData] = useState<any[]>([]);
   const [isLoadingStatement, setIsLoadingStatement] = useState(false);
   
-  // মূল টেবিলের ৫টি ড্রপডাউন ফিল্টার স্টেট
+  // মূল ফিল্টার বার স্টেট (সিলেক্টেড আইটেম, নির্দিষ্ট দিন, মাস, বছর, সব রেকর্ড)
   const [statementFilterType, setStatementFilterType] = useState('all'); 
   const [statementDateVal, setStatementDateVal] = useState('');
   
@@ -48,8 +48,8 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [actFilter, setActFilter] = useState('all');
 
-  // Print Modal State (ড্রপডাউন সম্পূর্ণ বাদ দেওয়া হয়েছে)
-  const [printModalTarget, setPrintModalTarget] = useState<'stock' | 'expense' | null>(null);
+  // Print Modal State for Expenses
+  const [printModalTarget, setPrintModalTarget] = useState<'expense' | null>(null);
 
   useEffect(() => { 
     setMounted(true); 
@@ -139,7 +139,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     } catch (err) { alert('❌ বাল্ক ডিলিট করতে সমস্যা হয়েছে!'); }
   };
 
-  // ৫টি ফিল্টার অপশন ও ব্রেকডাউন সহ স্টেটমেন্ট প্রসেসিং
+  // ফিল্টার ও ভ্যারাইটিস আইটেম ব্রেকডাউন প্রসেসিং
   const groupedStatement = useMemo(() => {
     let filtered = statementData;
     if (statementFilterType === 'day' && statementDateVal) {
@@ -149,7 +149,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     } else if (statementFilterType === 'year' && statementDateVal) {
       filtered = statementData.filter(row => row.date && new Date(row.date).getFullYear().toString() === statementDateVal);
     } else if (statementFilterType === 'selected_item') {
-      // নির্দিষ্ট সিলেক্টেড আইটেম ফিল্টার
+      // সিলেক্টেড আইটেম ফিল্টার লজিক
     }
 
     const groups: any[] = []; const map = new Map();
@@ -169,6 +169,17 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     map.forEach(val => { val.itemName = val.itemNames.join(' / '); groups.push(val); });
     return groups;
   }, [statementData, statementFilterType, statementDateVal]);
+
+  // সরাসরি প্রিন্ট করার ফাংশন (কোনো পপআপ ছাড়া)
+  const triggerStockPrint = () => {
+    const printContent = document.getElementById('print-statement');
+    if (!printContent) return;
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`<html><head><title>Stock Statement & Ledger</title><style>body{font-family:sans-serif;padding:20px} table{width:100%;border-collapse:collapse;margin-top:15px} th,td{border:1px solid #333;padding:8px;font-size:12px} th{background:#f1f5f9;text-align:left}</style></head><body>${printContent.outerHTML}<script>setTimeout(()=>{window.print();window.close();},500);</script></body></html>`);
+      printWindow.document.close();
+    } else alert('পপ-আপ ব্লকার চালু আছে!');
+  };
 
   // =================== EXPENSE LOGIC ===================
   const fetchExpenses = async () => {
@@ -216,28 +227,24 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   });
   const totalExpense = filteredExpenses.reduce((sum, row) => sum + Number(row.amount || 0), 0);
 
-  // =================== UTILS & PRINT ===================
   const getWeekNumber = (d: Date) => { const d2 = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const dayNum = d2.getUTCDay() || 7; d2.setUTCDate(d2.getUTCDate() + 4 - dayNum); const yearStart = new Date(Date.UTC(d2.getUTCFullYear(), 0, 1)); return Math.ceil((((d2.getTime() - yearStart.getTime()) / 86400000) + 1) / 7); };
   const formatWeek = (dateStr: string) => { if(!dateStr) return 'N/A'; const d = new Date(dateStr); return `Week ${getWeekNumber(d)} (${d.toLocaleString('en-GB', { month: 'short' })})`; };
   const toggleSelectRow = (id: string) => { setSelectedRowIds(selectedRowIds.includes(id) ? selectedRowIds.filter(i => i !== id) : [...selectedRowIds, id]); };
   const toggleSelectAll = () => { setSelectedRowIds(selectedRowIds.length === groupedStatement.length ? [] : groupedStatement.map(r => r.id)); };
 
-  const triggerPrint = () => {
-    const elementId = printModalTarget === 'stock' ? 'print-statement' : 'print-expenses';
-    const printContent = document.getElementById(elementId);
+  const triggerExpensePrint = () => {
+    const printContent = document.getElementById('print-expenses');
     if (!printContent) return;
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-      printWindow.document.write(`<html><head><title>Print Report</title><style>body{font-family:sans-serif;padding:20px} table{width:100%;border-collapse:collapse;margin-top:15px} th,td{border:1px solid #333;padding:8px;font-size:12px} th{background:#f1f5f9;text-align:left}</style></head><body>${printContent.outerHTML}<script>setTimeout(()=>{window.print();window.close();},500);</script></body></html>`);
+      printWindow.document.write(`<html><head><title>Expense Report</title><style>body{font-family:sans-serif;padding:20px} table{width:100%;border-collapse:collapse;margin-top:15px} th,td{border:1px solid #333;padding:8px;font-size:12px} th{background:#f1f5f9;text-align:left}</style></head><body>${printContent.outerHTML}<script>setTimeout(()=>{window.print();window.close();},500);</script></body></html>`);
       printWindow.document.close();
     } else alert('পপ-আপ ব্লকার চালু আছে!');
     setPrintModalTarget(null);
   };
 
-  const finalPrintStock = printModalTarget === 'stock' ? groupedStatement : [];
-  const finalPrintExpense = printModalTarget === 'expense' ? filteredExpenses : [];
-  const finalPrintTotalStock = finalPrintStock.reduce((sum, row) => sum + Number(row.total || 0), 0);
-  const finalPrintTotalExp = finalPrintExpense.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  const finalPrintTotalStock = groupedStatement.reduce((sum, row) => sum + Number(row.total || 0), 0);
+  const finalPrintTotalExp = filteredExpenses.reduce((sum, row) => sum + Number(row.amount || 0), 0);
 
   if (!mounted) return null;
 
@@ -278,16 +285,16 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         </div>, document.body
       )}
 
-      {/* প্রিন্ট পপআপ থেকে সমস্ত অতিরিক্ত ড্রপডাউন অপশন সম্পূর্ণ বাদ দেওয়া হয়েছে */}
-      {printModalTarget && createPortal(
+      {/* Expense Print Modal */}
+      {printModalTarget === 'expense' && createPortal(
         <div className="fixed inset-0 z-[9999999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 text-center">
             <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4"><Printer className="w-6 h-6"/></div>
-            <h3 className="text-xl font-black text-slate-900 mb-2">রিপোর্ট প্রিন্ট করুন</h3>
-            <p className="text-xs font-bold text-slate-500 mb-6">আপনি কি বর্তমান ফিল্টার করা ডাটা বা রিপোর্টটি প্রিন্ট করতে চান?</p>
+            <h3 className="text-xl font-black text-slate-900 mb-2">খরচের রিপোর্ট প্রিন্ট করুন</h3>
+            <p className="text-xs font-bold text-slate-500 mb-6">আপনি কি ফিল্টার করা খরচের হিসাবটি প্রিন্ট করতে চান?</p>
             <div className="flex gap-3">
               <button onClick={() => setPrintModalTarget(null)} className="w-full py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 cursor-pointer">বাতিল</button>
-              <button onClick={triggerPrint} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg flex justify-center gap-2 cursor-pointer"><Printer className="w-4 h-4"/> প্রিন্ট করুন</button>
+              <button onClick={triggerExpensePrint} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg flex justify-center gap-2 cursor-pointer"><Printer className="w-4 h-4"/> প্রিন্ট করুন</button>
             </div>
           </div>
         </div>, document.body
@@ -341,7 +348,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
               </form>
             ) : (
               <div className="max-w-7xl mx-auto">
-                {/* মূল টেবিলের ৫টি ড্রপডাউন ফিল্টার বার */}
+                {/* মূল টেবিলের ৫টি ড্রপডাউন ফিল্টার বার এবং প্রিন্ট বাটন পাশাপাশি */}
                 <div className="flex flex-wrap justify-between items-center mb-4 gap-3 no-print bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                   <div className="flex items-center gap-2.5">
                     <select 
@@ -372,7 +379,10 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
                   <div className="flex gap-2">
                     {isSuperAdmin && <button onClick={handleBulkDeleteStatement} className="bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"><Trash2 className="w-4 h-4"/> সিলেক্টেড ডিলিট</button>}
-                    <button onClick={() => setPrintModalTarget('stock')} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer"><Printer className="w-4 h-4"/> প্রিন্ট করুন</button>
+                    {/* সরাসরি ফিল্টারকৃত ডাটা ও ব্যাখ্যাসহ প্রিন্ট করার বাটন */}
+                    <button onClick={triggerStockPrint} className="bg-slate-900 hover:bg-black text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
+                      <Printer className="w-4 h-4 text-amber-400"/> প্রিন্ট করুন
+                    </button>
                   </div>
                 </div>
                 
@@ -454,28 +464,36 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                   </table>
                 </div>
 
+                {/* প্রিন্ট টেমপ্লেট যেখানে ফিল্টার করা ডাটা এবং ভ্যারাইটিস আইটেমের সুনির্দিষ্ট ব্যাখ্যা (Breakdown) প্রিন্ট পেপারে আসবে */}
                 <div id="print-statement" className="hidden p-6 bg-white text-black swadhinota-font">
-                   <h2 className="text-xl font-black text-center border-b-2 border-black pb-2 mb-4">Stock Statement & Ledger</h2>
-                   <p className="text-xs font-bold mb-2">Total Value: ৳ {finalPrintTotalStock}</p>
+                   <h2 className="text-xl font-black text-center border-b-2 border-black pb-2 mb-4">Stock Statement & Ledger Report</h2>
+                   <p className="text-xs font-bold mb-2">Filter Type: {statementFilterType.toUpperCase()} {statementDateVal ? `(${statementDateVal})` : ''} | Total Value: ৳ {finalPrintTotalStock}</p>
                    <table className="w-full border-collapse border border-black text-xs">
-                     <thead><tr className="bg-gray-100"><th>Date</th><th>Week/Month</th><th>Type</th><th>Reference</th><th>Items & Breakdown</th><th>Qty</th><th>Total</th></tr></thead>
+                     <thead><tr className="bg-gray-100"><th>Date</th><th>Week/Month</th><th>Type</th><th>Reference</th><th>Items & Detailed Breakdown</th><th>Qty</th><th>Total (৳)</th></tr></thead>
                      <tbody>
-                       {finalPrintStock.map(r => (
+                       {groupedStatement.map(r => (
                          <tr key={r.id}>
                            <td>{new Date(r.date).toLocaleString('en-GB')}</td>
                            <td>{formatWeek(r.date)}</td>
                            <td>{r.type}</td>
                            <td>{r.reference}</td>
                            <td>
-                             {r.itemName}
+                             <div style={{fontWeight: 'bold'}}>{r.itemName}</div>
                              {r.breakdown && r.breakdown.length > 0 && (
-                               <div style={{fontSize: '10px', marginTop: '4px', color: '#333'}}>
-                                 {r.breakdown.map((bk: any, bi: number) => <span key={bi} style={{marginRight: '8px', display: 'inline-block'}}>• {bk.name}: <b>{bk.qty} pcs</b></span>)}
+                               <div style={{fontSize: '11px', marginTop: '6px', color: '#111', borderTop: '1px dashed #ccc', paddingTop: '4px'}}>
+                                 <b>আইটেমভিত্তিক ব্যাখ্যা:</b>
+                                 <div style={{display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '3px'}}>
+                                   {r.breakdown.map((bk: any, bi: number) => (
+                                     <span key={bi} style={{background: '#f8fafc', border: '1px solid #cbd5e1', padding: '2px 6px', borderRadius: '4px', fontSize: '10px'}}>
+                                       {bk.name}: <b>{bk.qty} pcs</b>
+                                     </span>
+                                   ))}
+                                 </div>
                                </div>
                              )}
                            </td>
-                           <td>{r.quantity}</td>
-                           <td>{r.total}</td>
+                           <td style={{textAlign: 'center', fontWeight: 'bold'}}>{r.quantity}</td>
+                           <td style={{textAlign: 'right', fontWeight: 'bold'}}>{r.total}</td>
                          </tr>
                        ))}
                      </tbody>
@@ -526,7 +544,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                 <select value={expFilter} onChange={e=>setExpFilter(e.target.value)} className="border-none font-black text-sm outline-none cursor-pointer bg-transparent text-slate-800"><option value="all">সকল খরচের রেকর্ড</option><option value="today">আজকের খরচ</option><option value="month">এই মাসের খরচ</option><option value="year">এই বছরের খরচ</option></select>
                 <div className="flex gap-4 items-center">
                   <div className="text-xs font-bold text-slate-500">মোট খরচ: <span className="text-rose-600 font-black text-base">৳ {totalExpense}</span></div>
-                  <button onClick={() => setPrintModalTarget('expense')} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer"><Printer className="w-4 h-4"/> প্রিন্ট অপশন</button>
+                  <button onClick={() => setPrintModalTarget('expense')} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer"><Printer className="w-4 h-4"/> প্রিন্ট করুন</button>
                 </div>
               </div>
 
@@ -561,7 +579,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
               <h2 className="text-xl font-black text-center border-b-2 border-black pb-2 mb-4">Company Expense Ledger</h2>
               <p className="text-xs font-bold mb-2">Total Value: ৳ {finalPrintTotalExp}</p>
               <table className="w-full border-collapse border border-black text-xs"><thead><tr className="bg-gray-100"><th>Date</th><th>Description</th><th>Spender</th><th>Entry By</th><th>Amount (৳)</th></tr></thead>
-                <tbody>{finalPrintExpense.map(r => <tr key={r.id}><td>{new Date(r.date).toLocaleDateString('en-GB')}</td><td>{r.description}</td><td>{r.spender}</td><td>{r.createdBy}</td><td style={{textAlign:'right', fontWeight:'bold'}}>{r.amount}</td></tr>)}</tbody>
+                <tbody>{filteredExpenses.map(r => <tr key={r.id}><td>{new Date(r.date).toLocaleDateString('en-GB')}</td><td>{r.description}</td><td>{r.spender}</td><td>{r.createdBy}</td><td style={{textAlign:'right', fontWeight:'bold'}}>{r.amount}</td></tr>)}</tbody>
               </table>
             </div>
           </div>
@@ -588,7 +606,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {activityLogs.filter(log => actFilter === 'all' || log.action.includes(actFilter)).length === 0 ? <tr><td colSpan={4} className="p-10 text-center font-bold text-slate-400">কোনো হিস্ট্রি নেই</td></tr> :
-                   activityLogs.filter(log => actFilter === 'all' || log.action.includes(actFilter)).map((log) => {
+                   activityLogs.filter(log => actFilter === 'all' || log.action.includes(log_idx => true)).map((log) => {
                        const isDelete = log.action.includes('DELETE');
                        const actionColor = isDelete ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-emerald-100 text-emerald-800 border border-rose-200';
                        return (
