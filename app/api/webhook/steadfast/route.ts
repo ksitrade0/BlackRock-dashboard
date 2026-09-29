@@ -24,6 +24,9 @@ export async function POST(req: Request) {
     let pendingText = '';
     let tgMessage = '';
 
+    // 🚀 INJECTED: HTML Error Guard (টেলিগ্রাম যেন স্পেশাল ক্যারেক্টারের জন্য মেসেজ রিজেক্ট না করে) 🚀
+    const escapeHtml = (str: any) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
     // =======================================================
     // ১. ডাটাবেজ এবং WooCommerce রিয়েল-টাইম অটো-আপডেট লজিক
     // =======================================================
@@ -83,7 +86,7 @@ export async function POST(req: Request) {
               Authorization: authHeader,
             },
             body: JSON.stringify(updatePayload),
-          });
+          }).catch(() => {}); // 🚀 INJECTED: Error catch added to prevent crash
         }
 
         // ড্যাশবোর্ডের ডাটাবেজে স্ট্যাটাস আপডেট করা (যাতে রিলোড দিলে পুরোনোটা না আসে)
@@ -148,7 +151,11 @@ export async function POST(req: Request) {
     // =======================================================
     if (status === 'delivered') {
       try {
-        const dashRes = await fetch('https://app.ruhamar.com/api/orders');
+        // 🚀 INJECTED: টাইমআউট সেফটি এবং সঠিক লিংক (ruhamawear.com) 🚀
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000); 
+        const dashRes = await fetch('https://app.ruhamawear.com/api/orders', { signal: controller.signal });
+        clearTimeout(timeoutId);
         
         if (dashRes.ok) {
           const dashData = await dashRes.json();
@@ -215,12 +222,13 @@ export async function POST(req: Request) {
                     if (pO.size) pItems += ` [সাইজ: ${pO.size}]`;
                     const pCid = pO.consignmentId || pO.trackingCode || 'N/A';
                     
+                    // 🚀 INJECTED: HTML Error Guard (escapeHtml) 🚀
                     pendingText += `⚠️ <b>পেন্ডিং পার্সেল ${index + 1}:</b>\n`;
-                    pendingText += `🧾 <b>ইনভয়েস / CID:</b> #${pO.invoice} / <code>${pCid}</code>\n`;
-                    pendingText += `📅 <b>তারিখ:</b> ${orderDate}\n`;
-                    pendingText += `👤 <b>নাম:</b> ${pName}\n`;
-                    pendingText += `📍 <b>ঠিকানা:</b> ${pAddress}\n`;
-                    pendingText += `📦 <b>আইটেম:</b> ${pItems}\n`;
+                    pendingText += `🧾 <b>ইনভয়েস / CID:</b> #${escapeHtml(pO.invoice)} / <code>${escapeHtml(pCid)}</code>\n`;
+                    pendingText += `📅 <b>তারিখ:</b> ${escapeHtml(orderDate)}\n`;
+                    pendingText += `👤 <b>নাম:</b> ${escapeHtml(pName)}\n`;
+                    pendingText += `📍 <b>ঠিকানা:</b> ${escapeHtml(pAddress)}\n`;
+                    pendingText += `📦 <b>আইটেম:</b> ${escapeHtml(pItems)}\n`;
                     if (index < pendingOrders.length - 1) pendingText += `-----------------------\n`;
                   });
                 } else {
@@ -265,44 +273,59 @@ export async function POST(req: Request) {
          pendingText = `আপনার ${orderDate} তারিখের আর কোন পার্সেল পেন্ডিং নাই।`;
       }
 
+      // 🚀 INJECTED: HTML Error Guard (escapeHtml) 🚀
       tgMessage = 
         `✅ <b>আজকে ডেলিভারি হওয়া আপনার পার্সেল সম্পূর্ণভাবে ডেলিভারি হয়েছে।</b>\n\n` +
-        `🧾 <b>ইনভয়েস / CID:</b> #${invoice} / <code>${consignmentId}</code>\n` +
-        `📅 <b>তারিখ:</b> ${orderDate} = ${deliveryDate}\n\n` +
-        `👤 <b>নাম:</b> ${customerName}\n` +
-        `📍 <b>ঠিকানা:</b> ${address}\n` +
-        `📦 <b>আইটেম:</b> ${items}\n\n` +
+        `🧾 <b>ইনভয়েস / CID:</b> #${escapeHtml(invoice)} / <code>${escapeHtml(consignmentId)}</code>\n` +
+        `📅 <b>তারিখ:</b> ${escapeHtml(orderDate)} = ${escapeHtml(deliveryDate)}\n\n` +
+        `👤 <b>নাম:</b> ${escapeHtml(customerName)}\n` +
+        `📍 <b>ঠিকানা:</b> ${escapeHtml(address)}\n` +
+        `📦 <b>আইটেম:</b> ${escapeHtml(items)}\n\n` +
         `⏳ <b>পেন্ডিং আপডেট:</b>\n${pendingText}`;
 
     } 
     else if (status === 'cancelled' || status === 'partial_delivered') {
       tgMessage = `❌ <b>পার্সেল রিটার্ন / আংশিক ডেলিভারি!</b>\n` +
-        `• <b>ইনভয়েস:</b> #${invoice}\n` +
-        `• <b>স্ট্যাটাস:</b> <code>${status.toUpperCase()}</code>\n` +
-        `• <b>CID:</b> <code>${consignmentId}</code>\n` +
-        `${note ? `• <b>কারণ / নোট:</b> <i>${note}</i>\n` : ''}`;
+        `• <b>ইনভয়েস:</b> #${escapeHtml(invoice)}\n` +
+        `• <b>স্ট্যাটাস:</b> <code>${escapeHtml(status.toUpperCase())}</code>\n` +
+        `• <b>CID:</b> <code>${escapeHtml(consignmentId)}</code>\n` +
+        `${note ? `• <b>কারণ / নোট:</b> <i>${escapeHtml(note)}</i>\n` : ''}`;
     } 
     else if (note || riderName) {
       tgMessage = `⚠️ <b>রাইডার আপডেট / বিশেষ নোট</b>\n` +
         `-----------------------\n` +
-        `• <b>ইনভয়েস:</b> #${invoice}\n` +
-        `• <b>বর্তমান অবস্থা:</b> <code>${status.toUpperCase() || 'IN TRANSIT'}</code>\n` +
-        `• <b>CID:</b> <code>${consignmentId}</code>\n` +
-        `${riderName ? `• <b>রাইডার:</b> ${riderName} (${riderPhone})\n` : ''}` +
-        `• <b>রাইডারের নোট:</b> <b>${note || 'কোনো নোট দেওয়া হয়নি'}</b>\n\n` +
+        `• <b>ইনভয়েস:</b> #${escapeHtml(invoice)}\n` +
+        `• <b>বর্তমান অবস্থা:</b> <code>${escapeHtml(status.toUpperCase() || 'IN TRANSIT')}</code>\n` +
+        `• <b>CID:</b> <code>${escapeHtml(consignmentId)}</code>\n` +
+        `${riderName ? `• <b>রাইডার:</b> ${escapeHtml(riderName)} (${escapeHtml(riderPhone)})\n` : ''}` +
+        `• <b>রাইডারের নোট:</b> <b>${escapeHtml(note || 'কোনো নোট দেওয়া হয়নি')}</b>\n\n` +
         `<i>জরুরি ফলোআপের জন্য প্রস্তুত থাকুন!</i>`;
     }
 
+    // 🚀 INJECTED: টেলিগ্রাম মেসেজ লিমিট বাইপাস এবং স্প্লিট লজিক 🚀
     if (tgMessage) {
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: groupCourier,
-          text: tgMessage,
-          parse_mode: 'HTML',
-        }),
-      });
+      const sendTelegram = async (textMsg: string) => {
+        const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+        if (textMsg.length > 3500) {
+          const parts = textMsg.match(/[\s\S]{1,3500}/g) || [];
+          for (const part of parts) {
+            await fetch(url, { 
+              method: 'POST', 
+              headers: { 'Content-Type': 'application/json' }, 
+              body: JSON.stringify({ chat_id: groupCourier, text: part, parse_mode: 'HTML' }) 
+            });
+            await new Promise(r => setTimeout(r, 1000)); // ব্লক হওয়া ঠেকাতে ১ সেকেন্ড বিরতি
+          }
+        } else {
+          await fetch(url, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ chat_id: groupCourier, text: textMsg, parse_mode: 'HTML' }) 
+          });
+        }
+      };
+      
+      await sendTelegram(tgMessage);
     }
 
     return NextResponse.json({ success: true, received: true });
