@@ -146,8 +146,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
       filtered = statementData.filter(row => row.date && row.date.startsWith(statementDateVal));
     } else if (statementFilterType === 'year' && statementDateVal) {
       filtered = statementData.filter(row => row.date && new Date(row.date).getFullYear().toString() === statementDateVal);
-    } else if (statementFilterType === 'selected_item') {
-      // সিলেক্টেড আইটেম ফিল্টার
     }
 
     const groups: any[] = []; const map = new Map();
@@ -175,7 +173,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     return groups;
   }, [statementData, statementFilterType, statementDateVal]);
 
-  // শুধু বাম পাশের চেকবক্স থেকে সিলেক্ট করা রেকর্ডগুলো প্রিন্ট করার ফাংশন (সিলেক্টেড প্রিন্ট)
+  // প্রফেশনাল করপোরেট লেআউট সহ সরাসরি প্রিন্ট ফাংশন
   const triggerSelectedStockPrint = () => {
     if (selectedRowIds.length === 0) {
       return alert('প্রিন্ট করার জন্য বাম পাশ থেকে অন্তত একটি রেকর্ড সিলেক্ট করুন।');
@@ -184,7 +182,37 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     if (!printContent) return;
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-      printWindow.document.write(`<html><head><title>Selected Stock Statement Report</title><style>body{font-family:sans-serif;padding:20px} table{width:100%;border-collapse:collapse;margin-top:15px} th,td{border:1px solid #333;padding:8px;font-size:12px} th{background:#f1f5f9;text-align:left}</style></head><body>${printContent.outerHTML}<script>setTimeout(()=>{window.print();window.close();},500);</script></body></html>`);
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Stock Statement & Ledger Report</title>
+          <style>
+            @page { size: A4 portrait; margin: 15mm 12mm 15mm 12mm; }
+            body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .header-box { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 18px; }
+            .company-name { font-size: 20px; font-weight: 900; letter-spacing: 1px; color: #0f172a; text-transform: uppercase; margin-bottom: 4px; }
+            .report-title { font-size: 13px; font-weight: 700; color: #475569; letter-spacing: 0.5px; text-transform: uppercase; }
+            .meta-bar { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 12px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+            th { background-color: #0f172a !important; color: #ffffff !important; font-size: 11px; font-weight: 800; text-transform: uppercase; padding: 8px 10px; border: 1px solid #0f172a; text-align: left; }
+            td { font-size: 11px; padding: 8px 10px; border: 1px solid #cbd5e1; vertical-align: top; color: #0f172a; }
+            tr:nth-child(even) { background-color: #f8fafc; }
+            .breakdown-badge { display: inline-block; background-color: #f1f5f9; border: 1px solid #94a3b8; padding: 3px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; margin: 2px 4px 2px 0; color: #0f172a; }
+            .signatures-container { margin-top: 60px; display: flex; justify-content: space-between; padding: 0 40px; }
+            .sig-block { text-align: center; }
+            .sig-line { width: 180px; border-top: 1.5px dashed #475569; margin-bottom: 6px; }
+            .sig-label { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #334155; }
+          </style>
+        </head>
+        <body>
+          ${printContent.innerHTML}
+          <script>
+            setTimeout(() => { window.print(); window.close(); }, 400);
+          </script>
+        </body>
+        </html>
+      `);
       printWindow.document.close();
     } else alert('পপ-আপ ব্লকার চালু আছে!');
   };
@@ -209,7 +237,6 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
       if (res.ok) {
         const expList = expenseItems.map(i => `${i.description} (৳${i.amount})`).join(', ');
         await logActivity('ADD_EXPENSE', `Spender: ${finalSpender} | Items: ${expList}`);
-        
         alert('✅ খরচের হিসাব সেভ হয়েছে!'); setExpenseItems([{ description: '', amount: '' }]); setExpCustomSpender(''); fetchExpenses();
       } else alert('❌ সেভ হতে সমস্যা হয়েছে!');
     } catch (err) { alert('❌ নেটওয়ার্ক এরর!'); } finally { setIsSaving(false); }
@@ -236,7 +263,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   const totalExpense = filteredExpenses.reduce((sum, row) => sum + Number(row.amount || 0), 0);
 
   const getWeekNumber = (d: Date) => { const d2 = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const dayNum = d2.getUTCDay() || 7; d2.setUTCDate(d2.getUTCDate() + 4 - dayNum); const yearStart = new Date(Date.UTC(d2.getUTCFullYear(), 0, 1)); return Math.ceil((((d2.getTime() - yearStart.getTime()) / 86400000) + 1) / 7); };
-  const formatWeek = (dateStr: string) => {if(!dateStr) return 'N/A'; const d = new Date(dateStr); return `Week ${getWeekNumber(d)} (${d.toLocaleString('en-GB', { month: 'short' })})`; };
+  const formatWeek = (dateStr: string) => { if(!dateStr) return 'N/A'; const d = new Date(dateStr); return `Week ${getWeekNumber(d)} (${d.toLocaleString('en-GB', { month: 'short' })})`; };
   const toggleSelectRow = (id: string) => { setSelectedRowIds(selectedRowIds.includes(id) ? selectedRowIds.filter(i => i !== id) : [...selectedRowIds, id]); };
   const toggleSelectAll = () => { setSelectedRowIds(selectedRowIds.length === groupedStatement.length ? [] : groupedStatement.map(r => r.id)); };
 
@@ -253,6 +280,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
   const selectedPrintStockList = groupedStatement.filter(r => selectedRowIds.includes(r.id));
   const finalPrintTotalStock = selectedPrintStockList.reduce((sum, row) => sum + Number(row.total || 0), 0);
+  const finalPrintTotalQty = selectedPrintStockList.reduce((sum, row) => sum + Number(row.quantity || 0), 0);
   const finalPrintTotalExp = filteredExpenses.reduce((sum, row) => sum + Number(row.amount || 0), 0);
 
   if (!mounted) return null;
@@ -386,9 +414,8 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
                   <div className="flex gap-2">
                     {isSuperAdmin && <button onClick={handleBulkDeleteStatement} className="bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"><Trash2 className="w-4 h-4"/> সিলেক্টেড ডিলিট</button>}
-                    {/* শুধুমাত্র বাম পাশ থেকে টিক মার্ক করা রেকর্ডসমূহ প্রিন্ট করার বাটন */}
                     <button onClick={triggerSelectedStockPrint} className="bg-slate-900 hover:bg-black text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
-                      <Printer className="w-4 h-4 text-amber-400"/> সিলেক্টেড প্রিন্ট করুন
+                      <Printer className="w-4 h-4 text-amber-400"/> প্রিন্ট করুন
                     </button>
                   </div>
                 </div>
@@ -471,40 +498,72 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                   </table>
                 </div>
 
-                {/* শুধুমাত্র সিলেক্ট করা রেকর্ডসমূহ এবং সেগুলোর সম্পূর্ণ আইটেমভিত্তিক ব্যাখ্যাসহ প্রিন্ট টেমপ্লেট */}
-                <div id="print-selected-statement" className="hidden p-6 bg-white text-black swadhinota-font">
-                   <h2 className="text-xl font-black text-center border-b-2 border-black pb-2 mb-4">Selected Stock Statement & Ledger Report</h2>
-                   <p className="text-xs font-bold mb-2">Selected Records Count: {selectedPrintStockList.length} | Total Value: ৳ {finalPrintTotalStock}</p>
-                   <table className="w-full border-collapse border border-black text-xs">
-                     <thead><tr className="bg-gray-150"><th>Date</th><th>Week/Month</th><th>Type</th><th>Reference</th><th>Items & Detailed Breakdown</th><th>Qty</th><th>Total (৳)</th></tr></thead>
+                {/* 🚀 কর্পোরেট ও প্রফেশনাল প্রিন্ট টেমপ্লেট 🚀 */}
+                <div id="print-selected-statement" className="hidden">
+                   <div className="header-box">
+                     <div className="company-name">BlackRock Corporation × RUHAMA WEAR</div>
+                     <div className="report-title">Stock Statement & Inventory Report</div>
+                   </div>
+
+                   <div className="meta-bar">
+                     <div><b>প্রিন্ট তারিখ ও সময়:</b> {new Date().toLocaleString('en-GB')}</div>
+                     <div><b>রিপোর্ট টাইপ:</b> {statementFilterType === 'all' ? 'সকল লেনদেন' : statementFilterType === 'selected_item' ? 'নির্বাচিত আইটেম' : 'নির্দিষ্ট ফিল্টার'}</div>
+                     <div><b>অপারেটর:</b> {loggedInUser}</div>
+                   </div>
+
+                   <table>
+                     <thead>
+                       <tr>
+                         <th style={{width: '14%'}}>তারিখ ও সময়</th>
+                         <th style={{width: '12%'}}>সপ্তাহ/মাস</th>
+                         <th style={{width: '8%'}}>ধরণ</th>
+                         <th style={{width: '16%'}}>পার্টি / রেফারেন্স</th>
+                         <th>আইটেম ও বিস্তারিত ব্যাখ্যা</th>
+                         <th style={{width: '10%', textAlign: 'center'}}>পরিমাণ</th>
+                         <th style={{width: '12%', textAlign: 'right'}}>মোট (৳)</th>
+                       </tr>
+                     </thead>
                      <tbody>
                        {selectedPrintStockList.map(r => (
                          <tr key={r.id}>
                            <td>{new Date(r.date).toLocaleString('en-GB')}</td>
                            <td>{formatWeek(r.date)}</td>
-                           <td>{r.type}</td>
-                           <td>{r.reference}</td>
+                           <td style={{fontWeight: 'bold'}}>{r.type === 'STOCK_IN' ? 'IN' : r.type === 'STOCK_OUT' ? 'OUT' : 'RESTORE'}</td>
+                           <td style={{fontWeight: 'bold'}}>{r.reference}</td>
                            <td>
-                             <div style={{fontWeight: 'bold'}}>{r.itemName}</div>
+                             <div style={{fontWeight: 'bold', marginBottom: '4px'}}>{r.itemName}</div>
                              {r.breakdown && r.breakdown.length > 0 && (
-                               <div style={{fontSize: '11px', marginTop: '6px', color: '#111', borderTop: '1px dashed #ccc', paddingTop: '4px'}}>
-                                 <b>আইটেমভিত্তিক ব্যাখ্যা:</b>
-                                 <div style={{display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '3px'}}>
-                                   {r.breakdown.map((bk: any, bi: number) => (
-                                     <span key={bi} style={{background: '#f8fafc', border: '1px solid #cbd5e1', padding: '2px 6px', borderRadius: '4px', fontSize: '10px'}}>
-                                       {bk.name}: <b>{bk.qty} pcs</b>
-                                     </span>
-                                   ))}
-                                 </div>
+                               <div style={{marginTop: '4px'}}>
+                                 {r.breakdown.map((bk: any, bi: number) => (
+                                   <span key={bi} className="breakdown-badge">
+                                     {bk.name}: <b>{bk.qty} pcs</b>
+                                   </span>
+                                 ))}
                                </div>
                              )}
                            </td>
                            <td style={{textAlign: 'center', fontWeight: 'bold'}}>{r.quantity}</td>
-                           <td style={{textAlign: 'right', fontWeight: 'bold'}}>{r.total}</td>
+                           <td style={{textAlign: 'right', fontWeight: 'bold'}}>{Number(r.total || 0).toLocaleString('en-BD')}</td>
                          </tr>
                        ))}
+                       <tr style={{background: '#f1f5f9', fontWeight: 'bold'}}>
+                         <td colSpan={5} style={{textAlign: 'right', fontWeight: '900', textTransform: 'uppercase'}}>সর্বমোট (Grand Total):</td>
+                         <td style={{textAlign: 'center', fontWeight: '900'}}>{finalPrintTotalQty} pcs</td>
+                         <td style={{textAlign: 'right', fontWeight: '900'}}>৳ {finalPrintTotalStock.toLocaleString('en-BD')}</td>
+                       </tr>
                      </tbody>
                    </table>
+
+                   <div className="signatures-container">
+                     <div className="sig-block">
+                       <div className="sig-line"></div>
+                       <div className="sig-label">Prepared By</div>
+                     </div>
+                     <div className="sig-block">
+                       <div className="sig-line"></div>
+                       <div className="sig-label">Authorized Signature</div>
+                     </div>
+                   </div>
                 </div>
               </div>
             )}
