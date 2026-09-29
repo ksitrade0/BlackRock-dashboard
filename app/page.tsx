@@ -465,8 +465,15 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-200/70 text-slate-900 p-2 md:p-3 font-sans w-full overflow-x-hidden">
-      {/* ফন্ট লোড করার জন্য স্টাইল লিংক */}
-      <style dangerouslySetInnerHTML={{ __html: `@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap');` }} />
+      {/* Horizon ফন্ট লোড করার জন্য @font-face ডিক্লেয়ারেশন */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @font-face {
+          font-family: 'Horizon';
+          src: url('/fonts/horizon.otf') format('opentype');
+          font-weight: normal;
+          font-style: normal;
+        }
+      ` }} />
       
       <div className="max-w-[1950px] mx-auto w-full">
         <div className="bg-slate-200/95 pb-2 pt-2 w-full">
@@ -477,8 +484,8 @@ export default function Dashboard() {
                 <img src="/logo.jpg" alt="Black Rock Corporation Logo" className="w-full h-full object-contain" onError={() => setHasLogoImg(false)} />
               </div>
               <div>
-                {/* Bold Condensed Sans-Serif (Oswald) ফন্ট দিয়ে প্রফেশনাল হেডার */}
-                <h1 style={{ fontFamily: "'Oswald', sans-serif", letterSpacing: '1px' }} className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-950 uppercase">
+                {/* Horizon ফন্ট দিয়ে প্রফেশনাল হেডার */}
+                <h1 style={{ fontFamily: "'Horizon', sans-serif", letterSpacing: '1px' }} className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-950 uppercase">
                   BLACK ROCK CORPORATION
                 </h1>
                 <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 mt-0.5">
