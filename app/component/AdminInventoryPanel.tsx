@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Lock, Package, FileText, X, Save, ShoppingCart, Printer, Plus, Trash2, UserCircle, CheckSquare, Square, ArrowDownLeft, ArrowUpRight, RotateCcw, Wallet, Calendar, UserPlus, Filter, ShieldAlert, Activity, ChevronDown, ChevronUp } from 'lucide-react';
+import { Lock, Package, FileText, X, Save, ShoppingCart, Printer, Plus, Trash2, Edit, UserCircle, CheckSquare, Square, ArrowDownLeft, ArrowUpRight, RotateCcw, Wallet, Calendar, UserPlus, Filter, ShieldAlert, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 
 const STAFF_MEMBERS = ['Awlad Hossain', 'Emdadullah Sakib', 'Omar Faruque'];
 
@@ -28,6 +28,9 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [expandedStatementId, setExpandedStatementId] = useState<string | null>(null);
+  
+  // এডিটের জন্য স্টেট
+  const [editModalData, setEditModalData] = useState<any>(null);
   
   const [entryType, setEntryType] = useState<'NEW' | 'RETURN'>('NEW');
   const [returnInvoice, setReturnInvoice] = useState('');
@@ -73,7 +76,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     } catch (err) { alert('সার্ভার সমস্যা!'); } finally { setIsVerifying(false); }
   };
 
-  const closePanel = () => { setActivePanel(null); setPartyName(''); setReturnInvoice(''); setPurchaseItems([{ itemName: '', quantity: 1, buyingPrice: 0 }]); setExpenseItems([{ description: '', amount: '' }]); };
+  const closePanel = () => { setActivePanel(null); setPartyName(''); setReturnInvoice(''); setPurchaseItems([{ itemName: '', quantity: 1, buyingPrice: 0 }]); setExpenseItems([{ description: '', amount: '' }]); setEditModalData(null); };
 
   const logActivity = async (action: string, details: string) => {
     try { await fetch('/api/activity', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, details, performed_by: loggedInUser }) }); } catch(err) {}
@@ -107,72 +110,121 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         await logActivity('ADD_STOCK', `Type: ${entryType} | Party: ${finalParty} | Items: ${itemsList}`);
         
         alert('✅ সফলভাবে স্টক ইনভেন্টরি যুক্ত হয়েছে!'); setPartyName(''); setReturnInvoice(''); setPurchaseItems([{ itemName: '', quantity: 1, buyingPrice: 0 }]);
-        fetchStatement(); window.dispatchEvent(new Event('stockUpdated'));
+        fetchStatement(); 
+        window.dispatchEvent(new Event('stockUpdated')); 
       } else alert('❌ ডেটাবেজ সেভ হতে সমস্যা হয়েছে!');
     } catch (err) { alert('❌ নেটওয়ার্ক এরর!'); } finally { setIsSaving(false); }
   };
 
-  // 🚀 সিঙ্গেল ডিলিট লজিক (সরাসরি row.type ব্যবহার করে)
+  // 🚀 ড্যাশবোর্ড সেফটি লক সহ সিঙ্গেল ডিলিট
   const handleDeleteStatementRow = async (row: any) => {
     if (!isSuperAdmin) return alert('অ্যাডমিন ছাড়া ডিলিট করার অনুমতি নেই!');
-    if (!confirm('সতর্কবার্তা! আপনি কি এই রেকর্ডটি মুছে ফেলতে চান?')) return;
-    
     const idsToDelete = row.rawIds && row.rawIds.length > 0 ? row.rawIds : [row.id];
     
+    // 🛡️ সেফটি লক: চেক করা হচ্ছে এটা ড্যাশবোর্ডের অর্ডার কিনা
+    const isDashboardOrder = idsToDelete.some((id: string) => String(id).startsWith('ord-out-'));
+    if (isDashboardOrder) {
+      return alert('⛔ এটি ড্যাশবোর্ডের কাস্টমার অর্ডার! ড্যাশবোর্ডের ডাটা সুরক্ষিত রাখতে ইনভেন্টরি প্যানেল থেকে এটি ডিলিট বা এডিট করা সম্পূর্ণ ব্লক করা হয়েছে।');
+    }
+
+    if (!confirm('সতর্কবার্তা! আপনি কি ইনভেন্টরির এই ম্যানুয়াল এন্ট্রিটি মুছে ফেলতে চান? (ডাটাবেজ থেকে সরাসরি মুছে যাবে)')) return;
+    
+    let hasError = false;
     try {
       for (const rawId of idsToDelete) {
         const realId = String(rawId).replace(/^(pur-|out-|res-)/, '');
         const originalRow = statementData.find(r => r.id === rawId) || row;
-        
-        // এখানে নাম দেখে নয়, বরং আসল ডাটার টাইপ দেখে ডিলিট রিকোয়েস্ট পাঠানো হচ্ছে
         const rowType = originalRow.type || row.type;
         
-        await fetch(`/api/purchases/${realId}`, { 
+        const payload = { id: realId, deletedBy: loggedInUser, rowType: rowType, rawId: rawId };
+
+        let res = await fetch(`/api/purchases/${realId}`, { 
           method: 'DELETE', 
           headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify({ deletedBy: loggedInUser, rowType: rowType, rawId: rawId }) 
+          body: JSON.stringify(payload) 
         });
+
+        if (res.status === 404 || res.status === 405) {
+          res = await fetch(`/api/purchases`, { 
+            method: 'DELETE', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(payload) 
+          });
+        }
+
+        if (!res.ok) {
+          hasError = true;
+        } else {
+          await logActivity('DELETE_STOCK', `Manual Delete -> Ref: ${originalRow.reference} | Item: ${originalRow.itemName} | Qty: ${originalRow.quantity} | Type: ${originalRow.type}`);
+        }
       }
       
       fetchStatement(); 
       window.dispatchEvent(new Event('stockUpdated'));
+
+      if (hasError) alert('⚠️ কিছু রেকর্ড মুছতে সমস্যা হয়েছে।');
+      else alert('✅ এন্ট্রি সফলভাবে মুছে ফেলা হয়েছে!');
     } catch (err: any) { alert(`❌ সার্ভার এরর!`); }
   };
 
-  // 🚀 বাল্ক ডিলিট লজিক (সরাসরি row.type ব্যবহার করে)
+  // 🚀 ড্যাশবোর্ড সেফটি লক সহ বাল্ক ডিলিট
   const handleBulkDeleteStatement = async () => {
     if (!isSuperAdmin) return alert('অ্যাডমিন ছাড়া ডিলিট করার অনুমতি নেই!');
     if (selectedRowIds.length === 0) return alert('ডিলিট করার জন্য কোনো এন্ট্রি সিলেক্ট করা হয়নি।');
-    if (!confirm(`সতর্কবার্তা! আপনি কি সিলেক্ট করা ${selectedRowIds.length} টি রেকর্ড মুছে ফেলতে চান?`)) return;
     
-    try {
-      const rawIdsToDelete: string[] = [];
-      selectedRowIds.forEach(id => {
-        const groupRow = groupedStatement.find(r => r.id === id);
-        if (groupRow && groupRow.rawIds && groupRow.rawIds.length > 0) {
-          rawIdsToDelete.push(...groupRow.rawIds);
-        } else {
-          rawIdsToDelete.push(id);
-        }
+    // 🛡️ সেফটি লক: চেক করা হচ্ছে সিলেক্ট করা আইটেমগুলোতে ড্যাশবোর্ডের অর্ডার আছে কিনা
+    let hasDashboardOrder = false;
+    const rawIdsToDelete: string[] = [];
+    selectedRowIds.forEach(id => {
+      const groupRow = groupedStatement.find(r => r.id === id);
+      const idsToCheck = (groupRow && groupRow.rawIds && groupRow.rawIds.length > 0) ? groupRow.rawIds : [id];
+      
+      idsToCheck.forEach((rawId: string) => {
+        if (String(rawId).startsWith('ord-out-')) hasDashboardOrder = true;
+        else rawIdsToDelete.push(String(rawId));
       });
+    });
 
+    if (hasDashboardOrder) {
+      return alert('⛔ সতর্কতা: আপনার সিলেক্ট করা আইটেমগুলোর মধ্যে ড্যাশবোর্ডের অর্ডার রয়েছে! ড্যাশবোর্ডের সুরক্ষার্থে এগুলো ডিলিট করা ব্লক করা হয়েছে। দয়া করে শুধু ম্যানুয়াল এন্ট্রিগুলো সিলেক্ট করে ডিলিট করুন।');
+    }
+
+    if (!confirm(`সতর্কবার্তা! আপনি কি ইনভেন্টরির সিলেক্ট করা ${rawIdsToDelete.length} টি ম্যানুয়াল রেকর্ড মুছে ফেলতে চান?`)) return;
+    
+    let hasError = false;
+    try {
       for (const rawId of rawIdsToDelete) {
         const realId = String(rawId).replace(/^(pur-|out-|res-)/, '');
         const originalRow = statementData.find(r => r.id === rawId);
+        const rowType = originalRow?.type || (String(rawId).includes('out-') ? 'STOCK_OUT' : 'STOCK_IN');
         
-        // এখানেও আসল টাইপ বের করে দেওয়া হচ্ছে
-        const rowType = originalRow?.type || (String(rawId).includes('-out-') || String(rawId).includes('out-') ? 'STOCK_OUT' : 'STOCK_IN');
-        
-        await fetch(`/api/purchases/${realId}`, { 
+        const payload = { id: realId, deletedBy: loggedInUser, rowType: rowType, rawId: rawId };
+
+        let res = await fetch(`/api/purchases/${realId}`, { 
           method: 'DELETE', 
           headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify({ deletedBy: loggedInUser, rowType: rowType, rawId: rawId }) 
+          body: JSON.stringify(payload) 
         });
+
+        if (res.status === 404 || res.status === 405) {
+          res = await fetch(`/api/purchases`, { 
+            method: 'DELETE', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(payload) 
+          });
+        }
+
+        if (!res.ok) hasError = true;
       }
+      
+      if (!hasError) await logActivity('BULK_DELETE_STOCK', `Deleted ${rawIdsToDelete.length} manual entries.`);
       
       setSelectedRowIds([]);
       fetchStatement(); 
       window.dispatchEvent(new Event('stockUpdated')); 
+
+      if (hasError) alert('⚠️ কিছু রেকর্ড মুছতে সমস্যা হয়েছে।');
+      else alert('✅ ম্যানুয়াল এন্ট্রিগুলো সফলভাবে মুছে ফেলা হয়েছে!');
     } catch (err: any) { alert(`❌ সার্ভার এরর!`); }
   };
 
@@ -196,7 +248,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         ext.quantity += Number(row.quantity); 
         ext.total += Number(row.total); 
         ext.rawIds.push(row.id);
-        ext.breakdown.push({ name: row.itemName, qty: row.quantity, price: row.buyingPrice || 0 });
+        ext.breakdown.push({ name: row.itemName, qty: row.quantity, price: row.buyingPrice || 0, rawId: row.id, realId: String(row.id).replace(/^(pur-|out-|res-|ord-out-)/, ''), type: row.type });
       } else { 
         map.set(key, { 
           ...row, 
@@ -204,7 +256,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
           quantity: Number(row.quantity), 
           total: Number(row.total), 
           rawIds: [row.id], 
-          breakdown: [{ name: row.itemName, qty: row.quantity, price: row.buyingPrice || 0 }] 
+          breakdown: [{ name: row.itemName, qty: row.quantity, price: row.buyingPrice || 0, rawId: row.id, realId: String(row.id).replace(/^(pur-|out-|res-|ord-out-)/, ''), type: row.type }] 
         }); 
       }
     });
@@ -214,9 +266,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
   // প্রফেশনাল করপোরেট লেআউট সহ সরাসরি প্রিন্ট ফাংশন
   const triggerSelectedStockPrint = () => {
-    if (selectedRowIds.length === 0) {
-      return alert('প্রিন্ট করার জন্য বাম পাশ থেকে অন্তত একটি রেকর্ড সিলেক্ট করুন।');
-    }
+    if (selectedRowIds.length === 0) return alert('প্রিন্ট করার জন্য বাম পাশ থেকে অন্তত একটি রেকর্ড সিলেক্ট করুন।');
     const printContent = document.getElementById('print-selected-statement');
     if (!printContent) return;
     const printWindow = window.open('', '_blank');
@@ -225,7 +275,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Stock Statement & Ledger Report</title>
+          <title>Stock Statement Report</title>
           <style>
             @page { size: A4 portrait; margin: 15mm 12mm 15mm 12mm; }
             body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -246,9 +296,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
         </head>
         <body>
           ${printContent.innerHTML}
-          <script>
-            setTimeout(() => { window.print(); window.close(); }, 400);
-          </script>
+          <script>setTimeout(() => { window.print(); window.close(); }, 400);</script>
         </body>
         </html>
       `);
@@ -259,39 +307,24 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   // =================== EXPENSE LOGIC ===================
   const fetchExpenses = async () => {
     setIsLoadingStatement(true);
-    try { 
-      const res = await fetch(`/api/expenses?_t=${Date.now()}`, { cache: 'no-store' }); 
-      const data = await res.json(); 
-      setExpensesData(data.data || []); 
-    } catch (err) { setExpensesData([]); } finally { setIsLoadingStatement(false); }
+    try { const res = await fetch(`/api/expenses?_t=${Date.now()}`, { cache: 'no-store' }); const data = await res.json(); setExpensesData(data.data || []); } 
+    catch (err) { setExpensesData([]); } finally { setIsLoadingStatement(false); }
   };
-
   const handleExpItemChange = (index: number, field: string, value: any) => { const updated = [...expenseItems]; (updated[index] as any)[field] = value; setExpenseItems(updated); };
   const removeExpItem = (index: number) => { const updated = expenseItems.filter((_, i) => i !== index); setExpenseItems(updated.length > 0 ? updated : [{ description: '', amount: '' }]); };
-
   const handleSaveExpense = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const finalSpender = expSpender === 'add_new' ? expCustomSpender : expSpender;
+    e.preventDefault(); const finalSpender = expSpender === 'add_new' ? expCustomSpender : expSpender;
     if (!finalSpender || expenseItems.some(i => !i.description || !i.amount)) return alert('অনুগ্রহ করে সব তথ্য দিন।');
     setIsSaving(true);
     try {
       const res = await fetch('/api/expenses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: expDate, spender: finalSpender, createdBy: loggedInUser, items: expenseItems }) });
-      if (res.ok) {
-        const expList = expenseItems.map(i => `${i.description} (৳${i.amount})`).join(', ');
-        await logActivity('ADD_EXPENSE', `Spender: ${finalSpender} | Items: ${expList}`);
-        alert('✅ খরচের হিসাব সেভ হয়েছে!'); setExpenseItems([{ description: '', amount: '' }]); setExpCustomSpender(''); fetchExpenses();
-      } else alert('❌ সেভ হতে সমস্যা হয়েছে!');
+      if (res.ok) { alert('✅ খরচের হিসাব সেভ হয়েছে!'); setExpenseItems([{ description: '', amount: '' }]); setExpCustomSpender(''); fetchExpenses(); } else alert('❌ সেভ হতে সমস্যা হয়েছে!');
     } catch (err) { alert('❌ নেটওয়ার্ক এরর!'); } finally { setIsSaving(false); }
   };
-
   const handleDeleteExpense = async (id: number) => {
     if (!isSuperAdmin) return alert('অ্যাডমিন ছাড়া ডিলিট করার অনুমতি নেই!');
     if (!confirm('খরচের এই এন্ট্রিটি মুছে ফেলতে চান?')) return;
-    try {
-      const exp = expensesData.find(e => e.id === id);
-      if (exp) await logActivity('DELETE_EXPENSE', `Date: ${exp.date} | Desc: ${exp.description} | Amount: ৳${exp.amount} | Spender: ${exp.spender}`);
-      await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' }); fetchExpenses(); 
-    } catch (err) {}
+    try { await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' }); fetchExpenses(); } catch (err) {}
   };
 
   const filteredExpenses = expensesData.filter(row => {
@@ -303,23 +336,15 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     return true;
   });
   const totalExpense = filteredExpenses.reduce((sum, row) => sum + Number(row.amount || 0), 0);
-
   const getWeekNumber = (d: Date) => { const d2 = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const dayNum = d2.getUTCDay() || 7; d2.setUTCDate(d2.getUTCDate() + 4 - dayNum); const yearStart = new Date(Date.UTC(d2.getUTCFullYear(), 0, 1)); return Math.ceil((((d2.getTime() - yearStart.getTime()) / 86400000) + 1) / 7); };
   const formatWeek = (dateStr: string) => { if(!dateStr) return 'N/A'; const d = new Date(dateStr); return `Week ${getWeekNumber(d)} (${d.toLocaleString('en-GB', { month: 'short' })})`; };
   const toggleSelectRow = (id: string) => { setSelectedRowIds(selectedRowIds.includes(id) ? selectedRowIds.filter(i => i !== id) : [...selectedRowIds, id]); };
   const toggleSelectAll = () => { setSelectedRowIds(selectedRowIds.length === groupedStatement.length ? [] : groupedStatement.map(r => r.id)); };
-
   const triggerExpensePrint = () => {
-    const printContent = document.getElementById('print-expenses');
-    if (!printContent) return;
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`<html><head><title>Expense Report</title><style>body{font-family:sans-serif;padding:20px} table{width:100%;border-collapse:collapse;margin-top:15px} th,td{border:1px solid #333;padding:8px;font-size:12px} th{background:#f1f5f9;text-align:left}</style></head><body>${printContent.outerHTML}<script>setTimeout(()=>{window.print();window.close();},500);</script></body></html>`);
-      printWindow.document.close();
-    } else alert('পপ-আপ ব্লকার চালু আছে!');
+    const printContent = document.getElementById('print-expenses'); if (!printContent) return; const printWindow = window.open('', '_blank');
+    if (printWindow) { printWindow.document.write(`<html><head><title>Expense Report</title><style>body{font-family:sans-serif;padding:20px} table{width:100%;border-collapse:collapse;margin-top:15px} th,td{border:1px solid #333;padding:8px;font-size:12px} th{background:#f1f5f9;text-align:left}</style></head><body>${printContent.outerHTML}<script>setTimeout(()=>{window.print();window.close();},500);</script></body></html>`); printWindow.document.close(); } else alert('পপ-আপ ব্লকার চালু আছে!');
     setPrintModalTarget(null);
   };
-
   const selectedPrintStockList = groupedStatement.filter(r => selectedRowIds.includes(r.id));
   const finalPrintTotalStock = selectedPrintStockList.reduce((sum, row) => sum + Number(row.total || 0), 0);
   const finalPrintTotalQty = selectedPrintStockList.reduce((sum, row) => sum + Number(row.quantity || 0), 0);
@@ -331,48 +356,87 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     <div className="flex flex-col gap-1.5 w-48">
       <style dangerouslySetInnerHTML={{__html: `@import url('https://fonts.googleapis.com/css2?family=Tiro+Bangla:ital@0;1&display=swap'); .swadhinota-font { font-family: 'Swadhinota', 'Tiro Bangla', sans-serif; letter-spacing: 0.5px; }`}} />
 
-      <button onClick={() => setAuthTarget('inventory')} className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-bold transition shadow-2xs border border-slate-800 cursor-pointer">
-        <Package className="w-3.5 h-3.5 text-amber-400" /> ইনভেন্টরি ও স্টক লেজার
-      </button>
-      <button onClick={() => setAuthTarget('expense')} className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg text-xs font-bold transition shadow-2xs border border-slate-300 cursor-pointer">
-        <Wallet className="w-3.5 h-3.5 text-rose-600" /> কোম্পানির খরচের হিসাব
-      </button>
-      
-      {isSuperAdmin && (
-        <button onClick={() => setAuthTarget('activity')} className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-rose-100 hover:bg-rose-200 text-rose-900 rounded-lg text-xs font-black transition shadow-2xs border border-rose-300 cursor-pointer mt-1">
-          <ShieldAlert className="w-3.5 h-3.5 text-rose-700" /> সুপার অ্যাক্টিভিটি লগ
-        </button>
-      )}
+      <button onClick={() => setAuthTarget('inventory')} className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-bold transition shadow-2xs border border-slate-800 cursor-pointer"><Package className="w-3.5 h-3.5 text-amber-400" /> ইনভেন্টরি ও স্টক লেজার</button>
+      <button onClick={() => setAuthTarget('expense')} className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg text-xs font-bold transition shadow-2xs border border-slate-300 cursor-pointer"><Wallet className="w-3.5 h-3.5 text-rose-600" /> কোম্পানির খরচের হিসাব</button>
+      {isSuperAdmin && (<button onClick={() => setAuthTarget('activity')} className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-rose-100 hover:bg-rose-200 text-rose-900 rounded-lg text-xs font-black transition shadow-2xs border border-rose-300 cursor-pointer mt-1"><ShieldAlert className="w-3.5 h-3.5 text-rose-700" /> সুপার অ্যাক্টিভিটি লগ</button>)}
 
       {authTarget && createPortal(
         <div className="fixed inset-0 z-[999999] bg-slate-900/60 backdrop-blur-xl flex items-center justify-center p-4">
           <form onSubmit={handleAuth} className="bg-white/90 p-10 rounded-[32px] w-full max-w-md shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] border border-white/50 animate-in fade-in zoom-in-90 swadhinota-font">
-            <div className="flex flex-col items-center mb-8">
-              <div className="bg-gradient-to-tr from-rose-500 to-orange-400 p-4 rounded-2xl mb-4 shadow-lg shadow-rose-500/30"><Lock className="w-8 h-8 text-white" /></div>
-              <h3 className="text-2xl font-bold text-slate-900">অ্যাডমিন আনলক</h3>
-              <p className="text-sm font-bold text-slate-500 mt-2 text-center">নিরাপদ ড্যাশবোর্ড অ্যাক্সেস করতে লগইন করুন</p>
-            </div>
-            <div className="space-y-4">
-              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Email / ID" className="w-full bg-white border border-slate-200 p-4 rounded-2xl font-bold text-base focus:ring-4 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition shadow-inner" required />
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="w-full bg-white border border-slate-200 p-4 rounded-2xl font-bold text-base tracking-widest focus:ring-4 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition shadow-inner" required />
-            </div>
-            <div className="flex gap-4 mt-8">
-              <button type="button" onClick={() => setAuthTarget(null)} className="w-full py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition cursor-pointer">বাতিল করুন</button>
-              <button type="submit" disabled={isVerifying} className="w-full py-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white font-bold rounded-2xl hover:shadow-xl transition flex justify-center cursor-pointer">{isVerifying ? 'যাচাই হচ্ছে...' : 'লগইন করুন'}</button>
-            </div>
+            <div className="flex flex-col items-center mb-8"><div className="bg-gradient-to-tr from-rose-500 to-orange-400 p-4 rounded-2xl mb-4 shadow-lg shadow-rose-500/30"><Lock className="w-8 h-8 text-white" /></div><h3 className="text-2xl font-bold text-slate-900">অ্যাডমিন আনলক</h3><p className="text-sm font-bold text-slate-500 mt-2 text-center">নিরাপদ ড্যাশবোর্ড অ্যাক্সেস করতে লগইন করুন</p></div>
+            <div className="space-y-4"><input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Email / ID" className="w-full bg-white border border-slate-200 p-4 rounded-2xl font-bold text-base outline-none transition shadow-inner" required /><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="w-full bg-white border border-slate-200 p-4 rounded-2xl font-bold text-base tracking-widest outline-none transition shadow-inner" required /></div>
+            <div className="flex gap-4 mt-8"><button type="button" onClick={() => setAuthTarget(null)} className="w-full py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition cursor-pointer">বাতিল</button><button type="submit" disabled={isVerifying} className="w-full py-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white font-bold rounded-2xl hover:shadow-xl transition cursor-pointer">{isVerifying ? 'যাচাই হচ্ছে...' : 'লগইন'}</button></div>
           </form>
         </div>, document.body
       )}
 
       {printModalTarget === 'expense' && createPortal(
         <div className="fixed inset-0 z-[9999999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 text-center">
-            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4"><Printer className="w-6 h-6"/></div>
-            <h3 className="text-xl font-black text-slate-900 mb-2">খরচের রিপোর্ট প্রিন্ট করুন</h3>
-            <p className="text-xs font-bold text-slate-500 mb-6">আপনি কি ফিল্টার করা খরচের হিসাবটি প্রিন্ট করতে চান?</p>
-            <div className="flex gap-3">
-              <button onClick={() => setPrintModalTarget(null)} className="w-full py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 cursor-pointer">বাতিল</button>
-              <button onClick={triggerExpensePrint} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg flex justify-center gap-2 cursor-pointer"><Printer className="w-4 h-4"/> প্রিন্ট করুন</button>
+          <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl text-center"><div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4"><Printer className="w-6 h-6"/></div><h3 className="text-xl font-black text-slate-900 mb-2">প্রিন্ট করুন</h3><p className="text-xs font-bold text-slate-500 mb-6">আপনি কি রিপোর্টটি প্রিন্ট করতে চান?</p><div className="flex gap-3"><button onClick={() => setPrintModalTarget(null)} className="w-full py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 cursor-pointer">বাতিল</button><button onClick={triggerExpensePrint} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 cursor-pointer shadow-lg">প্রিন্ট</button></div></div>
+        </div>, document.body
+      )}
+
+      {/* 🚀 এডিট (EDIT) মোডাল - শুধুমাত্র ইনভেন্টরি এন্ট্রির জন্য */}
+      {editModalData && createPortal(
+        <div className="fixed inset-0 z-[9999999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95">
+            <div className="bg-slate-900 px-6 py-4 flex justify-between items-center">
+              <h3 className="text-white font-black text-lg">এন্ট্রি এডিট করুন ({editModalData.reference})</h3>
+              <button onClick={() => setEditModalData(null)} className="text-slate-400 hover:text-white transition cursor-pointer"><X className="w-5 h-5"/></button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <p className="text-[11px] font-bold text-slate-500 bg-blue-50 border border-blue-200 p-2 rounded">
+                💡 এডিট করে সেভ করলে তা সরাসরি লাইভ ইনভেন্টরিতে আপডেট হয়ে যাবে।
+              </p>
+              {editModalData.breakdown.map((item: any, idx: number) => (
+                <div key={item.rawId} className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3">
+                  <div className="font-black text-slate-800 text-sm border-b border-slate-200 pb-2">{item.name}</div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">নতুন পরিমাণ (Qty)</label>
+                      <input type="number" value={item.qty} onChange={(e) => {
+                        const newData = {...editModalData};
+                        newData.breakdown[idx].qty = Number(e.target.value);
+                        setEditModalData(newData);
+                      }} className="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm font-bold outline-none focus:border-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">নতুন দাম (৳)</label>
+                      <input type="number" value={item.price} onChange={(e) => {
+                        const newData = {...editModalData};
+                        newData.breakdown[idx].price = Number(e.target.value);
+                        setEditModalData(newData);
+                      }} className="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm font-bold outline-none focus:border-blue-500" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+              <button onClick={() => setEditModalData(null)} className="px-5 py-2.5 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition cursor-pointer">বাতিল</button>
+              <button onClick={async () => {
+                setIsSaving(true);
+                let hasError = false;
+                try {
+                  for (const item of editModalData.breakdown) {
+                    const payload = { 
+                      id: item.realId, quantity: Number(item.qty), buyingPrice: Number(item.price), updatedBy: loggedInUser, rowType: item.type, rawId: item.rawId
+                    };
+                    let res = await fetch(`/api/purchases/${item.realId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (res.status === 404 || res.status === 405) {
+                      res = await fetch(`/api/purchases`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    }
+                    if (!res.ok) hasError = true;
+                  }
+                  if (!hasError) {
+                    alert('✅ এন্ট্রি সফলভাবে আপডেট হয়েছে!'); setEditModalData(null); 
+                    fetchStatement(); 
+                    window.dispatchEvent(new Event('stockUpdated')); // লাইভ ইনভেন্টরি আপডেট
+                  } else alert('⚠️ সার্ভারে সমস্যা হয়েছে।');
+                } catch(err) { alert('❌ নেটওয়ার্ক এরর!'); } finally { setIsSaving(false); }
+              }} disabled={isSaving} className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition flex items-center gap-2 shadow-lg cursor-pointer">
+                {isSaving ? 'সেভ হচ্ছে...' : <><Save className="w-4 h-4"/> আপডেট সেভ করুন</>}
+              </button>
             </div>
           </div>
         </div>, document.body
@@ -467,7 +531,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                     <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-black tracking-wider border-b border-slate-200">
                       <tr>
                         <th className="px-4 py-3 w-10 text-center"><button onClick={toggleSelectAll} className="cursor-pointer text-slate-700">{selectedRowIds.length === groupedStatement.length ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4" />}</button></th>
-                        <th className="px-5 py-3">তারিখ ও সময়</th><th className="px-5 py-3">সপ্তাহ/মাস</th><th className="px-5 py-3">ধরণ</th><th className="px-5 py-3">পার্টি/রেফারেন্স</th><th className="px-5 py-3">আইটেম (বিস্তারিত ব্রেকডাউন)</th><th className="px-5 py-3 text-center">পরিমাণ</th><th className="px-5 py-3 text-right">মোট (৳)</th><th className="px-5 py-3 text-center">অ্যাকশন</th>
+                        <th className="px-5 py-3">তারিখ ও সময়</th><th className="px-5 py-3">সপ্তাহ/মাস</th><th className="px-5 py-3">ধরণ</th><th className="px-5 py-3">পার্টি/রেফারেন্স</th><th className="px-5 py-3">আইটেম (বিস্তারিত ব্রেকডাউন)</th><th className="px-5 py-3 text-center">পরিমাণ</th><th className="px-5 py-3 text-right">মোট (৳)</th><th className="px-5 py-3 text-center w-24">অ্যাকশন</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -476,6 +540,9 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                         const prevDate = idx > 0 && groupedStatement[idx - 1].date ? new Date(groupedStatement[idx - 1].date).toLocaleDateString('en-GB') : null;
                         const isSelected = selectedRowIds.includes(row.id);
                         const isExpanded = expandedStatementId === row.id;
+                        
+                        // ড্যাশবোর্ডের অর্ডার চেক
+                        const isDashboardOrder = row.rawIds && row.rawIds.some((id: string) => String(id).startsWith('ord-out-'));
 
                         return (
                           <React.Fragment key={row.id}>
@@ -505,8 +572,13 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
                               <td className="px-5 py-3 text-center text-xs font-black">{row.type === 'STOCK_OUT' ? `-${row.quantity}` : `+${row.quantity}`}</td>
                               <td className="px-5 py-3 text-right text-xs font-black">৳ {row.total}</td>
                               <td className="px-5 py-3 text-center">
-                                {isSuperAdmin ? (
-                                  <button onClick={() => handleDeleteStatementRow(row)} className="text-rose-500 hover:bg-rose-50 p-1.5 rounded cursor-pointer"><Trash2 className="w-4 h-4"/></button>
+                                {isDashboardOrder ? (
+                                  <span className="text-[10px] font-black text-slate-400 border border-slate-200 px-2 py-1 rounded bg-slate-50 cursor-not-allowed" title="ড্যাশবোর্ডের অর্ডার পরিবর্তন করা যাবে না">Locked</span>
+                                ) : isSuperAdmin ? (
+                                  <div className="flex justify-center gap-1.5">
+                                    <button onClick={() => setEditModalData(JSON.parse(JSON.stringify(row)))} title="এডিট করুন" className="text-blue-500 hover:bg-blue-50 p-1.5 rounded cursor-pointer transition"><Edit className="w-4 h-4"/></button>
+                                    <button onClick={() => handleDeleteStatementRow(row)} title="ডিলিট করুন" className="text-rose-500 hover:bg-rose-50 p-1.5 rounded cursor-pointer transition"><Trash2 className="w-4 h-4"/></button>
+                                  </div>
                                 ) : (
                                   <span className="text-[9px] font-black text-slate-300">Admin Only</span>
                                 )}
