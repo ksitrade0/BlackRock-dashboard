@@ -84,11 +84,17 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   };
 
   // =================== INVENTORY LOGIC ===================
+  
+  // 🚀 ক্যাশ বাইপাস করে সবসময় লেটেস্ট ডাটা আনার লজিক
   const fetchStatement = async () => {
     setIsLoadingStatement(true);
     try {
-      const res = await fetch('/api/stock/statement'); const data = await res.json();
-      setStatementData(data.data || []); setSelectedRowIds((data.data || []).map((r: any) => r.id));
+      const res = await fetch(`/api/stock/statement?_t=${Date.now()}`, { 
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+      });
+      const data = await res.json();
+      setStatementData(data.data || []); 
     } catch (err) { setStatementData([]); } finally { setIsLoadingStatement(false); }
   };
 
@@ -111,41 +117,61 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     } catch (err) { alert('❌ নেটওয়ার্ক এরর!'); } finally { setIsSaving(false); }
   };
 
-  // ডিলিট লজিক (সঠিক রেসপন্স চেক সহ)
+  // 🚀 সিঙ্গেল ডিলিট: বুলেটপ্রুফ লজিক
   const handleDeleteStatementRow = async (row: any) => {
     if (!isSuperAdmin) return alert('অ্যাডমিন ছাড়া ডিলিট করার অনুমতি নেই!');
     if (!confirm('সতর্কবার্তা! আপনি কি এই রেকর্ডটি মুছে ফেলতে চান?')) return;
     
     const idsToDelete = row.rawIds && row.rawIds.length > 0 ? row.rawIds : [row.id];
+    let hasError = false;
+
     try {
       for (const rawId of idsToDelete) {
-        const realId = rawId.replace(/^(pur-|out-|res-)/, '');
+        const realId = String(rawId).replace(/^(pur-|out-|res-)/, '');
         const originalRow = statementData.find(r => r.id === rawId) || row;
         
-        const res = await fetch(`/api/purchases/${realId}`, { 
+        const payload = { id: realId, deletedBy: loggedInUser, rowType: originalRow.type || row.type, rawId: rawId };
+
+        let res = await fetch(`/api/purchases/${realId}`, { 
           method: 'DELETE', 
           headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify({ deletedBy: loggedInUser, rowType: originalRow.type || row.type, rawId: rawId }) 
+          body: JSON.stringify(payload) 
         });
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || `Failed to delete ID: ${rawId}`);
+        // যদি ডায়নামিক রাউট না পেয়ে 404/405 এরর দেয়, তবে সরাসরি মেইন রাউটে রিকোয়েস্ট পাঠাবে
+        if (res.status === 404 || res.status === 405) {
+          res = await fetch(`/api/purchases`, { 
+            method: 'DELETE', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(payload) 
+          });
         }
-        await logActivity('DELETE_STOCK', `Ref: ${originalRow.reference} | Item: ${originalRow.itemName} | Qty: ${originalRow.quantity} | Type: ${originalRow.type}`);
+
+        if (!res.ok) {
+          hasError = true;
+          console.error(`Failed to delete ID: ${rawId}`);
+        } else {
+          await logActivity('DELETE_STOCK', `Ref: ${originalRow.reference} | Item: ${originalRow.itemName} | Qty: ${originalRow.quantity} | Type: ${originalRow.type}`);
+        }
       }
+      
       fetchStatement(); 
       window.dispatchEvent(new Event('stockUpdated'));
-      alert('✅ সফলভাবে রেকর্ডটি মুছে ফেলা হয়েছে!');
-    } catch (err: any) { alert(`❌ ডিলিট করতে সমস্যা হয়েছে: ${err.message || 'সার্ভার সমস্যা!'}`); }
+
+      if (hasError) alert('⚠️ কিছু রেকর্ড মুছতে সমস্যা হয়েছে। সার্ভার চেক করুন।');
+      else alert('✅ সফলভাবে রেকর্ডটি মুছে ফেলা হয়েছে!');
+      
+    } catch (err: any) { alert(`❌ ডিলিট করতে সমস্যা হয়েছে: ${err.message || 'সার্ভার এরর!'}`); }
   };
 
-  // বাল্ক / সিলেক্টেড ডিলিট লজিক (সঠিক রেসপন্স চেক সহ)
+  // 🚀 বাল্ক ডিলিট: বুলেটপ্রুফ লজিক
   const handleBulkDeleteStatement = async () => {
     if (!isSuperAdmin) return alert('অ্যাডমিন ছাড়া ডিলিট করার অনুমতি নেই!');
     if (selectedRowIds.length === 0) return alert('ডিলিট করার জন্য কোনো এন্ট্রি সিলেক্ট করা হয়নি।');
     if (!confirm(`সতর্কবার্তা! আপনি কি সিলেক্ট করা ${selectedRowIds.length} টি রেকর্ড মুছে ফেলতে চান?`)) return;
     
+    let hasError = false;
+
     try {
       const rawIdsToDelete: string[] = [];
       selectedRowIds.forEach(id => {
@@ -158,27 +184,42 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
       });
 
       for (const rawId of rawIdsToDelete) {
-        const realId = rawId.replace(/^(pur-|out-|res-)/, '');
+        const realId = String(rawId).replace(/^(pur-|out-|res-)/, '');
         const row = statementData.find(r => r.id === rawId);
         
-        const res = await fetch(`/api/purchases/${realId}`, { 
+        const payload = { id: realId, deletedBy: loggedInUser, rowType: row?.type || 'STOCK_IN', rawId: rawId };
+
+        let res = await fetch(`/api/purchases/${realId}`, { 
           method: 'DELETE', 
           headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify({ deletedBy: loggedInUser, rowType: row?.type || 'STOCK_IN', rawId: rawId }) 
+          body: JSON.stringify(payload) 
         });
 
+        // যদি ডায়নামিক রাউট না পেয়ে 404/405 এরর দেয়, তবে সরাসরি মেইন রাউটে রিকোয়েস্ট পাঠাবে
+        if (res.status === 404 || res.status === 405) {
+          res = await fetch(`/api/purchases`, { 
+            method: 'DELETE', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(payload) 
+          });
+        }
+
         if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || `Failed to delete ID: ${rawId}`);
+          hasError = true;
+          console.error(`Failed to delete ID: ${rawId}`);
         }
       }
       
-      await logActivity('BULK_DELETE_STOCK', `Deleted ${selectedRowIds.length} groups from stock statement.`);
-      alert('✅ রেকর্ডগুলো সফলভাবে ডিলিট হয়েছে!'); 
+      if (!hasError) await logActivity('BULK_DELETE_STOCK', `Deleted ${selectedRowIds.length} groups from stock statement.`);
+      
+      setSelectedRowIds([]);
       fetchStatement(); 
       window.dispatchEvent(new Event('stockUpdated')); 
-      setSelectedRowIds([]);
-    } catch (err: any) { alert(`❌ বাল্ক ডিলিট করতে সমস্যা হয়েছে: ${err.message || 'সার্ভার সমস্যা!'}`); }
+
+      if (hasError) alert('⚠️ কিছু রেকর্ড মুছতে সমস্যা হয়েছে। সার্ভার চেক করুন।');
+      else alert('✅ রেকর্ডগুলো সফলভাবে ডিলিট হয়েছে!');
+      
+    } catch (err: any) { alert(`❌ বাল্ক ডিলিট করতে সমস্যা হয়েছে: ${err.message || 'সার্ভার এরর!'}`); }
   };
 
   // সম্পূর্ণ ও নিখুঁত আইটেম ব্রেকডাউন প্রসেসিং
@@ -262,10 +303,14 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   };
 
   // =================== EXPENSE LOGIC ===================
+  // 🚀 ক্যাশ বাইপাস করে সবসময় লেটেস্ট ডাটা আনার লজিক
   const fetchExpenses = async () => {
     setIsLoadingStatement(true);
-    try { const res = await fetch('/api/expenses'); const data = await res.json(); setExpensesData(data.data || []); } 
-    catch (err) { setExpensesData([]); } finally { setIsLoadingStatement(false); }
+    try { 
+      const res = await fetch(`/api/expenses?_t=${Date.now()}`, { cache: 'no-store' }); 
+      const data = await res.json(); 
+      setExpensesData(data.data || []); 
+    } catch (err) { setExpensesData([]); } finally { setIsLoadingStatement(false); }
   };
 
   const handleExpItemChange = (index: number, field: string, value: any) => { const updated = [...expenseItems]; (updated[index] as any)[field] = value; setExpenseItems(updated); };
