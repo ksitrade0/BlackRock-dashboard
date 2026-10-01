@@ -112,7 +112,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     } catch (err) { alert('❌ নেটওয়ার্ক এরর!'); } finally { setIsSaving(false); }
   };
 
-  // 🚀 একদম সিম্পল ও নিখুঁত সিঙ্গেল ডিলিট লজিক
+  // 🚀 সিঙ্গেল ডিলিট লজিক (সরাসরি row.type ব্যবহার করে)
   const handleDeleteStatementRow = async (row: any) => {
     if (!isSuperAdmin) return alert('অ্যাডমিন ছাড়া ডিলিট করার অনুমতি নেই!');
     if (!confirm('সতর্কবার্তা! আপনি কি এই রেকর্ডটি মুছে ফেলতে চান?')) return;
@@ -122,8 +122,10 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     try {
       for (const rawId of idsToDelete) {
         const realId = String(rawId).replace(/^(pur-|out-|res-)/, '');
-        // আইডি দেখেই সে বুঝে নেবে এটা ইন নাকি আউট
-        const rowType = String(rawId).startsWith('out-') ? 'STOCK_OUT' : String(rawId).startsWith('res-') ? 'RESTORED' : 'STOCK_IN';
+        const originalRow = statementData.find(r => r.id === rawId) || row;
+        
+        // এখানে নাম দেখে নয়, বরং আসল ডাটার টাইপ দেখে ডিলিট রিকোয়েস্ট পাঠানো হচ্ছে
+        const rowType = originalRow.type || row.type;
         
         await fetch(`/api/purchases/${realId}`, { 
           method: 'DELETE', 
@@ -137,7 +139,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     } catch (err: any) { alert(`❌ সার্ভার এরর!`); }
   };
 
-  // 🚀 একদম সিম্পল ও নিখুঁত বাল্ক ডিলিট লজিক
+  // 🚀 বাল্ক ডিলিট লজিক (সরাসরি row.type ব্যবহার করে)
   const handleBulkDeleteStatement = async () => {
     if (!isSuperAdmin) return alert('অ্যাডমিন ছাড়া ডিলিট করার অনুমতি নেই!');
     if (selectedRowIds.length === 0) return alert('ডিলিট করার জন্য কোনো এন্ট্রি সিলেক্ট করা হয়নি।');
@@ -156,8 +158,10 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
       for (const rawId of rawIdsToDelete) {
         const realId = String(rawId).replace(/^(pur-|out-|res-)/, '');
-        // আইডি দেখেই সে বুঝে নেবে এটা ইন নাকি আউট
-        const rowType = String(rawId).startsWith('out-') ? 'STOCK_OUT' : String(rawId).startsWith('res-') ? 'RESTORED' : 'STOCK_IN';
+        const originalRow = statementData.find(r => r.id === rawId);
+        
+        // এখানেও আসল টাইপ বের করে দেওয়া হচ্ছে
+        const rowType = originalRow?.type || (String(rawId).includes('-out-') || String(rawId).includes('out-') ? 'STOCK_OUT' : 'STOCK_IN');
         
         await fetch(`/api/purchases/${realId}`, { 
           method: 'DELETE', 
