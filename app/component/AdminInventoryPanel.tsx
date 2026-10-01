@@ -111,29 +111,62 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     } catch (err) { alert('❌ নেটওয়ার্ক এরর!'); } finally { setIsSaving(false); }
   };
 
+  // 🛠️ সংশোধিত একক রো ডিলিট লজিক (rawIds ব্যবহার করে সঠিক ডেটাবেজ এন্ট্রি ডিলিট করবে)
   const handleDeleteStatementRow = async (row: any) => {
     if (!isSuperAdmin) return alert('অ্যাডমিন ছাড়া ডিলিট করার অনুমতি নেই!');
     if (!confirm('সতর্কবার্তা! আপনি কি এই রেকর্ডটি মুছে ফেলতে চান?')) return;
-    const realId = row.id.replace(/^(pur-|out-|res-)/, '');
+    
+    const idsToDelete = row.rawIds && row.rawIds.length > 0 ? row.rawIds : [row.id];
     try {
-      await logActivity('DELETE_STOCK', `Ref: ${row.reference} | Item: ${row.itemName} | Qty: ${row.quantity} | Type: ${row.type}`);
-      await fetch(`/api/purchases/${realId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deletedBy: loggedInUser, rowType: row.type, rawId: row.id }) });
-      fetchStatement(); window.dispatchEvent(new Event('stockUpdated'));
+      for (const rawId of idsToDelete) {
+        const realId = rawId.replace(/^(pur-|out-|res-)/, '');
+        const originalRow = statementData.find(r => r.id === rawId) || row;
+        await logActivity('DELETE_STOCK', `Ref: ${originalRow.reference} | Item: ${originalRow.itemName} | Qty: ${originalRow.quantity} | Type: ${originalRow.type}`);
+        await fetch(`/api/purchases/${realId}`, { 
+          method: 'DELETE', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ deletedBy: loggedInUser, rowType: originalRow.type || row.type, rawId: rawId }) 
+        });
+      }
+      fetchStatement(); 
+      window.dispatchEvent(new Event('stockUpdated'));
+      alert('✅ সফলভাবে রেকর্ডটি মুছে ফেলা হয়েছে!');
     } catch (err) { alert('❌ সার্ভার সমস্যা!'); }
   };
 
+  // 🛠️ সংশোধিত বাল্ক/সিলেক্টেড ডিলিট লজিক (গ্রুপড আইডি থেকে আসল rawIds বের করে ডিলিট করবে)
   const handleBulkDeleteStatement = async () => {
     if (!isSuperAdmin) return alert('অ্যাডমিন ছাড়া ডিলিট করার অনুমতি নেই!');
     if (selectedRowIds.length === 0) return alert('ডিলিট করার জন্য কোনো এন্ট্রি সিলেক্ট করা হয়নি।');
     if (!confirm(`সতর্কবার্তা! আপনি কি সিলেক্ট করা ${selectedRowIds.length} টি রেকর্ড মুছে ফেলতে চান?`)) return;
+    
     try {
-      await logActivity('BULK_DELETE_STOCK', `Deleted ${selectedRowIds.length} items from stock statement.`);
-      for (const id of selectedRowIds) {
-        const realId = id.replace(/^(pur-|out-|res-)/, '');
-        const row = statementData.find(r => r.id === id);
-        await fetch(`/api/purchases/${realId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deletedBy: loggedInUser, rowType: row?.type, rawId: id }) });
+      await logActivity('BULK_DELETE_STOCK', `Deleted ${selectedRowIds.length} groups from stock statement.`);
+      
+      const rawIdsToDelete: string[] = [];
+      selectedRowIds.forEach(id => {
+        const groupRow = groupedStatement.find(r => r.id === id);
+        if (groupRow && groupRow.rawIds && groupRow.rawIds.length > 0) {
+          rawIdsToDelete.push(...groupRow.rawIds);
+        } else {
+          rawIdsToDelete.push(id);
+        }
+      });
+
+      for (const rawId of rawIdsToDelete) {
+        const realId = rawId.replace(/^(pur-|out-|res-)/, '');
+        const row = statementData.find(r => r.id === rawId);
+        await fetch(`/api/purchases/${realId}`, { 
+          method: 'DELETE', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ deletedBy: loggedInUser, rowType: row?.type || 'STOCK_IN', rawId: rawId }) 
+        });
       }
-      alert('✅ রেকর্ডগুলো সফলভাবে ডিলিট হয়েছে!'); fetchStatement(); window.dispatchEvent(new Event('stockUpdated')); setSelectedRowIds([]);
+      
+      alert('✅ রেকর্ডগুলো সফলভাবে ডিলিট হয়েছে!'); 
+      fetchStatement(); 
+      window.dispatchEvent(new Event('stockUpdated')); 
+      setSelectedRowIds([]);
     } catch (err) { alert('❌ বাল্ক ডিলিট করতে সমস্যা হয়েছে!'); }
   };
 
