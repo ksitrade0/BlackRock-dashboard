@@ -68,11 +68,8 @@ export async function POST(req: Request) {
 
     let finalOrderId = orderId;
     let createData: any = null;
-    let isNew = false;
 
     if (!orderId || Number(orderId) <= 0 || String(orderId).length > 10) {
-      isNew = true;
-      // নতুন অর্ডারের ক্ষেত্রে fee_lines যাবে কারণ এর কোনো প্রোডাক্ট নেই
       const createRes = await fetch(`${cleanUrl}/wp-json/wc/v3/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: authHeader },
@@ -80,13 +77,12 @@ export async function POST(req: Request) {
           payment_method: 'cod', payment_method_title: 'Cash on delivery', set_paid: false,
           status: status || 'on-hold', billing: billingShipping, shipping: billingShipping,
           meta_data: [...metaData, { key: '_is_manual_dashboard_order', value: 'yes' }],
-          fee_lines: [{ name: 'Order Total', total: String(total || '0') }] 
+          total: String(total || '0')
         }),
       });
       createData = await createRes.json();
       finalOrderId = createData.id;
     } else {
-      // 🚀 ফিক্সড বাগ: আপডেট করার সময় fee_lines সম্পূর্ণ মুছে দেওয়া হয়েছে 🚀
       await fetch(`${cleanUrl}/wp-json/wc/v3/orders/${orderId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: authHeader },
@@ -94,7 +90,8 @@ export async function POST(req: Request) {
             status: status || 'on-hold', 
             billing: billingShipping, 
             shipping: billingShipping, 
-            meta_data: metaData 
+            meta_data: metaData,
+            total: String(total || '0')
         }),
       });
     }
@@ -107,51 +104,13 @@ export async function POST(req: Request) {
       await query(
         `INSERT INTO orders (id, store_id, invoice, customer_name, phone, address, district, thana, size, total, status, items, tracking_code, consignment_id, cancel_reason) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE tracking_code = VALUES(tracking_code), consignment_id = VALUES(consignment_id), status = VALUES(status), items = VALUES(items), cancel_reason = VALUES(cancel_reason)`,
+         ON DUPLICATE KEY UPDATE tracking_code = VALUES(tracking_code), consignment_id = VALUES(consignment_id), status = VALUES(status), items = VALUES(items), cancel_reason = VALUES(cancel_reason), total = VALUES(total)`,
         [finalOrderId, storeId, String(finalOrderId), customerName, phone, streetAddress, district, thana, size, total || '0', status || 'on-hold', items || '', trackingCode || null, consignmentId || null, cancelReason || '']
       );
     } catch (dbErr) {
       try {
-        await query(`UPDATE orders SET items = ?, status = ?, cancel_reason = ? WHERE id = ?`, [items || '', status || 'on-hold', cancelReason || '', finalOrderId]);
+        await query(`UPDATE orders SET items = ?, status = ?, cancel_reason = ?, total = ? WHERE id = ?`, [items || '', status || 'on-hold', cancelReason || '', total || '0', finalOrderId]);
       } catch(fallbackErr) {}
-    }
-
-    const currentStatus = String(status || '').toLowerCase();
-    
-    if (oldStatus !== currentStatus && (currentStatus === 'completed' || currentStatus === 'cancelled')) {
-        let eventName = '';
-        if (currentStatus === 'completed') {
-            eventName = 'Order_Delivered';
-        } else if (currentStatus === 'cancelled') {
-            if (String(cancelReason || '').includes('৪৮ ঘণ্টা')) {
-                eventName = 'Fake_Order';
-            } else {
-                eventName = 'Order_Cancelled';
-            }
-        }
-
-        if (eventName) {
-            const PIXEL_ID = '1407475261571485';
-            const ACCESS_TOKEN = 'EAAZBgIMx3nh0BSYfDyK54YtwjU7ejlxU0TrAc8tpakyOVPEatBs7kSOJKpnSlk06hoIZAaTxdfyUtOF7thgIUfifFAmvNQbUkEUpC2NakeRKZCSnlhCYPN5P4fXnn743W5xvOO9JohVloRjr2llm0Dh3k0fqp0ZByINexW9BbMh9VQgMP5kcZBG1oqDWuuQZDZD';
-            const orderTotal = parseFloat(total || '0');
-            const hashData = (hashStr: string) => hashStr ? crypto.createHash('sha256').update(hashStr.replace(/[^0-9]/g, '')).digest('hex') : '';
-            
-            try {
-                await fetch(`https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        data: [{ 
-                            event_name: eventName, 
-                            event_time: Math.floor(Date.now() / 1000), 
-                            action_source: 'website', 
-                            event_id: `${finalOrderId}_${eventName}_${Math.floor(Date.now() / 1000)}`, 
-                            user_data: { ph: phone ? [hashData(phone)] : [] }, 
-                            custom_data: { currency: 'BDT', value: orderTotal } 
-                        }] 
-                    })
-                });
-            } catch (capiErr) {}
-        }
     }
 
     return NextResponse.json({ success: true, order: createData });
