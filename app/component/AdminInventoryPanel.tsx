@@ -116,23 +116,17 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     } catch (err) { alert('❌ নেটওয়ার্ক এরর!'); } finally { setIsSaving(false); }
   };
 
-  // 🚀 ড্যাশবোর্ড সেফটি লক সহ সিঙ্গেল ডিলিট
+  // 🚀 মডিফাইড: ব্লকার রিমুভ করে সরাসরি ইনভেন্টরি থেকে ডিলিট
   const handleDeleteStatementRow = async (row: any) => {
     if (!isSuperAdmin) return alert('অ্যাডমিন ছাড়া ডিলিট করার অনুমতি নেই!');
     const idsToDelete = row.rawIds && row.rawIds.length > 0 ? row.rawIds : [row.id];
     
-    // 🛡️ সেফটি লক: চেক করা হচ্ছে এটা ড্যাশবোর্ডের অর্ডার কিনা
-    const isDashboardOrder = idsToDelete.some((id: string) => String(id).startsWith('ord-out-'));
-    if (isDashboardOrder) {
-      return alert('⛔ এটি ড্যাশবোর্ডের কাস্টমার অর্ডার! ড্যাশবোর্ডের ডাটা সুরক্ষিত রাখতে ইনভেন্টরি প্যানেল থেকে এটি ডিলিট বা এডিট করা সম্পূর্ণ ব্লক করা হয়েছে।');
-    }
-
-    if (!confirm('সতর্কবার্তা! আপনি কি ইনভেন্টরির এই ম্যানুয়াল এন্ট্রিটি মুছে ফেলতে চান? (ডাটাবেজ থেকে সরাসরি মুছে যাবে)')) return;
+    if (!confirm('সতর্কবার্তা! আপনি কি ইনভেন্টরি থেকে এই এন্ট্রিটি মুছে ফেলতে চান? (ড্যাশবোর্ডের অর্ডারে কোনো প্রভাব পড়বে না)')) return;
     
     let hasError = false;
     try {
       for (const rawId of idsToDelete) {
-        const realId = String(rawId).replace(/^(pur-|out-|res-)/, '');
+        const realId = String(rawId).replace(/^(pur-|out-|res-|ord-out-)/, '');
         const originalRow = statementData.find(r => r.id === rawId) || row;
         const rowType = originalRow.type || row.type;
         
@@ -167,34 +161,27 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     } catch (err: any) { alert(`❌ সার্ভার এরর!`); }
   };
 
-  // 🚀 ড্যাশবোর্ড সেফটি লক সহ বাল্ক ডিলিট
+  // 🚀 মডিফাইড: ব্লকার রিমুভ করে সরাসরি বাল্ক ডিলিট
   const handleBulkDeleteStatement = async () => {
     if (!isSuperAdmin) return alert('অ্যাডমিন ছাড়া ডিলিট করার অনুমতি নেই!');
     if (selectedRowIds.length === 0) return alert('ডিলিট করার জন্য কোনো এন্ট্রি সিলেক্ট করা হয়নি।');
     
-    // 🛡️ সেফটি লক: চেক করা হচ্ছে সিলেক্ট করা আইটেমগুলোতে ড্যাশবোর্ডের অর্ডার আছে কিনা
-    let hasDashboardOrder = false;
+    if (!confirm(`সতর্কবার্তা! আপনি কি সিলেক্ট করা ${selectedRowIds.length} টি রেকর্ড ইনভেন্টরি থেকে মুছে ফেলতে চান? (ড্যাশবোর্ডের অর্ডার নিরাপদ থাকবে)`)) return;
+    
     const rawIdsToDelete: string[] = [];
     selectedRowIds.forEach(id => {
       const groupRow = groupedStatement.find(r => r.id === id);
       const idsToCheck = (groupRow && groupRow.rawIds && groupRow.rawIds.length > 0) ? groupRow.rawIds : [id];
       
       idsToCheck.forEach((rawId: string) => {
-        if (String(rawId).startsWith('ord-out-')) hasDashboardOrder = true;
-        else rawIdsToDelete.push(String(rawId));
+        rawIdsToDelete.push(String(rawId));
       });
     });
 
-    if (hasDashboardOrder) {
-      return alert('⛔ সতর্কতা: আপনার সিলেক্ট করা আইটেমগুলোর মধ্যে ড্যাশবোর্ডের অর্ডার রয়েছে! ড্যাশবোর্ডের সুরক্ষার্থে এগুলো ডিলিট করা ব্লক করা হয়েছে। দয়া করে শুধু ম্যানুয়াল এন্ট্রিগুলো সিলেক্ট করে ডিলিট করুন।');
-    }
-
-    if (!confirm(`সতর্কবার্তা! আপনি কি ইনভেন্টরির সিলেক্ট করা ${rawIdsToDelete.length} টি ম্যানুয়াল রেকর্ড মুছে ফেলতে চান?`)) return;
-    
     let hasError = false;
     try {
       for (const rawId of rawIdsToDelete) {
-        const realId = String(rawId).replace(/^(pur-|out-|res-)/, '');
+        const realId = String(rawId).replace(/^(pur-|out-|res-|ord-out-)/, '');
         const originalRow = statementData.find(r => r.id === rawId);
         const rowType = originalRow?.type || (String(rawId).includes('out-') ? 'STOCK_OUT' : 'STOCK_IN');
         
@@ -358,7 +345,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
       <button onClick={() => setAuthTarget('inventory')} className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-bold transition shadow-2xs border border-slate-800 cursor-pointer"><Package className="w-3.5 h-3.5 text-amber-400" /> ইনভেন্টরি ও স্টক লেজার</button>
       <button onClick={() => setAuthTarget('expense')} className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg text-xs font-bold transition shadow-2xs border border-slate-300 cursor-pointer"><Wallet className="w-3.5 h-3.5 text-rose-600" /> কোম্পানির খরচের হিসাব</button>
-      {isSuperAdmin && (<button onClick={() => setAuthTarget('activity')} className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-rose-100 hover:bg-rose-200 text-rose-900 rounded-lg text-xs font-black transition shadow-2xs border border-rose-300 cursor-pointer mt-1"><ShieldAlert className="w-3.5 h-3.5 text-rose-700" /> সুপার অ্যাক্টিভিটি লগ</button>)}
+      {isSuperAdmin && (<button onClick={() => setAuthTarget('activity')} className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-rose-100 hover:bg-rose-200 text-rose-900 rounded-lg text-xs font-bold transition shadow-2xs border border-rose-300 cursor-pointer mt-1"><ShieldAlert className="w-3.5 h-3.5 text-rose-700" /> সুপার অ্যাক্টিভিটি লগ</button>)}
 
       {authTarget && createPortal(
         <div className="fixed inset-0 z-[999999] bg-slate-900/60 backdrop-blur-xl flex items-center justify-center p-4">
@@ -571,12 +558,13 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
                               <td className="px-5 py-3 text-center text-xs font-black">{row.type === 'STOCK_OUT' ? `-${row.quantity}` : `+${row.quantity}`}</td>
                               <td className="px-5 py-3 text-right text-xs font-black">৳ {row.total}</td>
-                              <td className="px-5 py-3 text-center">
-                                {isDashboardOrder ? (
-                                  <span className="text-[10px] font-black text-slate-400 border border-slate-200 px-2 py-1 rounded bg-slate-50 cursor-not-allowed" title="ড্যাশবোর্ডের অর্ডার পরিবর্তন করা যাবে না">Locked</span>
-                                ) : isSuperAdmin ? (
+                              <td className="px-5 py-3 text-center w-24">
+                                {isSuperAdmin ? (
                                   <div className="flex justify-center gap-1.5">
-                                    <button onClick={() => setEditModalData(JSON.parse(JSON.stringify(row)))} title="এডিট করুন" className="text-blue-500 hover:bg-blue-50 p-1.5 rounded cursor-pointer transition"><Edit className="w-4 h-4"/></button>
+                                    {/* 🚀 ড্যাশবোর্ডের অর্ডার এডিট করা যাবে না, কিন্তু ডিলিট করা যাবে */}
+                                    {!isDashboardOrder && (
+                                      <button onClick={() => setEditModalData(JSON.parse(JSON.stringify(row)))} title="এডিট করুন" className="text-blue-500 hover:bg-blue-50 p-1.5 rounded cursor-pointer transition"><Edit className="w-4 h-4"/></button>
+                                    )}
                                     <button onClick={() => handleDeleteStatementRow(row)} title="ডিলিট করুন" className="text-rose-500 hover:bg-rose-50 p-1.5 rounded cursor-pointer transition"><Trash2 className="w-4 h-4"/></button>
                                   </div>
                                 ) : (

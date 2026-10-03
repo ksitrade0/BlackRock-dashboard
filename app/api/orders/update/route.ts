@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     const {
       storeId, orderId, status, staffName, customerName, phone, 
       streetAddress, district, thana, size, items, total, 
-      action, trackingCode, consignmentId, courierStatus, dateSent
+      action, trackingCode, consignmentId, courierStatus, dateSent, cancelReason
     } = body;
 
     let url = ''; let key = ''; let secret = '';
@@ -63,6 +63,7 @@ export async function POST(req: Request) {
       ...(consignmentId ? [{ key: 'consignmentId', value: String(consignmentId) }] : []),
       ...(courierStatus ? [{ key: 'courierStatus', value: String(courierStatus) }] : []),
       ...(dateSent ? [{ key: 'dateSent', value: String(dateSent) }] : []),
+      ...(cancelReason ? [{ key: 'cancel_reason', value: String(cancelReason) }] : []),
     ];
 
     let finalOrderId = orderId;
@@ -93,32 +94,58 @@ export async function POST(req: Request) {
 
     try { await query(`ALTER TABLE orders ADD COLUMN items TEXT`); } catch(e) {}
     try { await query(`ALTER TABLE orders ADD COLUMN store_id VARCHAR(50)`); } catch(e) {}
+    try { await query(`ALTER TABLE orders ADD COLUMN cancel_reason TEXT`); } catch(e) {}
 
     try {
       await query(
-        `INSERT INTO orders (id, store_id, invoice, customer_name, phone, address, district, thana, size, total, status, items, tracking_code, consignment_id) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE tracking_code = VALUES(tracking_code), consignment_id = VALUES(consignment_id), status = VALUES(status), items = VALUES(items)`,
-        [finalOrderId, storeId, String(finalOrderId), customerName, phone, streetAddress, district, thana, size, total || '0', status || 'on-hold', items || '', trackingCode || null, consignmentId || null]
+        `INSERT INTO orders (id, store_id, invoice, customer_name, phone, address, district, thana, size, total, status, items, tracking_code, consignment_id, cancel_reason) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE tracking_code = VALUES(tracking_code), consignment_id = VALUES(consignment_id), status = VALUES(status), items = VALUES(items), cancel_reason = VALUES(cancel_reason)`,
+        [finalOrderId, storeId, String(finalOrderId), customerName, phone, streetAddress, district, thana, size, total || '0', status || 'on-hold', items || '', trackingCode || null, consignmentId || null, cancelReason || '']
       );
     } catch (dbErr) {
       try {
-        await query(`UPDATE orders SET items = ?, status = ? WHERE id = ?`, [items || '', status || 'on-hold', finalOrderId]);
+        await query(`UPDATE orders SET items = ?, status = ?, cancel_reason = ? WHERE id = ?`, [items || '', status || 'on-hold', cancelReason || '', finalOrderId]);
       } catch(fallbackErr) {}
     }
 
     const currentStatus = String(status || '').toLowerCase();
-    if (oldStatus !== 'completed' && currentStatus === 'completed') {
-        const PIXEL_ID = '1407475261571485';
-        const ACCESS_TOKEN = 'EAAZBgIMx3nh0BSYfDyK54YtwjU7ejlxU0TrAc8tpakyOVPEatBs7kSOJKpnSlk06hoIZAaTxdfyUtOF7thgIUfifFAmvNQbUkEUpC2NakeRKZCSnlhCYPN5P4fXnn743W5xvOO9JohVloRjr2llm0Dh3k0fqp0ZByINexW9BbMh9VQgMP5kcZBG1oqDWuuQZDZD';
-        const orderTotal = parseFloat(total || '0');
-        const hashData = (hashStr: string) => hashStr ? crypto.createHash('sha256').update(hashStr.replace(/[^0-9]/g, '')).digest('hex') : '';
-        try {
-            await fetch(`https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ data: [{ event_name: 'Purchase', event_time: Math.floor(Date.now() / 1000), action_source: 'website', event_id: finalOrderId.toString(), user_data: { ph: phone ? [hashData(phone)] : [] }, custom_data: { currency: 'BDT', value: orderTotal } }] })
-            });
-        } catch (capiErr) {}
+    
+    // 🚀 NEW FULL FUNNEL CAPI LOGIC 🚀
+    if (oldStatus !== currentStatus && (currentStatus === 'completed' || currentStatus === 'cancelled')) {
+        let eventName = '';
+        if (currentStatus === 'completed') {
+            eventName = 'Order_Delivered';
+        } else if (currentStatus === 'cancelled') {
+            if (String(cancelReason || '').includes('৪৮ ঘণ্টা')) {
+                eventName = 'Fake_Order';
+            } else {
+                eventName = 'Order_Cancelled';
+            }
+        }
+
+        if (eventName) {
+            const PIXEL_ID = '1407475261571485';
+            const ACCESS_TOKEN = 'EAAZBgIMx3nh0BSYfDyK54YtwjU7ejlxU0TrAc8tpakyOVPEatBs7kSOJKpnSlk06hoIZAaTxdfyUtOF7thgIUfifFAmvNQbUkEUpC2NakeRKZCSnlhCYPN5P4fXnn743W5xvOO9JohVloRjr2llm0Dh3k0fqp0ZByINexW9BbMh9VQgMP5kcZBG1oqDWuuQZDZD';
+            const orderTotal = parseFloat(total || '0');
+            const hashData = (hashStr: string) => hashStr ? crypto.createHash('sha256').update(hashStr.replace(/[^0-9]/g, '')).digest('hex') : '';
+            
+            try {
+                await fetch(`https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        data: [{ 
+                            event_name: eventName, 
+                            event_time: Math.floor(Date.now() / 1000), 
+                            action_source: 'website', 
+                            event_id: `${finalOrderId}_${eventName}_${Math.floor(Date.now() / 1000)}`, 
+                            user_data: { ph: phone ? [hashData(phone)] : [] }, 
+                            custom_data: { currency: 'BDT', value: orderTotal } 
+                        }] 
+                    })
+                });
+            } catch (capiErr) {}
+        }
     }
 
     return NextResponse.json({ success: true, order: createData });
