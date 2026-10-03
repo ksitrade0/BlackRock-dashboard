@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Lock, Package, FileText, X, Save, ShoppingCart, Printer, Plus, Trash2, Edit, UserCircle, CheckSquare, Square, ArrowDownLeft, ArrowUpRight, RotateCcw, Wallet, Calendar, UserPlus, Filter, ShieldAlert, Activity, ChevronDown, ChevronUp } from 'lucide-react';
+import { Lock, Package, FileText, X, Save, ShoppingCart, Printer, Plus, Trash2, Edit, UserCircle, CheckSquare, Square, ArrowDownLeft, ArrowUpRight, RotateCcw, Wallet, Calendar, UserPlus, Filter, ShieldAlert, Activity, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 
 const STAFF_MEMBERS = ['Awlad Hossain', 'Emdadullah Sakib', 'Omar Faruque'];
 
@@ -22,6 +22,9 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
   const [statementData, setStatementData] = useState<any[]>([]);
   const [isLoadingStatement, setIsLoadingStatement] = useState(false);
+  
+  // 🚀 ডাটা আলাদা করার জন্য নতুন স্টেট
+  const [recordType, setRecordType] = useState<'all' | 'manual' | 'orders'>('all');
   
   const [statementFilterType, setStatementFilterType] = useState('all'); 
   const [statementDateVal, setStatementDateVal] = useState('');
@@ -116,17 +119,23 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     } catch (err) { alert('❌ নেটওয়ার্ক এরর!'); } finally { setIsSaving(false); }
   };
 
-  // 🚀 মডিফাইড: ব্লকার রিমুভ করে সরাসরি ইনভেন্টরি থেকে ডিলিট
+  // 🚀 ড্যাশবোর্ড সেফটি লক সহ সিঙ্গেল ডিলিট
   const handleDeleteStatementRow = async (row: any) => {
     if (!isSuperAdmin) return alert('অ্যাডমিন ছাড়া ডিলিট করার অনুমতি নেই!');
     const idsToDelete = row.rawIds && row.rawIds.length > 0 ? row.rawIds : [row.id];
     
-    if (!confirm('সতর্কবার্তা! আপনি কি ইনভেন্টরি থেকে এই এন্ট্রিটি মুছে ফেলতে চান? (ড্যাশবোর্ডের অর্ডারে কোনো প্রভাব পড়বে না)')) return;
+    // 🛡️ সেফটি লক: চেক করা হচ্ছে এটা ড্যাশবোর্ডের অর্ডার কিনা
+    const isDashboardOrder = idsToDelete.some((id: string) => String(id).startsWith('ord-out-'));
+    if (isDashboardOrder) {
+      return alert('⛔ এটি ড্যাশবোর্ডের কাস্টমার অর্ডার! ড্যাশবোর্ডের ডাটা সুরক্ষিত রাখতে ইনভেন্টরি প্যানেল থেকে এটি ডিলিট বা এডিট করা সম্পূর্ণ ব্লক করা হয়েছে।');
+    }
+
+    if (!confirm('সতর্কবার্তা! আপনি কি ইনভেন্টরির এই ম্যানুয়াল এন্ট্রিটি মুছে ফেলতে চান? (ডাটাবেজ থেকে সরাসরি মুছে যাবে)')) return;
     
     let hasError = false;
     try {
       for (const rawId of idsToDelete) {
-        const realId = String(rawId).replace(/^(pur-|out-|res-|ord-out-)/, '');
+        const realId = String(rawId).replace(/^(pur-|out-|res-)/, '');
         const originalRow = statementData.find(r => r.id === rawId) || row;
         const rowType = originalRow.type || row.type;
         
@@ -161,27 +170,34 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     } catch (err: any) { alert(`❌ সার্ভার এরর!`); }
   };
 
-  // 🚀 মডিফাইড: ব্লকার রিমুভ করে সরাসরি বাল্ক ডিলিট
+  // 🚀 ড্যাশবোর্ড সেফটি লক সহ বাল্ক ডিলিট
   const handleBulkDeleteStatement = async () => {
     if (!isSuperAdmin) return alert('অ্যাডমিন ছাড়া ডিলিট করার অনুমতি নেই!');
     if (selectedRowIds.length === 0) return alert('ডিলিট করার জন্য কোনো এন্ট্রি সিলেক্ট করা হয়নি।');
     
-    if (!confirm(`সতর্কবার্তা! আপনি কি সিলেক্ট করা ${selectedRowIds.length} টি রেকর্ড ইনভেন্টরি থেকে মুছে ফেলতে চান? (ড্যাশবোর্ডের অর্ডার নিরাপদ থাকবে)`)) return;
-    
+    // 🛡️ সেফটি লক: চেক করা হচ্ছে সিলেক্ট করা আইটেমগুলোতে ড্যাশবোর্ডের অর্ডার আছে কিনা
+    let hasDashboardOrder = false;
     const rawIdsToDelete: string[] = [];
     selectedRowIds.forEach(id => {
       const groupRow = groupedStatement.find(r => r.id === id);
       const idsToCheck = (groupRow && groupRow.rawIds && groupRow.rawIds.length > 0) ? groupRow.rawIds : [id];
       
       idsToCheck.forEach((rawId: string) => {
-        rawIdsToDelete.push(String(rawId));
+        if (String(rawId).startsWith('ord-out-')) hasDashboardOrder = true;
+        else rawIdsToDelete.push(String(rawId));
       });
     });
 
+    if (hasDashboardOrder) {
+      return alert('⛔ সতর্কতা: আপনার সিলেক্ট করা আইটেমগুলোর মধ্যে ড্যাশবোর্ডের অর্ডার রয়েছে! ড্যাশবোর্ডের সুরক্ষার্থে এগুলো ডিলিট করা ব্লক করা হয়েছে। দয়া করে শুধু ম্যানুয়াল এন্ট্রিগুলো সিলেক্ট করে ডিলিট করুন।');
+    }
+
+    if (!confirm(`সতর্কবার্তা! আপনি কি ইনভেন্টরির সিলেক্ট করা ${rawIdsToDelete.length} টি ম্যানুয়াল রেকর্ড মুছে ফেলতে চান?`)) return;
+    
     let hasError = false;
     try {
       for (const rawId of rawIdsToDelete) {
-        const realId = String(rawId).replace(/^(pur-|out-|res-|ord-out-)/, '');
+        const realId = String(rawId).replace(/^(pur-|out-|res-)/, '');
         const originalRow = statementData.find(r => r.id === rawId);
         const rowType = originalRow?.type || (String(rawId).includes('out-') ? 'STOCK_OUT' : 'STOCK_IN');
         
@@ -218,12 +234,20 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
   // সম্পূর্ণ ও নিখুঁত আইটেম ব্রেকডাউন প্রসেসিং
   const groupedStatement = useMemo(() => {
     let filtered = statementData;
+
+    // 🚀 ডাটা আলাদা করার লজিক 🚀
+    if (recordType === 'manual') {
+      filtered = filtered.filter(row => !String(row.id).startsWith('ord-out-'));
+    } else if (recordType === 'orders') {
+      filtered = filtered.filter(row => String(row.id).startsWith('ord-out-'));
+    }
+
     if (statementFilterType === 'day' && statementDateVal) {
-      filtered = statementData.filter(row => row.date && row.date.startsWith(statementDateVal));
+      filtered = filtered.filter(row => row.date && row.date.startsWith(statementDateVal));
     } else if (statementFilterType === 'month' && statementDateVal) {
-      filtered = statementData.filter(row => row.date && row.date.startsWith(statementDateVal));
+      filtered = filtered.filter(row => row.date && row.date.startsWith(statementDateVal));
     } else if (statementFilterType === 'year' && statementDateVal) {
-      filtered = statementData.filter(row => row.date && new Date(row.date).getFullYear().toString() === statementDateVal);
+      filtered = filtered.filter(row => row.date && new Date(row.date).getFullYear().toString() === statementDateVal);
     }
 
     const groups: any[] = []; const map = new Map();
@@ -249,7 +273,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
     });
     map.forEach(val => { val.itemName = val.itemNames.join(' / '); groups.push(val); });
     return groups;
-  }, [statementData, statementFilterType, statementDateVal]);
+  }, [statementData, statementFilterType, statementDateVal, recordType]);
 
   // প্রফেশনাল করপোরেট লেআউট সহ সরাসরি প্রিন্ট ফাংশন
   const triggerSelectedStockPrint = () => {
@@ -345,7 +369,7 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
 
       <button onClick={() => setAuthTarget('inventory')} className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-bold transition shadow-2xs border border-slate-800 cursor-pointer"><Package className="w-3.5 h-3.5 text-amber-400" /> ইনভেন্টরি ও স্টক লেজার</button>
       <button onClick={() => setAuthTarget('expense')} className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg text-xs font-bold transition shadow-2xs border border-slate-300 cursor-pointer"><Wallet className="w-3.5 h-3.5 text-rose-600" /> কোম্পানির খরচের হিসাব</button>
-      {isSuperAdmin && (<button onClick={() => setAuthTarget('activity')} className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-rose-100 hover:bg-rose-200 text-rose-900 rounded-lg text-xs font-bold transition shadow-2xs border border-rose-300 cursor-pointer mt-1"><ShieldAlert className="w-3.5 h-3.5 text-rose-700" /> সুপার অ্যাক্টিভিটি লগ</button>)}
+      {isSuperAdmin && (<button onClick={() => setAuthTarget('activity')} className="w-full h-[36px] flex items-center justify-center gap-1.5 bg-rose-100 hover:bg-rose-200 text-rose-900 rounded-lg text-xs font-black transition shadow-2xs border border-rose-300 cursor-pointer mt-1"><ShieldAlert className="w-3.5 h-3.5 text-rose-700" /> সুপার অ্যাক্টিভিটি লগ</button>)}
 
       {authTarget && createPortal(
         <div className="fixed inset-0 z-[999999] bg-slate-900/60 backdrop-blur-xl flex items-center justify-center p-4">
@@ -477,6 +501,13 @@ export default function AdminInventoryPanel({ existingItems }: { existingItems: 
               </form>
             ) : (
               <div className="max-w-7xl mx-auto">
+                {/* 🚀 নতুন ট্যাব: ডাটা আলাদা করার জন্য */}
+                <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200 w-fit mb-4 shadow-inner">
+                  <button onClick={() => setRecordType('all')} className={`px-5 py-2 text-xs font-black rounded-lg transition cursor-pointer flex items-center gap-2 ${recordType === 'all' ? 'bg-white text-slate-900 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-900'}`}><Layers className="w-3.5 h-3.5"/> সব রেকর্ড</button>
+                  <button onClick={() => setRecordType('manual')} className={`px-5 py-2 text-xs font-black rounded-lg transition cursor-pointer flex items-center gap-2 ${recordType === 'manual' ? 'bg-white text-blue-700 shadow-sm border border-blue-200' : 'text-slate-500 hover:text-slate-900'}`}><Edit className="w-3.5 h-3.5"/> শুধু ম্যানুয়াল এন্ট্রি</button>
+                  <button onClick={() => setRecordType('orders')} className={`px-5 py-2 text-xs font-black rounded-lg transition cursor-pointer flex items-center gap-2 ${recordType === 'orders' ? 'bg-white text-rose-700 shadow-sm border border-rose-200' : 'text-slate-500 hover:text-slate-900'}`}><ShoppingCart className="w-3.5 h-3.5"/> ড্যাশবোর্ডের অর্ডারসমূহ</button>
+                </div>
+
                 <div className="flex flex-wrap justify-between items-center mb-4 gap-3 no-print bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                   <div className="flex items-center gap-2.5">
                     <select 

@@ -72,6 +72,7 @@ export async function POST(req: Request) {
 
     if (!orderId || Number(orderId) <= 0 || String(orderId).length > 10) {
       isNew = true;
+      // নতুন অর্ডারের ক্ষেত্রে fee_lines যাবে কারণ এর কোনো প্রোডাক্ট নেই
       const createRes = await fetch(`${cleanUrl}/wp-json/wc/v3/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: authHeader },
@@ -79,16 +80,22 @@ export async function POST(req: Request) {
           payment_method: 'cod', payment_method_title: 'Cash on delivery', set_paid: false,
           status: status || 'on-hold', billing: billingShipping, shipping: billingShipping,
           meta_data: [...metaData, { key: '_is_manual_dashboard_order', value: 'yes' }],
-          fee_lines: [{ name: 'Order Total', total: String(total || '0') }]
+          fee_lines: [{ name: 'Order Total', total: String(total || '0') }] 
         }),
       });
       createData = await createRes.json();
       finalOrderId = createData.id;
     } else {
+      // 🚀 ফিক্সড বাগ: আপডেট করার সময় fee_lines সম্পূর্ণ মুছে দেওয়া হয়েছে 🚀
       await fetch(`${cleanUrl}/wp-json/wc/v3/orders/${orderId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: authHeader },
-        body: JSON.stringify({ status: status || 'on-hold', total: String(total || '0'), billing: billingShipping, shipping: billingShipping, meta_data: metaData, fee_lines: [{ name: 'Order Total', total: String(total || '0') }] }),
+        body: JSON.stringify({ 
+            status: status || 'on-hold', 
+            billing: billingShipping, 
+            shipping: billingShipping, 
+            meta_data: metaData 
+        }),
       });
     }
 
@@ -111,7 +118,6 @@ export async function POST(req: Request) {
 
     const currentStatus = String(status || '').toLowerCase();
     
-    // 🚀 NEW FULL FUNNEL CAPI LOGIC 🚀
     if (oldStatus !== currentStatus && (currentStatus === 'completed' || currentStatus === 'cancelled')) {
         let eventName = '';
         if (currentStatus === 'completed') {

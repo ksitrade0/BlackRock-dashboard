@@ -54,6 +54,9 @@ export default function Dashboard() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasLogoImg, setHasLogoImg] = useState<boolean>(true);
 
+  // Auto-cancel tracker to prevent infinite loops
+  const checkedAutoCancels = useRef<Set<number>>(new Set());
+
   useEffect(() => { if (message) { const timer = setTimeout(() => setMessage(null), 5000); return () => clearTimeout(timer); } }, [message]);
 
   const topScrollRef = useRef<HTMLDivElement>(null);
@@ -71,6 +74,23 @@ export default function Dashboard() {
     fetch('/api/auth/check').then(res => { if (!res.ok) router.push('/login'); else res.json().then(d => d.username && setCurrentUser(d.username)); }).catch(() => router.push('/login'));
   }, [router]);
 
+  const runAutoCancelCheck = (currentOrders: Order[]) => {
+    const now = new Date().getTime();
+    const fortyEightHours = 48 * 60 * 60 * 1000;
+    
+    currentOrders.forEach(o => {
+      if (o.status === 'on-hold' && !o.trackingCode && !o.consignmentId && o.dateCreated) {
+        if (now - new Date(o.dateCreated).getTime() > fortyEightHours) {
+          if (!checkedAutoCancels.current.has(o.id)) {
+            checkedAutoCancels.current.add(o.id);
+            // Fire safely without looping
+            handleSaveOrder({...o, cancelReason: 'কারণ: ৪৮ ঘণ্টায় কনফার্ম হয়নি (Auto)'}, 'cancelled', true);
+          }
+        }
+      }
+    });
+  };
+
   const fetchOrders = async (isSilent = false) => {
     if (!isSilent) { setLoading(true); setMessage(null); }
     try {
@@ -81,14 +101,19 @@ export default function Dashboard() {
         const mappedOrders: Order[] = data.orders.map((o: any) => ({
           ...o, streetAddress: o.address || '', district: o.district || '', thana: o.thana || '', size: o.size || '', customNote: o.customNote || '', staffName: o.staffName || '', courierStatus: o.courierStatus || '', dateSent: o.dateSent || '', cancelReason: o.cancel_reason || o.cancelReason || '', isNewRow: false,
         }));
+        
         setOrders(prevOrders => {
-          if (!isSilent) return [...prevOrders.filter(o => o.isNewRow), ...mappedOrders];
-          return prevOrders.map(prevOrder => {
+          const merged = !isSilent ? [...prevOrders.filter(o => o.isNewRow), ...mappedOrders] : prevOrders.map(prevOrder => {
             if (prevOrder.isNewRow) return prevOrder;
             const dbOrder = mappedOrders.find(m => m.id === prevOrder.id && m.storeId === prevOrder.storeId);
             return dbOrder ? { ...prevOrder, courierStatus: dbOrder.courierStatus, status: dbOrder.status, cancelReason: dbOrder.cancelReason } : prevOrder;
           });
+          
+          // Run check only after fresh data is loaded
+          setTimeout(() => runAutoCancelCheck(merged), 2000);
+          return merged;
         });
+
         setInitialOrders(prevInit => {
           const newInit = { ...prevInit };
           if (!isSilent) mappedOrders.forEach(item => { newInit[`${item.storeId}-${item.id}`] = JSON.parse(JSON.stringify(item)); });
@@ -105,25 +130,6 @@ export default function Dashboard() {
     const intervalId = setInterval(() => { fetchOrders(true); }, 60000);
     return () => clearInterval(intervalId);
   }, []);
-
-  // 🚀 48-Hour Auto Cancel Logic 🚀
-  useEffect(() => {
-    const now = new Date().getTime();
-    const fortyEightHours = 48 * 60 * 60 * 1000;
-    
-    const autoCancels = orders.filter(o => 
-       o.status === 'on-hold' && 
-       (!o.trackingCode && !o.consignmentId) && 
-       o.dateCreated && 
-       (now - new Date(o.dateCreated).getTime() > fortyEightHours)
-    );
-    
-    if (autoCancels.length > 0) {
-       autoCancels.forEach(o => {
-          handleSaveOrder({...o, cancelReason: 'কারণ: ৪৮ ঘণ্টায় কনফার্ম হয়নি (Auto)'}, 'cancelled', true);
-       });
-    }
-  }, [orders]);
 
   const handleAddNewBlankRow = () => {
     const tempId = Date.now();
@@ -402,7 +408,6 @@ export default function Dashboard() {
         const consignment = result.data.consignment || result.data; const tracking = consignment.tracking_code || 'Sent'; const cid = consignment.consignment_id || ''; const initialStatus = consignment.status || 'in_review'; const currentTimestamp = new Date().toISOString();
         setOrders(prev => prev.map(o => o.id === order.id && o.storeId === order.storeId ? { ...o, trackingCode: tracking, consignmentId: cid, courierStatus: initialStatus, staffName: assignedStaff, dateSent: currentTimestamp } : o));
         
-        // 🚀 Status changes automatically to pending 🚀
         handleSaveOrder({ ...order, trackingCode: tracking, consignmentId: cid, courierStatus: initialStatus, dateSent: currentTimestamp }, 'pending', true);
         setMessage({ text: `Order #${order.invoice} কুরিয়ারে পাঠানো হয়েছে! CID: ${cid}`, type: 'success' });
 
@@ -443,7 +448,6 @@ export default function Dashboard() {
         let newCancelReason = order.cancelReason;
         const s = liveStatus.toLowerCase();
         
-        // 🚀 CAPI and Partial Logic Integration 🚀
         if (s === 'delivered') {
             newWooStatus = 'completed';
         } else if (s === 'partial_delivered') {
@@ -695,7 +699,6 @@ export default function Dashboard() {
                               <button onClick={() => handleSaveOrder(order)} disabled={updatingId === order.id} className="w-full h-[34px] flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded transition cursor-pointer disabled:opacity-50 shadow-2xs mt-1.5"><Save className={`w-3.5 h-3.5 ${updatingId === order.id ? 'animate-spin' : ''}`} />{updatingId === order.id ? 'সেভ হচ্ছে...' : 'তথ্য সেভ করুন (Save)'}</button>
                               <div className="pt-1.5"><button onClick={() => handleDeleteOrder(order)} disabled={updatingId === order.id} title="ডিলিট" className="h-[30px] w-full flex items-center justify-center gap-1 text-[11px] font-bold text-slate-700 hover:text-red-700 bg-slate-50 hover:bg-red-50 border border-slate-200 rounded cursor-pointer shadow-2xs"><Trash2 className="w-3 h-3" /> ডিলিট করুন (Delete)</button></div>
                               
-                              {/* 🚀 NEW Cancel Reason Input Box 🚀 */}
                               <div className="pt-1.5 border-t border-slate-200 mt-2">
                                 <textarea rows={2} placeholder="ক্যানসেলের কারণ / নোট..." value={order.cancelReason || ''} onChange={e => handleFieldChange(order.id, order.storeId, 'cancelReason', e.target.value)} className="w-full text-[10px] font-bold text-slate-700 bg-white border border-slate-300 rounded p-1.5 outline-none resize-none shadow-inner" />
                               </div>
